@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<applications>
+	<application name="FACE_REC_APP">
+		<usage_percentage>100</usage_percentage>
+		<prob_cloud_selection>10</prob_cloud_selection>
+		<poisson_interarrival>3</poisson_interarrival>
+		<active_period>45</active_period>
+		<idle_period>15</idle_period>
+		<data_upload>1500</data_upload>
+		<data_download>16</data_download>
+		<task_length>1500</task_length>
+		<required_core>2</required_core>
+		<vm_utilization>10</vm_utilization>
+	</application>
+	<application name="HEALTH_APP">
+		<usage_percentage>0</usage_percentage>
+		<prob_cloud_selection>0</prob_cloud_selection>
+		<poisson_interarrival>0</poisson_interarrival>
+		<active_period>0</active_period>
+		<idle_period>0</idle_period>
+		<data_upload>0</data_upload>
+		<data_download>0</data_download>
+		<task_length>0</task_length>
+		<required_core>0</required_core>
+		<vm_utilization>0</vm_utilization>
+	</application>
+	<application name="HEAVY_COMP_APP">
+		<usage_percentage>0</usage_percentage>
+		<prob_cloud_selection>0</prob_cloud_selection>
+		<poisson_interarrival>0</poisson_interarrival>
+		<active_period>0</active_period>
+		<idle_period>0</idle_period>
+		<data_upload>0</data_upload>
+		<data_download>0</data_download>
+		<task_length>0</task_length>
+		<required_core>0</required_core>
+		<vm_utilization>0</vm_utilization>
+	</application>
+	<application name="VIDEO_GAME_APP">
+		<usage_percentage>0</usage_percentage>
+		<prob_cloud_selection>0</prob_cloud_selection>
+		<poisson_interarrival>0</poisson_interarrival>
+		<active_period>0</active_period>
+		<idle_period>0</idle_period>
+		<data_upload>0</data_upload>
+		<data_download>0</data_download>
+		<task_length>0</task_length>
+		<required_core>0</required_core>
+		<vm_utilization>0</vm_utilization>
+	</application>
+	<application name="SIMPLE_SERVICE_APP">
+		<usage_percentage>0</usage_percentage>
+		<prob_cloud_selection>0</prob_cloud_selection>
+		<poisson_interarrival>0</poisson_interarrival>
+		<active_period>0</active_period>
+		<idle_period>0</idle_period>
+		<data_upload>0</data_upload>
+		<data_download>0</data_download>
+		<task_length>0</task_length>
+		<required_core>0</required_core>
+		<vm_utilization>0</vm_utilization>
+	</application>
+</applications>
