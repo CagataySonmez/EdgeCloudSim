@@ -13,15 +13,14 @@
 
 package edu.boun.edgecloudsim.edge_orchestrator;
 
-import edu.boun.edgecloudsim.core.SimSettings;
 import edu.boun.edgecloudsim.edge_server.EdgeVM;
 import edu.boun.edgecloudsim.edge_client.Task;
 
 public abstract class EdgeOrchestrator {
 	protected String policy;
-	protected SimSettings.SCENARIO_TYPES simScenario;
+	protected String simScenario;
 	
-	public EdgeOrchestrator(String _policy, SimSettings.SCENARIO_TYPES _simScenario){
+	public EdgeOrchestrator(String _policy, String _simScenario){
 		policy = _policy;
 		simScenario = _simScenario;
 	}

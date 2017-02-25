@@ -26,7 +26,7 @@ import edu.boun.edgecloudsim.utils.SimUtils;
 
 public class IdleActiveLoadGenerator extends LoadGeneratorModel{
 
-	public IdleActiveLoadGenerator(int _numberOfMobileDevices, double _simulationTime, SimSettings.SCENARIO_TYPES _simScenario) {
+	public IdleActiveLoadGenerator(int _numberOfMobileDevices, double _simulationTime, String _simScenario) {
 		super(_numberOfMobileDevices, _simulationTime, _simScenario);
 	}
 
@@ -88,7 +88,7 @@ public class IdleActiveLoadGenerator extends LoadGeneratorModel{
 				}
 
 				boolean requireCloud = false;
-				if(simScenario != SimSettings.SCENARIO_TYPES.SINGLE_TIER){
+				if(!simScenario.equals("SINGLE_TIER")){
 					//decide to use cloud or cloudlet VM
 					int CloudVmPicker = SimUtils.getRandomNumber(0, 100);
 					

@@ -15,16 +15,15 @@ package edu.boun.edgecloudsim.task_generator;
 
 import java.util.List;
 
-import edu.boun.edgecloudsim.core.SimSettings;
 import edu.boun.edgecloudsim.utils.EdgeTask;
 
 public abstract class LoadGeneratorModel {
 	protected List<EdgeTask> taskList;
 	protected int numberOfMobileDevices;
 	protected double simulationTime;
-	protected SimSettings.SCENARIO_TYPES simScenario;
+	protected String simScenario;
 	
-	public LoadGeneratorModel(int _numberOfMobileDevices, double _simulationTime, SimSettings.SCENARIO_TYPES _simScenario){
+	public LoadGeneratorModel(int _numberOfMobileDevices, double _simulationTime, String _simScenario){
 		numberOfMobileDevices=_numberOfMobileDevices;
 		simulationTime=_simulationTime;
 		simScenario=_simScenario;

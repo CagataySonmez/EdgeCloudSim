@@ -47,7 +47,7 @@ public class SimManager extends SimEntity {
 	
 	private static SimManager instance = null;
 	
-	public SimManager(ScenarioFactory _scenarioFactory, int _numOfMobileDevice, SimSettings.SCENARIO_TYPES _simScenario) throws Exception {
+	public SimManager(ScenarioFactory _scenarioFactory, int _numOfMobileDevice, String _simScenario) throws Exception {
 		super("SimManager");
 		scenarioFactory = _scenarioFactory;
 		numOfMobileDevice = _numOfMobileDevice;

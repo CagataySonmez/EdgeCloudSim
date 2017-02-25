@@ -18,7 +18,6 @@ import org.cloudbus.cloudsim.core.CloudSim;
 
 import edu.boun.edgecloudsim.core.SimManager;
 import edu.boun.edgecloudsim.core.SimSettings;
-import edu.boun.edgecloudsim.core.SimSettings.SCENARIO_TYPES;
 import edu.boun.edgecloudsim.edge_server.EdgeVM;
 import edu.boun.edgecloudsim.edge_client.CpuUtilizationModel_Custom;
 import edu.boun.edgecloudsim.edge_client.Task;
@@ -30,8 +29,7 @@ public class BasicEdgeOrchestrator extends EdgeOrchestrator {
 	private int lastSelectedHostIndex; //used by load balancer
 	private int[] lastSelectedVmIndexes; //used by each host individually
 	
-	public BasicEdgeOrchestrator(String _policy,
-			SCENARIO_TYPES _simScenario) {
+	public BasicEdgeOrchestrator(String _policy, String _simScenario) {
 		super(_policy, _simScenario);
 	}
 
@@ -47,7 +45,7 @@ public class BasicEdgeOrchestrator extends EdgeOrchestrator {
 
 	@Override
 	public EdgeVM selectVm(Task task) {
-		if(simScenario == SimSettings.SCENARIO_TYPES.TWO_TIER_WITH_EO)
+		if(simScenario.equals("TWO_TIER_WITH_EO"))
 			return selectVmOnLoadBalancer(task);
 		else
 			return selectVmOnHost(task);

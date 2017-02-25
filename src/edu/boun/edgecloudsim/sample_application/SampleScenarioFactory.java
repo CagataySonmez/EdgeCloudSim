@@ -17,7 +17,6 @@ import org.cloudbus.cloudsim.UtilizationModel;
 import org.cloudbus.cloudsim.VmAllocationPolicy;
 
 import edu.boun.edgecloudsim.core.ScenarioFactory;
-import edu.boun.edgecloudsim.core.SimSettings;
 import edu.boun.edgecloudsim.core.SimSettings.APP_TYPES;
 import edu.boun.edgecloudsim.edge_orchestrator.BasicEdgeOrchestrator;
 import edu.boun.edgecloudsim.edge_orchestrator.EdgeOrchestrator;
@@ -34,12 +33,12 @@ public class SampleScenarioFactory implements ScenarioFactory {
 	private int numOfMobileDevice;
 	private double simulationTime;
 	private String orchestratorPolicy;
-	private SimSettings.SCENARIO_TYPES simScenario;
+	private String simScenario;
 	
 	SampleScenarioFactory(int _numOfMobileDevice,
 			double _simulationTime,
 			String _orchestratorPolicy,
-			SimSettings.SCENARIO_TYPES _simScenario){
+			String _simScenario){
 		orchestratorPolicy = _orchestratorPolicy;
 		numOfMobileDevice = _numOfMobileDevice;
 		simulationTime = _simulationTime;
@@ -75,5 +74,4 @@ public class SampleScenarioFactory implements ScenarioFactory {
 	public UtilizationModel getCpuUtilizationModel(APP_TYPES _taskType) {
 		return new CpuUtilizationModel_Custom(_taskType);
 	}
-
 }

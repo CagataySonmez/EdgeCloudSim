@@ -75,44 +75,50 @@ public class mainApp {
 
 		for(int j=SS.getMinNumOfMobileDev(); j<=SS.getMaxNumOfMobileDev(); j+=SS.getMobileDevCounterSize())
 		{
-			for (SimSettings.SCENARIO_TYPES scenario : SimSettings.SCENARIO_TYPES.values())
+			for(int k=0; k<SS.getSimulationScenarios().length; k++)
 			{
-				Date ScenarioStartDate = Calendar.getInstance().getTime();
-				now = df.format(ScenarioStartDate);
-				
-				SimLogger.printLine("Scenario started at " + now);
-				SimLogger.printLine(scenario + "(" + SS.getOrchestratorPolicy() + ")" + " - duration: " + SS.getSimulationTime()/3600 + " hour(s) - poisson: " + SS.getTaskLookUpTable()[0][2] + " - #devices: " + j + " - ite: " + iterationNumber);
-				SimLogger.getInstance().simStarted(outputFolder,"SIMRESULT_" + scenario + "_" + j + "DEVICES");
-				
-				try
+				for(int i=0; i<SS.getOrchestratorPolicies().length; i++)
 				{
-					// First step: Initialize the CloudSim package. It should be called
-					// before creating any entities.
-					int num_user = 2;   // number of grid users
-					Calendar calendar = Calendar.getInstance();
-					boolean trace_flag = false;  // mean trace events
-			
-					// Initialize the CloudSim library
-					CloudSim.init(num_user, calendar, trace_flag, 0.01);
+					String simScenario = SS.getSimulationScenarios()[k];
+					String orchestratorPolicy = SS.getOrchestratorPolicies()[i];
+					Date ScenarioStartDate = Calendar.getInstance().getTime();
+					now = df.format(ScenarioStartDate);
 					
-					ScenarioFactory sampleFactory = new SampleScenarioFactory(j,SS.getSimulationTime(), SS.getOrchestratorPolicy(), scenario);
+					SimLogger.printLine("Scenario started at " + now);
+					SimLogger.printLine("Scenario: " + simScenario + " - Policy: " + orchestratorPolicy + " - #iteration: " + iterationNumber);
+					SimLogger.printLine("Duration: " + SS.getSimulationTime()/3600 + " hour(s) - Poisson: " + SS.getTaskLookUpTable()[0][2] + " - #devices: " + j);
+					SimLogger.getInstance().simStarted(outputFolder,"SIMRESULT_" + simScenario + "_"  + orchestratorPolicy + "_" + j + "DEVICES");
 					
-					SimManager manager = new SimManager(sampleFactory, j, scenario);
-					manager.startSimulation();
-				}
-				catch (Exception e)
-				{
-					SimLogger.printLine("The simulation has been terminated due to an unexpected error");
-					e.printStackTrace();
-					System.exit(0);
-				}
+					try
+					{
+						// First step: Initialize the CloudSim package. It should be called
+						// before creating any entities.
+						int num_user = 2;   // number of grid users
+						Calendar calendar = Calendar.getInstance();
+						boolean trace_flag = false;  // mean trace events
 				
-				Date ScenarioEndDate = Calendar.getInstance().getTime();
-				now = df.format(ScenarioEndDate);
-				SimLogger.printLine("Scenario finished at " + now +  ". It took " + SimUtils.getTimeDifference(ScenarioStartDate,ScenarioEndDate));
-				SimLogger.printLine("----------------------------------------------------------------------");
-			}//End of SCENARIO_TYPES loop
-		}//End of NUMBER_OF_MOBILE_DEVICE loop
+						// Initialize the CloudSim library
+						CloudSim.init(num_user, calendar, trace_flag, 0.01);
+						
+						ScenarioFactory sampleFactory = new SampleScenarioFactory(j,SS.getSimulationTime(), orchestratorPolicy, simScenario);
+						
+						SimManager manager = new SimManager(sampleFactory, j, simScenario);
+						manager.startSimulation();
+					}
+					catch (Exception e)
+					{
+						SimLogger.printLine("The simulation has been terminated due to an unexpected error");
+						e.printStackTrace();
+						System.exit(0);
+					}
+					
+					Date ScenarioEndDate = Calendar.getInstance().getTime();
+					now = df.format(ScenarioEndDate);
+					SimLogger.printLine("Scenario finished at " + now +  ". It took " + SimUtils.getTimeDifference(ScenarioStartDate,ScenarioEndDate));
+					SimLogger.printLine("----------------------------------------------------------------------");
+				}//End of orchestrators loop
+			}//End of scenarios loop
+		}//End of mobile devices loop
 
 		Date SimulationEndDate = Calendar.getInstance().getTime();
 		now = df.format(SimulationEndDate);

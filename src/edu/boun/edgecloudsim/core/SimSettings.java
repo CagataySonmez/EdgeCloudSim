@@ -33,13 +33,12 @@ public class SimSettings {
 	private static SimSettings instance = null;
 	private Document edgeDevicesDoc = null;
 	
-	//enumarations for the scenarion, VM, appplication, and place.
+	//enumarations for the VM, appplication, and place.
 	//if you want to add different types on your config file,
 	//you may modify current types or add new types here. 
 	public static enum VM_TYPES { EDGE_VM, CLOUD_VM }
 	public static enum APP_TYPES { FACE_REC_APP, HEALTH_APP, HEAVY_COMP_APP, VIDEO_GAME_APP, SIMPLE_SERVICE_APP }
 	public static enum PLACE_TYPES { ATTRACTIVENESS_L1, ATTRACTIVENESS_L2, ATTRACTIVENESS_L3 }
-	public static enum SCENARIO_TYPES { SINGLE_TIER, TWO_TIER, TWO_TIER_WITH_EO }
 	
 	//predifined ID for cloud components.
 	public static int CLOUD_DATACENTER_ID = 1000;
@@ -71,7 +70,8 @@ public class SimSettings {
 
     private int MIPS_FOR_CLOUD; //MIPS
     
-    private String ORCHESTRATOR_POLICY;
+    private String[] SIMULATION_SCENARIOS;
+    private String[] ORCHESTRATOR_POLICIES;
     
     // mean waiting time (minute) is stored for each place types
     private double[] mobilityLookUpTable;
@@ -135,7 +135,9 @@ public class SimSettings {
 			//-Each task is executed with maximum capacity (as if there is no task in the cloud) 
 			MIPS_FOR_CLOUD = Integer.parseInt(prop.getProperty("mips_for_cloud"));
 
-			ORCHESTRATOR_POLICY = prop.getProperty("task_provisioning");
+			ORCHESTRATOR_POLICIES = prop.getProperty("orchestrator_policies").split(",");
+			
+			SIMULATION_SCENARIOS = prop.getProperty("simulation_scenarios").split(",");
 			
 			//avg waiting time in a place (min)
 			double place1_mean_waiting_time = Double.parseDouble(prop.getProperty("attractiveness_L1_mean_waiting_time"));
@@ -314,11 +316,19 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns orchestrator policy as string
+	 * returns simulation screnarios as string
 	 */
-	public String getOrchestratorPolicy()
+	public String[] getSimulationScenarios()
 	{
-		return ORCHESTRATOR_POLICY;
+		return SIMULATION_SCENARIOS;
+	}
+
+	/**
+	 * returns orchestrator policies as string
+	 */
+	public String[] getOrchestratorPolicies()
+	{
+		return ORCHESTRATOR_POLICIES;
 	}
 	
 	/**
