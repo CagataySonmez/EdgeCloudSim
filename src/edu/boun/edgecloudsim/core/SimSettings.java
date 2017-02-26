@@ -40,10 +40,14 @@ public class SimSettings {
 	public static enum APP_TYPES { FACE_REC_APP, HEALTH_APP, HEAVY_COMP_APP, VIDEO_GAME_APP, SIMPLE_SERVICE_APP }
 	public static enum PLACE_TYPES { ATTRACTIVENESS_L1, ATTRACTIVENESS_L2, ATTRACTIVENESS_L3 }
 	
-	//predifined ID for cloud components.
+	//predifined IDs for cloud components.
 	public static int CLOUD_DATACENTER_ID = 1000;
 	public static int CLOUD_HOST_ID = CLOUD_DATACENTER_ID + 1;
 	public static int CLOUD_VM_ID = CLOUD_DATACENTER_ID + 2;
+	
+	//predifined IDs for edge devices
+	public static int EDGE_ORCHESTRATOR_ID = 2000;
+	public static int GENERIC_EDGE_DEVICE_ID = EDGE_ORCHESTRATOR_ID + 1;
 
 	//delimiter for output file.
 	public static String DELIMITER = ";";
@@ -52,7 +56,8 @@ public class SimSettings {
     private double WARM_UP_PERIOD; //seconds unit in properties file
     private double INTERVAL_TO_GET_VM_LOAD_LOG; //seconds unit in properties file
     private double INTERVAL_TO_GET_VM_LOCATION_LOG; //seconds unit in properties file
-    private boolean DEEP_FILE_LOG_ENABLED; //used for each success failed task
+    private boolean FILE_LOG_ENABLED; //boolean to check file logging option
+    private boolean DEEP_FILE_LOG_ENABLED; //boolean to check deep file logging option
 
     private int MIN_NUM_OF_MOBILE_DEVICES;
     private int MAX_NUM_OF_MOBILE_DEVICES;
@@ -118,6 +123,7 @@ public class SimSettings {
 			WARM_UP_PERIOD = Double.parseDouble(prop.getProperty("warm_up_period")); //seconds
 			INTERVAL_TO_GET_VM_LOAD_LOG = Double.parseDouble(prop.getProperty("vm_load_check_interval")); //seconds
 			INTERVAL_TO_GET_VM_LOCATION_LOG = Double.parseDouble(prop.getProperty("vm_location_check_interval")); //seconds
+			FILE_LOG_ENABLED = Boolean.parseBoolean(prop.getProperty("file_log_enabled"));
 			DEEP_FILE_LOG_ENABLED = Boolean.parseBoolean(prop.getProperty("deep_file_log_enabled"));
 			
 			MIN_NUM_OF_MOBILE_DEVICES = Integer.parseInt(prop.getProperty("min_number_of_mobile_devices"));
@@ -218,6 +224,14 @@ public class SimSettings {
 		return DEEP_FILE_LOG_ENABLED; 
 	}
 
+	/**
+	 * returns deep statistics logging status from properties file
+	 */
+	public boolean getFileLoggingEnabled()
+	{
+		return FILE_LOG_ENABLED; 
+	}
+	
 	/**
 	 * returns WAN propogation delay (in second unit) from properties file
 	 */

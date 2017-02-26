@@ -69,18 +69,21 @@ public class MM1Queue extends NetworkModel {
 		double delay = 0;
 		Location accessPointLocation = SimManager.getInstance().getMobilityModel().getLocation(sourceDeviceId,CloudSim.clock());
 
-		//if destination device is the cloud datacenter, both wan and wlan delay should be considered
+		//mobile device to cloud server
 		if(destDeviceId == SimSettings.CLOUD_DATACENTER_ID){
 			double wlanDelay = getWlanUploadDelay(accessPointLocation, CloudSim.clock());
 			double wanDelay = getWanUploadDelay(accessPointLocation, CloudSim.clock() + wlanDelay);
 			if(wlanDelay > 0 && wanDelay >0)
 				delay = wlanDelay + wanDelay;
 		}
-		else{
+		//mobile device to edge orchestrator
+		else if(destDeviceId == SimSettings.EDGE_ORCHESTRATOR_ID){
+			delay = getWlanUploadDelay(accessPointLocation, CloudSim.clock()) +
+					SimSettings.getInstance().getInternalLanDelay();
+		}
+		//mobile device to edge device (wifi access point)
+		else if (destDeviceId == SimSettings.GENERIC_EDGE_DEVICE_ID) {
 			delay = getWlanUploadDelay(accessPointLocation, CloudSim.clock());
-			
-			//all requests are send to edge orchestrator first than redirected related VM
-			delay += (SimSettings.getInstance().getInternalLanDelay() * 2);
 		}
 		
 		return delay;
@@ -91,16 +94,23 @@ public class MM1Queue extends NetworkModel {
     */
 	@Override
 	public double getDownloadDelay(int sourceDeviceId, int destDeviceId) {
+		//Special Case -> edge orchestrator to edge device
+		if(sourceDeviceId == SimSettings.EDGE_ORCHESTRATOR_ID &&
+				destDeviceId == SimSettings.GENERIC_EDGE_DEVICE_ID){
+			return SimSettings.getInstance().getInternalLanDelay();
+		}
+
 		double delay = 0;
 		Location accessPointLocation = SimManager.getInstance().getMobilityModel().getLocation(destDeviceId,CloudSim.clock());
 		
-		//if source device is the cloud datacenter, both wan and wlan delay should be considered
+		//cloud server to mobile device
 		if(sourceDeviceId == SimSettings.CLOUD_DATACENTER_ID){
 			double wlanDelay = getWlanDownloadDelay(accessPointLocation, CloudSim.clock());
 			double wanDelay = getWanDownloadDelay(accessPointLocation, CloudSim.clock() + wlanDelay);
 			if(wlanDelay > 0 && wanDelay >0)
 				delay = wlanDelay + wanDelay;
 		}
+		//edge device (wifi access point) to mobile device
 		else{
 			delay = getWlanDownloadDelay(accessPointLocation, CloudSim.clock());
 			

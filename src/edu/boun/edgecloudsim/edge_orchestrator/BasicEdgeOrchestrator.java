@@ -44,7 +44,23 @@ public class BasicEdgeOrchestrator extends EdgeOrchestrator {
 	}
 
 	@Override
-	public EdgeVM selectVm(Task task) {
+	public int getDeviceToOffload(Task task) {
+		int result = SimSettings.GENERIC_EDGE_DEVICE_ID;
+		if(!simScenario.equals("SINGLE_TIER")){
+			//decide to use cloud or cloudlet VM
+			int CloudVmPicker = SimUtils.getRandomNumber(0, 100);
+			
+			if(CloudVmPicker <= SimSettings.getInstance().getTaskLookUpTable()[task.getTaskType().ordinal()][1])
+				result = SimSettings.CLOUD_DATACENTER_ID;
+			else
+				result = SimSettings.EDGE_ORCHESTRATOR_ID;
+		}
+		
+		return result;
+	}
+	
+	@Override
+	public EdgeVM getVmToOffload(Task task) {
 		if(simScenario.equals("TWO_TIER_WITH_EO"))
 			return selectVmOnLoadBalancer(task);
 		else

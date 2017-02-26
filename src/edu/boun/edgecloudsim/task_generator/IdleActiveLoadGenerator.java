@@ -86,17 +86,8 @@ public class IdleActiveLoadGenerator extends LoadGeneratorModel{
 					virtualTime = activePeriodStartTime;
 					continue;
 				}
-
-				boolean requireCloud = false;
-				if(!simScenario.equals("SINGLE_TIER")){
-					//decide to use cloud or cloudlet VM
-					int CloudVmPicker = SimUtils.getRandomNumber(0, 100);
-					
-					if(CloudVmPicker <= SimSettings.getInstance().getTaskLookUpTable()[randomTaskType.ordinal()][1])
-						requireCloud = true;
-				}
 				
-				taskList.add(new EdgeTask(i,randomTaskType, virtualTime, requireCloud, poissonRngList));
+				taskList.add(new EdgeTask(i,randomTaskType, virtualTime, poissonRngList));
 			}
 		}
 	}

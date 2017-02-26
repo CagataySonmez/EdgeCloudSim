@@ -34,7 +34,6 @@ public class mainApp {
 		
 		//enable console ourput and file output of this application
 		SimLogger.enablePrintLog();
-		SimLogger.enableFileLog();
 		
 		int iterationNumber = 1;
 		String configFile = "";
@@ -64,8 +63,10 @@ public class mainApp {
 			System.exit(0);
 		}
 		
-		if(SimLogger.isFileLogEnabled())
+		if(SS.getFileLoggingEnabled()){
+			SimLogger.enableFileLog();
 			SimUtils.cleanOutputFolder(outputFolder);
+		}
 		
 		DateFormat df = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 		Date SimulationStartDate = Calendar.getInstance().getTime();

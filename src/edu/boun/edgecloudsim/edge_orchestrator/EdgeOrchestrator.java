@@ -31,7 +31,12 @@ public abstract class EdgeOrchestrator {
 	public abstract void initialize();
 	
 	/*
+	 * decides where to offload
+	 */
+	public abstract int getDeviceToOffload(Task task);
+	
+	/*
 	 * returns proper VM from the related edge orchestrator point of view
 	 */
-	public abstract EdgeVM selectVm(Task task);
+	public abstract EdgeVM getVmToOffload(Task task);
 }
