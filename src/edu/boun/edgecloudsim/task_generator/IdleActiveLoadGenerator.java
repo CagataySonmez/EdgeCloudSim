@@ -20,7 +20,6 @@ import org.apache.commons.math3.distribution.ExponentialDistribution;
 import edu.boun.edgecloudsim.core.SimSettings;
 import edu.boun.edgecloudsim.core.SimSettings.APP_TYPES;
 import edu.boun.edgecloudsim.utils.EdgeTask;
-import edu.boun.edgecloudsim.utils.PoissonDistr;
 import edu.boun.edgecloudsim.utils.SimLogger;
 import edu.boun.edgecloudsim.utils.SimUtils;
 
@@ -35,16 +34,16 @@ public class IdleActiveLoadGenerator extends LoadGeneratorModel{
 		taskList = new ArrayList<EdgeTask>();
 		
 		//exponential number generator for file input size, file output size and task length
-		PoissonDistr[][] poissonRngList = new PoissonDistr[SimSettings.APP_TYPES.values().length][3];
+		ExponentialDistribution[][] expRngList = new ExponentialDistribution[SimSettings.APP_TYPES.values().length][3];
 		
 		//create random number generator for each place
 		for(int i=0; i<SimSettings.APP_TYPES.values().length; i++) {
 			if(SimSettings.getInstance().getTaskLookUpTable()[i][0] ==0)
-				break;
+				continue;
 			
-			poissonRngList[i][0] = new PoissonDistr(SimSettings.getInstance().getTaskLookUpTable()[i][5]);
-			poissonRngList[i][1] = new PoissonDistr(SimSettings.getInstance().getTaskLookUpTable()[i][6]);
-			poissonRngList[i][2] = new PoissonDistr(SimSettings.getInstance().getTaskLookUpTable()[i][7]);
+			expRngList[i][0] = new ExponentialDistribution(SimSettings.getInstance().getTaskLookUpTable()[i][5]);
+			expRngList[i][1] = new ExponentialDistribution(SimSettings.getInstance().getTaskLookUpTable()[i][6]);
+			expRngList[i][2] = new ExponentialDistribution(SimSettings.getInstance().getTaskLookUpTable()[i][7]);
 		}
 		
 		//Each mobile device utilizes an app type (task type)
@@ -87,7 +86,7 @@ public class IdleActiveLoadGenerator extends LoadGeneratorModel{
 					continue;
 				}
 				
-				taskList.add(new EdgeTask(i,randomTaskType, virtualTime, poissonRngList));
+				taskList.add(new EdgeTask(i,randomTaskType, virtualTime, expRngList));
 			}
 		}
 	}

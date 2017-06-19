@@ -37,7 +37,7 @@ public class SimSettings {
 	//if you want to add different types on your config file,
 	//you may modify current types or add new types here. 
 	public static enum VM_TYPES { EDGE_VM, CLOUD_VM }
-	public static enum APP_TYPES { FACE_REC_APP, HEALTH_APP, HEAVY_COMP_APP, VIDEO_GAME_APP, SIMPLE_SERVICE_APP }
+	public static enum APP_TYPES { AUGMENTED_REALITY, HEALTH_APP, HEAVY_COMP_APP, INFOTAINMENT_APP }
 	public static enum PLACE_TYPES { ATTRACTIVENESS_L1, ATTRACTIVENESS_L2, ATTRACTIVENESS_L3 }
 	
 	//predifined IDs for cloud components.
@@ -52,10 +52,10 @@ public class SimSettings {
 	//delimiter for output file.
 	public static String DELIMITER = ";";
 	
-    private double SIMULATION_TIME; //hours unit in properties file
-    private double WARM_UP_PERIOD; //seconds unit in properties file
-    private double INTERVAL_TO_GET_VM_LOAD_LOG; //seconds unit in properties file
-    private double INTERVAL_TO_GET_VM_LOCATION_LOG; //seconds unit in properties file
+    private double SIMULATION_TIME; //minutes unit in properties file
+    private double WARM_UP_PERIOD; //minutes unit in properties file
+    private double INTERVAL_TO_GET_VM_LOAD_LOG; //minutes unit in properties file
+    private double INTERVAL_TO_GET_VM_LOCATION_LOG; //minutes unit in properties file
     private boolean FILE_LOG_ENABLED; //boolean to check file logging option
     private boolean DEEP_FILE_LOG_ENABLED; //boolean to check deep file logging option
 
@@ -92,7 +92,7 @@ public class SimSettings {
     // [7] avg task length (MI)
     // [8] required # of cores
     // [9] vm utilization (%)
-    private double[][] taskLookUpTable = new double[APP_TYPES.values().length][10];
+    private double[][] taskLookUpTable = new double[APP_TYPES.values().length][11];
 
 	private SimSettings() {
 	}
@@ -119,10 +119,10 @@ public class SimSettings {
 			Properties prop = new Properties();
 			prop.load(input);
 
-			SIMULATION_TIME = 3600 * Double.parseDouble(prop.getProperty("simulation_time")); //hours
-			WARM_UP_PERIOD = Double.parseDouble(prop.getProperty("warm_up_period")); //seconds
-			INTERVAL_TO_GET_VM_LOAD_LOG = Double.parseDouble(prop.getProperty("vm_load_check_interval")); //seconds
-			INTERVAL_TO_GET_VM_LOCATION_LOG = Double.parseDouble(prop.getProperty("vm_location_check_interval")); //seconds
+			SIMULATION_TIME = (double)60 * Double.parseDouble(prop.getProperty("simulation_time")); //seconds
+			WARM_UP_PERIOD = (double)60 * Double.parseDouble(prop.getProperty("warm_up_period")); //seconds
+			INTERVAL_TO_GET_VM_LOAD_LOG = (double)60 * Double.parseDouble(prop.getProperty("vm_load_check_interval")); //seconds
+			INTERVAL_TO_GET_VM_LOCATION_LOG = (double)60 * Double.parseDouble(prop.getProperty("vm_location_check_interval")); //seconds
 			FILE_LOG_ENABLED = Boolean.parseBoolean(prop.getProperty("file_log_enabled"));
 			DEEP_FILE_LOG_ENABLED = Boolean.parseBoolean(prop.getProperty("deep_file_log_enabled"));
 			
@@ -185,7 +185,7 @@ public class SimSettings {
 
 
 	/**
-	 * returns simulation time (in hours unit) from properties file
+	 * returns simulation time (in seconds unit) from properties file
 	 */
 	public double getSimulationTime()
 	{
@@ -430,9 +430,10 @@ public class SimSettings {
 				double task_length = Double.parseDouble(appElement.getElementsByTagName("task_length").item(0).getTextContent());
 				double required_core = Double.parseDouble(appElement.getElementsByTagName("required_core").item(0).getTextContent());
 				double vm_utilization = Double.parseDouble(appElement.getElementsByTagName("vm_utilization").item(0).getTextContent());
+				double delay_sensitivity = Double.parseDouble(appElement.getElementsByTagName("delay_sensitivity").item(0).getTextContent());
 				
-			    taskLookUpTable[appType.ordinal()][0] = usage_percentage; //usage percentage (%)
-			    taskLookUpTable[appType.ordinal()][1] = prob_cloud_selection; //prob. of selecting cloud (%)
+			    taskLookUpTable[appType.ordinal()][0] = usage_percentage; //usage percentage [0-100]
+			    taskLookUpTable[appType.ordinal()][1] = prob_cloud_selection; //prob. of selecting cloud [0-100]
 			    taskLookUpTable[appType.ordinal()][2] = poisson_interarrival; //poisson mean (sec)
 			    taskLookUpTable[appType.ordinal()][3] = active_period; //active period (sec)
 			    taskLookUpTable[appType.ordinal()][4] = idle_period; //idle period (sec)
@@ -440,7 +441,8 @@ public class SimSettings {
 			    taskLookUpTable[appType.ordinal()][6] = data_download; //avg data download (KB)
 			    taskLookUpTable[appType.ordinal()][7] = task_length; //avg task length (MI)
 			    taskLookUpTable[appType.ordinal()][8] = required_core; //required # of core
-			    taskLookUpTable[appType.ordinal()][9] = vm_utilization; //vm utilization (%)
+			    taskLookUpTable[appType.ordinal()][9] = vm_utilization; //vm utilization [0-100]
+			    taskLookUpTable[appType.ordinal()][10] = delay_sensitivity; //delay_sensitivity [0-1]
 			}
 	
 		} catch (Exception e) {

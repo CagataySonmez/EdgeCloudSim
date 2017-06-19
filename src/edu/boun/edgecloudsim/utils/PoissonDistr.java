@@ -1,7 +1,7 @@
 /*
  * Title:        EdgeCloudSim - Poisson Distribution
  * 
- * Description:  Poisson Distribution implementation
+ * Description:  Wrapper class for colt Poisson Distribution
  * 
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
@@ -9,28 +9,16 @@
 
 package edu.boun.edgecloudsim.utils;
 
-import java.util.Random;
+import java.util.Date;
+import java.util.concurrent.TimeUnit;
+
+import cern.jet.random.Poisson;
+import cern.jet.random.engine.MersenneTwister;
+import cern.jet.random.engine.RandomEngine;
 
 public class PoissonDistr {
-    /** The num gen. */
-    private final Random numGen;
-
-    /** The mean. */
-    private final double mean;
-
-    /**
-     * Creates a new exponential number generator.
-     * 
-     * @param seed the seed to be used.
-     * @param mean the mean for the distribution.
-     */
-    public PoissonDistr(long seed, double mean) {
-        if (mean <= 0.0) {
-            throw new IllegalArgumentException("Mean must be greater than 0.0");
-        }
-        numGen = new Random(seed);
-        this.mean = mean;
-    }
+	Poisson poisson;
+	RandomEngine engine;
 
     /**
      * Creates a new exponential number generator.
@@ -38,11 +26,17 @@ public class PoissonDistr {
      * @param mean the mean for the distribution.
      */
     public PoissonDistr(double mean) {
-        if (mean <= 0.0) {
-            throw new IllegalArgumentException("Mean must be greated than 0.0");
-        }
-        numGen = new Random(System.currentTimeMillis());
-        this.mean = mean;
+		engine = new MersenneTwister(new Date());
+		poisson = new Poisson(mean, engine);
+		
+		//always sleep for some milliseconds in order not to have same seed for iterative PoissonDistr contruction
+		try {
+			TimeUnit.MILLISECONDS.sleep(10);
+		} catch (InterruptedException e) {
+	    	SimLogger.printLine("impossible is occured! Poisson random number cannot be created!");
+			e.printStackTrace();
+	    	System.exit(0);
+		}
     }
 
     /**
@@ -51,13 +45,6 @@ public class PoissonDistr {
      * @return the next random number in the sequence
      */
         public double sample() {
-            double L = Math.exp(-mean);
-            int k = 0;
-            double p = 1.0;
-            do {
-                p = p * numGen.nextDouble();
-                k++;
-            } while (p > L);
-            return k - 1;
+        	return poisson.nextDouble();
     }
 }

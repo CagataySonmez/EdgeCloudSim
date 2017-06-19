@@ -53,7 +53,7 @@ public class BasicEdgeOrchestrator extends EdgeOrchestrator {
 			if(CloudVmPicker <= SimSettings.getInstance().getTaskLookUpTable()[task.getTaskType().ordinal()][1])
 				result = SimSettings.CLOUD_DATACENTER_ID;
 			else
-				result = SimSettings.EDGE_ORCHESTRATOR_ID;
+				result = SimSettings.GENERIC_EDGE_DEVICE_ID;
 		}
 		
 		return result;

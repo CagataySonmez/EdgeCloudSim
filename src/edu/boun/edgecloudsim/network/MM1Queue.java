@@ -65,7 +65,7 @@ public class MM1Queue extends NetworkModel {
     * source device is always mobile device in our simulation scenarios!
     */
 	@Override
-	public double getUploadDelay(int sourceDeviceId, int destDeviceId) {
+	public double getUploadDelay(int sourceDeviceId, int destDeviceId, double dataSize) {
 		double delay = 0;
 		Location accessPointLocation = SimManager.getInstance().getMobilityModel().getLocation(sourceDeviceId,CloudSim.clock());
 
@@ -93,7 +93,7 @@ public class MM1Queue extends NetworkModel {
     * destination device is always mobile device in our simulation scenarios!
     */
 	@Override
-	public double getDownloadDelay(int sourceDeviceId, int destDeviceId) {
+	public double getDownloadDelay(int sourceDeviceId, int destDeviceId, double dataSize) {
 		//Special Case -> edge orchestrator to edge device
 		if(sourceDeviceId == SimSettings.EDGE_ORCHESTRATOR_ID &&
 				destDeviceId == SimSettings.GENERIC_EDGE_DEVICE_ID){
@@ -155,11 +155,13 @@ public class MM1Queue extends NetworkModel {
 		avgTaskSize = avgTaskSize * (double)1000; //convert from KB to Byte
 		
 		Bps = bandwidth * (double)1000 / (double)8; //convert from Kbps to Byte per seconds
-	    lamda = ((double)1/(double)PoissonMean); //task per seconds
+                lamda = ((double)1/(double)PoissonMean); //task per seconds
 		mu = Bps / avgTaskSize ; //task per seconds
 		double result = (double)1 / (mu-lamda*(double)deviceCount);
 		
-		return result + propogationDelay;
+		result += propogationDelay;
+		
+		return (result > 5) ? -1 : result;
 	}
 	
 	private double getWlanDownloadDelay(Location accessPointLocation, double time) {
@@ -192,5 +194,29 @@ public class MM1Queue extends NetworkModel {
 				WanPoissonMean,
 				avgTaskInputSize,
 				getDeviceCount(accessPointLocation, time));
+	}
+
+	@Override
+	public void uploadStarted(Location accessPointLocation, int destDeviceId) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void uploadFinished(Location accessPointLocation, int destDeviceId) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void downloadStarted(Location accessPointLocation, int sourceDeviceId) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void downloadFinished(Location accessPointLocation, int sourceDeviceId) {
+		// TODO Auto-generated method stub
+		
 	}
 }

@@ -50,9 +50,9 @@ public class mainApp {
 		else{
 			SimLogger.printLine("Simulation setting file, output folder and iteration number are not provided! Using default ones...");
 			String configName = "default_config";
-			configFile = "config/" + configName + ".properties";
-			applicationsFile = "config/applications.xml";
-			edgeDevicesFile = "config/edge_devices.xml";
+			configFile = "config/sample_application/" + configName + ".properties";
+			applicationsFile = "config/sample_application/applications.xml";
+			edgeDevicesFile = "config/sample_application/edge_devices.xml";
 			outputFolder = "D:/" + configName + "/ite" + iterationNumber;
 		}
 
@@ -101,9 +101,13 @@ public class mainApp {
 						// Initialize the CloudSim library
 						CloudSim.init(num_user, calendar, trace_flag, 0.01);
 						
+						// Generate EdgeCloudsim Scenario Factory
 						ScenarioFactory sampleFactory = new SampleScenarioFactory(j,SS.getSimulationTime(), orchestratorPolicy, simScenario);
 						
+						// Generate EdgeCloudSim Simulation Manager
 						SimManager manager = new SimManager(sampleFactory, j, simScenario);
+						
+						// Start simulation
 						manager.startSimulation();
 					}
 					catch (Exception e)

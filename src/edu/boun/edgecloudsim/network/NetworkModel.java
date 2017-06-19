@@ -13,6 +13,8 @@
 
 package edu.boun.edgecloudsim.network;
 
+import edu.boun.edgecloudsim.utils.Location;
+
 public abstract class NetworkModel {
 	protected int numberOfMobileDevices;
 
@@ -28,10 +30,19 @@ public abstract class NetworkModel {
     /**
     * calculates the upload delay from source to destination device
     */
-	public abstract double getUploadDelay(int sourceDeviceId, int destDeviceId);
+	public abstract double getUploadDelay(int sourceDeviceId, int destDeviceId, double dataSize);
 	
     /**
     * calculates the download delay from source to destination device
     */
-	public abstract double getDownloadDelay(int sourceDeviceId, int destDeviceId);
+	public abstract double getDownloadDelay(int sourceDeviceId, int destDeviceId, double dataSize);
+	
+    /**
+    * Mobile device manager should inform network manager about the network operation
+    * This information may be important for some network delay models
+    */
+	public abstract void uploadStarted(Location accessPointLocation, int destDeviceId);
+	public abstract void uploadFinished(Location accessPointLocation, int destDeviceId);
+	public abstract void downloadStarted(Location accessPointLocation, int sourceDeviceId);
+	public abstract void downloadFinished(Location accessPointLocation, int sourceDeviceId);
 }

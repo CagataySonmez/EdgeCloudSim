@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.TreeMap;
 import java.util.Map.Entry;
 
+import org.apache.commons.math3.distribution.ExponentialDistribution;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -24,7 +25,6 @@ import org.w3c.dom.NodeList;
 
 import edu.boun.edgecloudsim.core.SimSettings;
 import edu.boun.edgecloudsim.utils.Location;
-import edu.boun.edgecloudsim.utils.PoissonDistr;
 import edu.boun.edgecloudsim.utils.SimLogger;
 import edu.boun.edgecloudsim.utils.SimUtils;
 
@@ -40,7 +40,7 @@ public class NomadicMobility extends MobilityModel {
 	public void initialize() {
 		treeMapArray = new ArrayList<TreeMap<Double, Location>>();
 		
-		PoissonDistr[] poissonRngList = new PoissonDistr[SimSettings.getInstance().getNumOfEdgeDatacenters()];
+		ExponentialDistribution[] expRngList = new ExponentialDistribution[SimSettings.getInstance().getNumOfEdgeDatacenters()];
 
 		//create random number generator for each place
 		Document doc = SimSettings.getInstance().getEdgeDevicesDocument();
@@ -52,7 +52,7 @@ public class NomadicMobility extends MobilityModel {
 			String attractiveness = location.getElementsByTagName("attractiveness").item(0).getTextContent();
 			SimSettings.PLACE_TYPES placeType = SimUtils.stringToPlace(attractiveness);
 			
-			poissonRngList[i] = new PoissonDistr(SimSettings.getInstance().getMobilityLookUpTable()[placeType.ordinal()]);
+			expRngList[i] = new ExponentialDistribution(SimSettings.getInstance().getMobilityLookUpTable()[placeType.ordinal()]);
 		}
 		
 		//initialize tree maps and position of mobile devices
@@ -79,7 +79,7 @@ public class NomadicMobility extends MobilityModel {
 			while(treeMap.lastKey() < SimSettings.getInstance().getSimulationTime()) {				
 				boolean placeFound = false;
 				int currentLocationId = treeMap.lastEntry().getValue().getServingWlanId();
-				double waitingTime = poissonRngList[currentLocationId].sample() * 60;
+				double waitingTime = expRngList[currentLocationId].sample();
 				
 				while(placeFound == false){
 					int newDatacenterId = SimUtils.getRandomNumber(0,SimSettings.getInstance().getNumOfEdgeDatacenters()-1);
@@ -95,7 +95,7 @@ public class NomadicMobility extends MobilityModel {
 						int y_pos = Integer.parseInt(location.getElementsByTagName("y_pos").item(0).getTextContent());
 						
 						treeMap.put(treeMap.lastKey()+waitingTime, new Location(placeType, wlan_id, x_pos, y_pos));
-					}					
+					}
 				}
 				if(!placeFound){
 					SimLogger.printLine("impossible is occured! location cannot be assigned to the device!");
