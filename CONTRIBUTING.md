@@ -3,13 +3,17 @@
 EdgeCloudSim is an open source project, so every contributor is welcome!
 EdgeCloudSim has not been fully tested regarding to many different scenarios.
 There may be some bugs which are waiting to be fixed.
-You can add new features on EdgeCloudSim such as:
+You can add new features on EdgeCloudSim as well.
+Here is the list of needed features:
 
-Integration of different access technologies such as 3G/4G
-Adding a realistic energy consumption model for mobile devices as well as data centers
-Adding a realistic cost model for data centers
-Implementing task migration among VMs or Data Centers
-And more...
+## Needed Features
+
+* Mist computing features (executing tasks on mobile device)
+* Incorporating cellular access network model into EdgeCloudSim (3G/4G/5G)
+* Task migration among the Edge or Cloud VMs
+* Energy consumption model for the mobile and edge devices as well as the cloud datacenters
+* Adding probabilistic network failure model by considering the congestion or other parameters such as the distance between mobile device and the WiFi access point.
+* Visual tool for displaying the network topology
 
 # Reporting Bugs
 
@@ -62,8 +66,8 @@ $ git remote add upstream git remote add upstream https://github.com/CagataySonm
 
 After this step, you will have two remotes on your local:
 
-_origin_: points to the forked project with read and write permissions.
-_upstream_: points to the main project with read permission only.
+- _origin_: points to the forked project with read and write permissions.
+- _upstream_: points to the main project with read permission only.
 
 
 ## Step 3: Push your modification to the origin repository
