@@ -1,6 +1,17 @@
-# EdgeCloudSim: An Environment for Performance Evaluation of Edge Computing Systems
+# EdgeCloudSim
 
-EdgeCloudSim provides a simulation environment specific to Edge Computing scenarios where it is possible to conduct experiments that considers both computational and networking resources. EdgeCloudSim is based on CloudSim but adds considerable functionality so that it can be efficiently used for Edge Computing scenarios. EdgeCloudSim is an open source tool. If you want to use EdgeCloudSim in your research work, please cite our paper [[1]](http://ieeexplore.ieee.org/document/7946405/).
+EdgeCloudSim provides a simulation environment specific to Edge Computing scenarios where it is possible to conduct experiments that considers both computational and networking resources. EdgeCloudSim is based on CloudSim but adds considerable functionality so that it can be efficiently used for Edge Computing scenarios. EdgeCloudSim is an open source tool and any contributions are welcome. If you want to contribute EdgeCloudSim please check below feature list and the [contributing guidelines](/CONTRIBUTING.md). If you want to use EdgeCloudSim in your research work, please cite our paper [[1]](http://ieeexplore.ieee.org/document/7946405/).
+
+## Needed Features
+
+* Mist computing features (executing tasks on mobile device)
+* Incorporating cellular access network model into EdgeCloudSim (3G/4G/5G)
+* Task migration among the Edge or Cloud VMs
+* Energy consumption model for the mobile and edge devices as well as the cloud datacenters
+* Adding probabilistic network failure model by considering the congestion or other parameters such as the distance between mobile device and the WiFi access point.
+* Visual tool for displaying the network topology
+
+# EdgeCloudSim: An Environment for Performance Evaluation of Edge Computing Systems
 
 EdgeCloudSim provides a modular architecture to provide support for a variety of crucial functionalities such as network modeling specific to WLAN and WAN, device mobility model, realistic and tunable load generator. As depicted in Figure 2, in the current EdgeCloudSim version there are five main modules available, namely: Core Simulation, Networking, Load Generator, Mobility and Edge Orchestrator. To ease fast prototyping efforts, each module contains a default implementation that can be extended easily.
 
