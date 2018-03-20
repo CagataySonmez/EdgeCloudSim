@@ -1,6 +1,6 @@
 # EdgeCloudSim
 
-EdgeCloudSim provides a simulation environment specific to Edge Computing scenarios where it is possible to conduct experiments that considers both computational and networking resources. EdgeCloudSim is based on CloudSim but adds considerable functionality so that it can be efficiently used for Edge Computing scenarios. EdgeCloudSim is an open source tool and any contributions are welcome. If you want to contribute EdgeCloudSim please check below feature list and the [contributing guidelines](/CONTRIBUTING.md). If you want to use EdgeCloudSim in your research work, please cite our paper [[1]](http://ieeexplore.ieee.org/document/7946405/).
+EdgeCloudSim provides a simulation environment specific to Edge Computing scenarios where it is possible to conduct experiments that considers both computational and networking resources. EdgeCloudSim is based on CloudSim but adds considerable functionality so that it can be efficiently used for Edge Computing scenarios. EdgeCloudSim is an open source tool and any contributions are welcome. If you want to contribute EdgeCloudSim, please check below feature list and the [contributing guidelines](/CONTRIBUTING.md). If you want to use EdgeCloudSim in your research work, please cite our paper [[1]](http://ieeexplore.ieee.org/document/7946405/).
 
 ## Needed Features
 
@@ -13,7 +13,7 @@ EdgeCloudSim provides a simulation environment specific to Edge Computing scenar
 
 # EdgeCloudSim: An Environment for Performance Evaluation of Edge Computing Systems
 
-EdgeCloudSim provides a modular architecture to provide support for a variety of crucial functionalities such as network modeling specific to WLAN and WAN, device mobility model, realistic and tunable load generator. As depicted in Figure 2, in the current EdgeCloudSim version there are five main modules available, namely: Core Simulation, Networking, Load Generator, Mobility and Edge Orchestrator. To ease fast prototyping efforts, each module contains a default implementation that can be extended easily.
+EdgeCloudSim provides a modular architecture to provide support for a variety of crucial functionalities such as network modeling specific to WLAN and WAN, device mobility model, realistic and tunable load generator. As depicted in Figure 2, the current EdgeCloudSim version has five main modules available: Core Simulation, Networking, Load Generator, Mobility and Edge Orchestrator. To ease fast prototyping efforts, each module contains a default implementation that can be easily extended.
 
 <p align="center">
   <img src="/doc/images/edgecloudsim_diagram.png" width="55%">
@@ -23,28 +23,28 @@ EdgeCloudSim provides a modular architecture to provide support for a variety of
 </p>
 
 ## Mobility Module
-The mobility module manages the location of edge devices and clients. Since CloudSim focuses on the conventional cloud computing principles, the mobility is not considered in the framework. In our design, each mobile device has x and y coordinates which are updated according to the dynamically managed hash table. By default, we provide a nomadic mobility model but different mobility models can be implemented by extending abstract MobilityModel class.
+The mobility module manages the location of edge devices and clients. Since CloudSim focuses on the conventional cloud computing principles, the mobility is not considered in the framework. In our design, each mobile device has x and y coordinates which are updated according to the dynamically managed hash table. By default, we provide a nomadic mobility model, but different mobility models can be implemented by extending abstract MobilityModel class.
 
 <p align="center">
   <img src="/doc/images/mobility_module.png" width="55%">
 </p>
 
 ## Load Generator Module
-The load generator module is responsible for generating tasks for the given configuration. By default, the tasks are generated according to a Poisson distribution via active/idle task generation pattern. If other task generation pattern is required, abstract LoadGeneratorModel class should be extended.
+The load generator module is responsible for generating tasks for the given configuration. By default, the tasks are generated according to a Poisson distribution via active/idle task generation pattern. If other task generation patterns are required, abstract LoadGeneratorModel class should be extended.
 
 <p align="center">
   <img src="/doc/images/task_generator_module.png" width="50%">
 </p>
 
 ## Networking Module
-The networking module particularly handles the transmission delay in the WLAN and WAN by considering both upload and download data. The default implementation of the networking module is based on a single server queue model. Users o EdgeCloudSim can incorporate their own network behavior models by extending abstract NetworkModel class.
+The networking module particularly handles the transmission delay in the WLAN and WAN by considering both upload and download data. The default implementation of the networking module is based on a single server queue model. Users of EdgeCloudSim can incorporate their own network behavior models by extending abstract NetworkModel class.
 
 <p align="center">
   <img src="/doc/images/network_module.png" width="55%">
 </p>
 
 ## Edge Orchestrator Module
-The edge orchestrator module is the decision maker of the system. It uses the information collected from the other modules to decide how and where to handle incoming client requests. In the first version, we simply use a probabilistic approach to decide where to handle incoming tasks but more realistic edge orchestrator can be added by extending abstract EdgeOrchestrator class.
+The edge orchestrator module is the decision maker of the system. It uses the information collected from the other modules to decide how and where to handle incoming client requests. In the first version, we simply use a probabilistic approach to decide where to handle incoming tasks, but more realistic edge orchestrator can be added by extending abstract EdgeOrchestrator class.
 
 <p align="center">
   <img src="/doc/images/edge_orchestrator_module.png" width="65%">
@@ -64,7 +64,7 @@ EdgeCloudSim uses a factory pattern making easier to integrate new models mentio
 </p>
 
 ## Ease of Use
-At the beginning of our study, we observed that too many parameters are used in the simulations and managing these parameters programmatically is very difficult.
+At the beginning of our study, we observed that too many parameters are used in the simulations and managing these parameters programmatically is difficult.
 As a solution, we propose to use configuration files to manage the parameters.
 EdgeCloudSim reads parameters dynamically from the following files:
 - **config.properties:** Simulation settings are managed in configuration file
@@ -76,9 +76,9 @@ EdgeCloudSim reads parameters dynamically from the following files:
 </p>
 
 ## Compilation and Running
-To compile sample application, *compile.sh* script which is located in *scripts/sample_application* folder can be used. You can rewrite similar script for your own application by modifying the arguments of javac command in way to declare the java file which includes your main method. Please note that, this script can run on Linux based systems, including Mac OS. You can also use your favorite IDE (eclipse, netbeans etc.) to compile your project.
+To compile sample application, *compile.sh* script which is located in *scripts/sample_application* folder can be used. You can rewrite similar script for your own application by modifying the arguments of javac command in way to declare the java file which includes your main method. Please note that this script can run on Linux based systems, including Mac OS. You can also use your favorite IDE (eclipse, netbeans etc.) to compile your project.
 
-In order to run multiple sample_application scenarios in parallel, you can use *run_scenarios.sh* script which is located in *scripts/sample_application* folder. To run your own application, you need to modify java command in *runner.sh* script in a way to declare the java class which includes your main method. The details of using this script is explained in [this](/wiki/How-to-run-EdgeCloudSim-application-in-parallel) wiki page.
+In order to run multiple sample_application scenarios in parallel, you can use *run_scenarios.sh* script which is located in *scripts/sample_application* folder. To run your own application, modify the java command in *runner.sh* script in a way to declare the java class which includes your main method. The details of using this script is explained in [this](/wiki/How-to-run-EdgeCloudSim-application-in-parallel) wiki page.
 
 You can also monitor each process via the output files located under *scripts/sample_application/output/date* folder. For example:
 ```
@@ -87,7 +87,7 @@ tail -f output/date/ite_1.log
 ```
 
 ## Analyzing the Results
-At the end of each iteration, simulation results will be compressed in the *output/date/ite_n.tgz* files. When you extract these tgz files, you would see lots of log file in csv format. You can find matlab files which can plot graphics by using these files under *scripts/sample_application/matlab* folder. You can also write other scripts (e.g. python scripts) with the same manner of matlab plotter files.
+At the end of each iteration, simulation results will be compressed in the *output/date/ite_n.tgz* files. When you extract these tgz files, you will see lots of log file in csv format. You can find matlab files which can plot graphics by using these files under *scripts/sample_application/matlab* folder. You can also write other scripts (e.g. python scripts) with the same manner of matlab plotter files.
 
 ## Example Output of EdgeCloudSim
 You can plot lots of graphics by using the result of EdgeCloudSim. Some examples are given below:
