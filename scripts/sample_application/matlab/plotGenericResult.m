@@ -9,7 +9,8 @@ function [] = plotGenericResult(rowOfset, columnOfset, yLabel, appType, calculat
     numOfMobileDevices = (endOfMobileDeviceLoop - startOfMobileDeviceLoop)/stepOfMobileDeviceLoop + 1;
 
     all_results = zeros(numOfSimulations, size(scenarioType,2), numOfMobileDevices);
-    min_max_results = zeros(2, size(scenarioType,2), numOfMobileDevices);
+    min_results = zeros(size(scenarioType,2), numOfMobileDevices);
+    max_results = zeros(size(scenarioType,2), numOfMobileDevices);
     
     if ~exist('appType','var')
         appType = 'ALL_APPS';
@@ -60,8 +61,8 @@ function [] = plotGenericResult(rowOfset, columnOfset, yLabel, appType, calculat
                 CI(2) = 0;
             end
 
-            min_max_results(1,i,j) = results(i,j) - CI(1);
-            min_max_results(2,i,j) = CI(2) - results(i,j);
+            min_results(i,j) = results(i,j) - CI(1);
+            max_results(i,j) = CI(2) - results(i,j);
         end
     end
     
@@ -90,7 +91,7 @@ function [] = plotGenericResult(rowOfset, columnOfset, yLabel, appType, calculat
         
         for j=1:size(scenarioType,2)
             if(getConfiguration(19) == 1)
-                errorbar(types, results(j,:), min_max_results(1,j,:),min_max_results(2,j,:),':k','color',getConfiguration(20+j),'LineWidth',1.5);
+                errorbar(types, results(j,:), min_results(j,:),max_results(j,:),':k','color',getConfiguration(20+j),'LineWidth',1.5);
             else
                 plot(types, results(j,:),':k','color',getConfiguration(20+j),'LineWidth',1.5);
             end
@@ -108,8 +109,7 @@ function [] = plotGenericResult(rowOfset, columnOfset, yLabel, appType, calculat
             end
             hold on;
         end
-        
-        %set(gcf, 'Position',getConfiguration(28));
+       
     end
     lgnd = legend(getConfiguration(6),'Location','NorthWest');
     if(getConfiguration(20) == 1)
