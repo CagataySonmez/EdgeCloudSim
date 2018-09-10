@@ -19,12 +19,12 @@ package edu.boun.edgecloudsim.edge_client;
 import org.cloudbus.cloudsim.UtilizationModel;
 
 import edu.boun.edgecloudsim.core.SimSettings;
+import edu.boun.edgecloudsim.utils.SimLogger;
 
 public class CpuUtilizationModel_Custom implements UtilizationModel {
-	private SimSettings.APP_TYPES taskType;
+	private Task task;
 	
-	public CpuUtilizationModel_Custom(SimSettings.APP_TYPES _taskType){
-		taskType=_taskType;
+	public CpuUtilizationModel_Custom(){
 	}
 	
 	/*
@@ -33,10 +33,27 @@ public class CpuUtilizationModel_Custom implements UtilizationModel {
 	 */
 	@Override
 	public double getUtilization(double time) {
-		return SimSettings.getInstance().getTaskLookUpTable()[taskType.ordinal()][9];
+		int index = 9;
+		if(task.getAssociatedDatacenterId() == SimSettings.CLOUD_DATACENTER_ID)
+			index = 10;
+
+		return SimSettings.getInstance().getTaskLookUpTable()[task.getTaskType()][index];
+	}
+	
+	public void setTask(Task _task){
+		task=_task;
 	}
 	
 	public double predictUtilization(SimSettings.VM_TYPES _vmType){
-		return SimSettings.getInstance().getTaskLookUpTable()[taskType.ordinal()][9];
+		int index = 0;
+		if(_vmType == SimSettings.VM_TYPES.EDGE_VM)
+			index = 9;
+		else if(_vmType == SimSettings.VM_TYPES.CLOUD_VM)
+			index = 10;
+		else{
+			SimLogger.printLine("Unknown VM Type! Terminating simulation...");
+			System.exit(0);
+		}
+		return SimSettings.getInstance().getTaskLookUpTable()[task.getTaskType()][index];
 	}
 }

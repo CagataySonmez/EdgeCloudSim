@@ -41,4 +41,9 @@ public abstract class LoadGeneratorModel {
 	 * fill task list according to related task generation model
 	 */
 	public abstract void initializeModel();
+	
+	/*
+	 * returns the task type (index) that the mobile device uses
+	 */
+	public abstract int getTaskTypeOfDevice(int deviceId);
 }

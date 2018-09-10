@@ -22,12 +22,9 @@ public class EdgeVM extends Vm {
 			long bw, long size, String vmm, CloudletScheduler cloudletScheduler) {
 		super(id, userId, mips, numberOfPes, ram, bw, size, vmm, cloudletScheduler);
 
+		type = SimSettings.VM_TYPES.EDGE_VM;
 	}
 
-	public void setVmType(SimSettings.VM_TYPES _type){
-		type=_type;
-	}
-	
 	public SimSettings.VM_TYPES getVmType(){
 		return type;
 	}

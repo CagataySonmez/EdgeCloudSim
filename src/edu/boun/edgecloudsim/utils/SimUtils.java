@@ -14,8 +14,6 @@ import java.util.Date;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import edu.boun.edgecloudsim.core.SimSettings;
-
 public class SimUtils {
 
     public static final Random RNG = new Random(System.currentTimeMillis());
@@ -83,21 +81,5 @@ public class SimUtils {
 			result += diffInMilli + ((diffInMilli>1 == true) ? " Milli Seconds" : " Milli Second");
 		
 		return result;
-	}
-	
-	public static SimSettings.PLACE_TYPES stringToPlace(String attractiveness){
-		SimSettings.PLACE_TYPES placeType = null;
-		if(attractiveness.equals("1"))
-			placeType = SimSettings.PLACE_TYPES.ATTRACTIVENESS_L1;
-		else if(attractiveness.equals("2"))
-			placeType = SimSettings.PLACE_TYPES.ATTRACTIVENESS_L2;
-		else if(attractiveness.equals("3"))
-			placeType = SimSettings.PLACE_TYPES.ATTRACTIVENESS_L3;
-		else{
-			SimLogger.printLine("Unknown attractiveness level! Terminating simulation...");
-	    	System.exit(0);
-		}
-		
-		return placeType;
 	}
 }

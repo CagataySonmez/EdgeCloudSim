@@ -1,0 +1,1 @@
+/home/cagatay/Desktop/ecs/EdgeCloudSim/scripts/sample_app2/runner.sh /home/cagatay/Desktop/ecs/EdgeCloudSim/scripts/sample_app2/output/30-08-2018_15-29 default_config edge_devices.xml applications.xml 1

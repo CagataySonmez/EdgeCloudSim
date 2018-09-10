@@ -13,13 +13,10 @@
 
 package edu.boun.edgecloudsim.core;
 
-import java.util.List;
-
-import org.cloudbus.cloudsim.Host;
-import org.cloudbus.cloudsim.UtilizationModel;
-import org.cloudbus.cloudsim.VmAllocationPolicy;
-
+import edu.boun.edgecloudsim.cloud_server.CloudServerManager;
+import edu.boun.edgecloudsim.edge_client.MobileDeviceManager;
 import edu.boun.edgecloudsim.edge_orchestrator.EdgeOrchestrator;
+import edu.boun.edgecloudsim.edge_server.EdgeServerManager;
 import edu.boun.edgecloudsim.mobility.MobilityModel;
 import edu.boun.edgecloudsim.task_generator.LoadGeneratorModel;
 import edu.boun.edgecloudsim.network.NetworkModel;
@@ -46,12 +43,17 @@ public interface ScenarioFactory {
 	public NetworkModel getNetworkModel();
 
 	/**
-	 * provides abstract CPU Utilization Model
+	 * provides abstract Edge Server Model
 	 */
-	public UtilizationModel getCpuUtilizationModel(SimSettings.APP_TYPES _taskType);
+	public EdgeServerManager getEdgeServerManager();
 
 	/**
-	 * provides abstract Vm Allocation Policy
+	 * provides abstract Cloud Server Model
 	 */
-	public VmAllocationPolicy getVmAllocationPolicy(List<? extends Host> list, int dataCenterIndex);
+	public CloudServerManager getCloudServerManager();
+
+	/**
+	 * provides abstract Mobile Device Manager Model
+	 */
+	public MobileDeviceManager getMobileDeviceManager() throws Exception;
 }

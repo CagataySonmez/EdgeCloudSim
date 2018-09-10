@@ -13,7 +13,9 @@
 package edu.boun.edgecloudsim.core;
 
 import java.io.IOException;
+import java.util.List;
 
+import org.cloudbus.cloudsim.Host;
 import org.cloudbus.cloudsim.Log;
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.core.SimEntity;
@@ -21,7 +23,8 @@ import org.cloudbus.cloudsim.core.SimEvent;
 
 import edu.boun.edgecloudsim.edge_orchestrator.EdgeOrchestrator;
 import edu.boun.edgecloudsim.edge_server.EdgeServerManager;
-import edu.boun.edgecloudsim.edge_server.VmAllocationPolicy_Custom;
+import edu.boun.edgecloudsim.edge_server.EdgeVmAllocationPolicy_Custom;
+import edu.boun.edgecloudsim.cloud_server.CloudServerManager;
 import edu.boun.edgecloudsim.edge_client.MobileDeviceManager;
 import edu.boun.edgecloudsim.mobility.MobilityModel;
 import edu.boun.edgecloudsim.task_generator.LoadGeneratorModel;
@@ -36,21 +39,26 @@ public class SimManager extends SimEntity {
 	private static final int PRINT_PROGRESS = 3;
 	private static final int STOP_SIMULATION = 4;
 	
+	private String simScenario;
+	private String orchestratorPolicy;
 	private int numOfMobileDevice;
 	private NetworkModel networkModel;
 	private MobilityModel mobilityModel;
 	private ScenarioFactory scenarioFactory;
 	private EdgeOrchestrator edgeOrchestrator;
 	private EdgeServerManager edgeServerManager;
+	private CloudServerManager cloudServerManager;
 	private LoadGeneratorModel loadGeneratorModel;
 	private MobileDeviceManager mobileDeviceManager;
 	
 	private static SimManager instance = null;
 	
-	public SimManager(ScenarioFactory _scenarioFactory, int _numOfMobileDevice, String _simScenario) throws Exception {
+	public SimManager(ScenarioFactory _scenarioFactory, int _numOfMobileDevice, String _simScenario, String _orchestratorPolicy) throws Exception {
 		super("SimManager");
+		simScenario = _simScenario;
 		scenarioFactory = _scenarioFactory;
 		numOfMobileDevice = _numOfMobileDevice;
+		orchestratorPolicy = _orchestratorPolicy;
 
 		SimLogger.print("Creating tasks...");
 		loadGeneratorModel = scenarioFactory.getLoadGeneratorModel();
@@ -71,10 +79,16 @@ public class SimManager extends SimEntity {
 		edgeOrchestrator.initialize();
 		
 		//Create Physical Servers
-		edgeServerManager = new EdgeServerManager();
+		edgeServerManager = scenarioFactory.getEdgeServerManager();
+		edgeServerManager.initialize();
+		
+		//Create Physical Servers on cloud
+		cloudServerManager = scenarioFactory.getCloudServerManager();
+		cloudServerManager.initialize();
 
 		//Create Client Manager
-		mobileDeviceManager = new MobileDeviceManager();
+		mobileDeviceManager = scenarioFactory.getMobileDeviceManager();
+		mobileDeviceManager.initialize();
 		
 		instance = this;
 	}
@@ -90,11 +104,23 @@ public class SimManager extends SimEntity {
 		//Starts the simulation
 		SimLogger.print(super.getName()+" is starting...");
 		
-		//Start Edge Servers & Generate VMs
+		//Start Edge Datacenters & Generate VMs
 		edgeServerManager.startDatacenters();
 		edgeServerManager.createVmList(mobileDeviceManager.getId());
 		
+		//Start Edge Datacenters & Generate VMs
+		cloudServerManager.startDatacenters();
+		cloudServerManager.createVmList(mobileDeviceManager.getId());
+
 		CloudSim.startSimulation();
+	}
+
+	public String getSimulationScenario(){
+		return simScenario;
+	}
+
+	public String getOrchestratorPolicy(){
+		return orchestratorPolicy;
 	}
 	
 	public ScenarioFactory getScenarioFactory(){
@@ -117,19 +143,38 @@ public class SimManager extends SimEntity {
 		return edgeOrchestrator;
 	}
 	
-	public EdgeServerManager getLocalServerManager(){
+	public EdgeServerManager getEdgeServerManager(){
 		return edgeServerManager;
 	}
-
+	
+	public CloudServerManager getCloudServerManager(){
+		return cloudServerManager;
+	}
+	
+	public LoadGeneratorModel getLoadGeneratorModel(){
+		return loadGeneratorModel;
+	}
+	
 	public MobileDeviceManager getMobileDeviceManager(){
 		return mobileDeviceManager;
 	}
 	
 	@Override
 	public void startEntity() {
-		for(int i=0; i<edgeServerManager.getDatacenterList().size(); i++)
-			mobileDeviceManager.submitVmList(edgeServerManager.getVmList(i));
+		int hostCounter=0;
+
+		for(int i= 0; i<edgeServerManager.getDatacenterList().size(); i++) {
+			List<? extends Host> list = edgeServerManager.getDatacenterList().get(i).getHostList();
+			for (int j=0; j < list.size(); j++) {
+				mobileDeviceManager.submitVmList(edgeServerManager.getVmList(hostCounter));
+				hostCounter++;
+			}
+		}
 		
+		for(int i= 0; i<SimSettings.getInstance().getNumOfCoudHost(); i++) {
+			mobileDeviceManager.submitVmList(cloudServerManager.getVmList(i));
+		}
+
 		//Creation of tasks are scheduled here!
 		for(int i=0; i< loadGeneratorModel.getTaskList().size(); i++)
 			schedule(getId(), loadGeneratorModel.getTaskList().get(i).startTime, CREATE_TASK, loadGeneratorModel.getTaskList().get(i));
@@ -158,13 +203,17 @@ public class SimManager extends SimEntity {
 				break;
 			case CHECK_ALL_VM:
 				int totalNumOfVm = SimSettings.getInstance().getNumOfEdgeVMs();
-				if(VmAllocationPolicy_Custom.getCreatedVmNum() != totalNumOfVm){
+				if(EdgeVmAllocationPolicy_Custom.getCreatedVmNum() != totalNumOfVm){
 					SimLogger.printLine("All VMs cannot be created! Terminating simulation...");
 					System.exit(0);
 				}
 				break;
 			case GET_LOAD_LOG:
-				SimLogger.getInstance().addVmUtilizationLog(CloudSim.clock(),edgeServerManager.getAvgUtilization());
+				SimLogger.getInstance().addVmUtilizationLog(
+						CloudSim.clock(),
+						edgeServerManager.getAvgUtilization(),
+						cloudServerManager.getAvgUtilization());
+				
 				schedule(getId(), SimSettings.getInstance().getVmLoadLogInterval(), GET_LOAD_LOG);
 				break;
 			case PRINT_PROGRESS:
@@ -175,6 +224,7 @@ public class SimManager extends SimEntity {
 					SimLogger.print(".");
 				if(CloudSim.clock() < SimSettings.getInstance().getSimulationTime())
 					schedule(getId(), SimSettings.getInstance().getSimulationTime()/100, PRINT_PROGRESS);
+
 				break;
 			case STOP_SIMULATION:
 				SimLogger.printLine("100");
@@ -196,5 +246,6 @@ public class SimManager extends SimEntity {
 	@Override
 	public void shutdownEntity() {
 		edgeServerManager.terminateDatacenters();
+		cloudServerManager.terminateDatacenters();
 	}
 }

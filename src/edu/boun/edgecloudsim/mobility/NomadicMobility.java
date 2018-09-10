@@ -50,9 +50,9 @@ public class NomadicMobility extends MobilityModel {
 			Element datacenterElement = (Element) datacenterNode;
 			Element location = (Element)datacenterElement.getElementsByTagName("location").item(0);
 			String attractiveness = location.getElementsByTagName("attractiveness").item(0).getTextContent();
-			SimSettings.PLACE_TYPES placeType = SimUtils.stringToPlace(attractiveness);
+			int placeTypeIndex = Integer.parseInt(attractiveness);
 			
-			expRngList[i] = new ExponentialDistribution(SimSettings.getInstance().getMobilityLookUpTable()[placeType.ordinal()]);
+			expRngList[i] = new ExponentialDistribution(SimSettings.getInstance().getMobilityLookUpTable()[placeTypeIndex]);
 		}
 		
 		//initialize tree maps and position of mobile devices
@@ -64,13 +64,13 @@ public class NomadicMobility extends MobilityModel {
 			Element datacenterElement = (Element) datacenterNode;
 			Element location = (Element)datacenterElement.getElementsByTagName("location").item(0);
 			String attractiveness = location.getElementsByTagName("attractiveness").item(0).getTextContent();
-			SimSettings.PLACE_TYPES placeType = SimUtils.stringToPlace(attractiveness);
+			int placeTypeIndex = Integer.parseInt(attractiveness);
 			int wlan_id = Integer.parseInt(location.getElementsByTagName("wlan_id").item(0).getTextContent());
 			int x_pos = Integer.parseInt(location.getElementsByTagName("x_pos").item(0).getTextContent());
 			int y_pos = Integer.parseInt(location.getElementsByTagName("y_pos").item(0).getTextContent());
 
-			//start locating user from 10th seconds
-			treeMapArray.get(i).put((double)10, new Location(placeType, wlan_id, x_pos, y_pos));
+			//start locating user shortly after the simulation started (e.g. 10 seconds)
+			treeMapArray.get(i).put(SimSettings.CLIENT_ACTIVITY_START_TIME, new Location(placeTypeIndex, wlan_id, x_pos, y_pos));
 		}
 		
 		for(int i=0; i<numberOfMobileDevices; i++) {
@@ -89,12 +89,12 @@ public class NomadicMobility extends MobilityModel {
 						Element datacenterElement = (Element) datacenterNode;
 						Element location = (Element)datacenterElement.getElementsByTagName("location").item(0);
 						String attractiveness = location.getElementsByTagName("attractiveness").item(0).getTextContent();
-						SimSettings.PLACE_TYPES placeType = SimUtils.stringToPlace(attractiveness);
+						int placeTypeIndex = Integer.parseInt(attractiveness);
 						int wlan_id = Integer.parseInt(location.getElementsByTagName("wlan_id").item(0).getTextContent());
 						int x_pos = Integer.parseInt(location.getElementsByTagName("x_pos").item(0).getTextContent());
 						int y_pos = Integer.parseInt(location.getElementsByTagName("y_pos").item(0).getTextContent());
 						
-						treeMap.put(treeMap.lastKey()+waitingTime, new Location(placeType, wlan_id, x_pos, y_pos));
+						treeMap.put(treeMap.lastKey()+waitingTime, new Location(placeTypeIndex, wlan_id, x_pos, y_pos));
 					}
 				}
 				if(!placeFound){
@@ -113,7 +113,7 @@ public class NomadicMobility extends MobilityModel {
 		Entry<Double, Location> e = treeMap.floorEntry(time);
 	    
 	    if(e == null){
-	    	SimLogger.printLine("impossible is occured! no location is found for the device!");
+	    	SimLogger.printLine("impossible is occured! no location is found for the device '" + deviceId + "' at " + time);
 	    	System.exit(0);
 	    }
 	    

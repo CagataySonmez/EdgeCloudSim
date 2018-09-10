@@ -14,14 +14,15 @@ package edu.boun.edgecloudsim.edge_client;
 import org.cloudbus.cloudsim.Cloudlet;
 import org.cloudbus.cloudsim.UtilizationModel;
 
-import edu.boun.edgecloudsim.core.SimSettings;
 import edu.boun.edgecloudsim.utils.Location;
 
 public class Task extends Cloudlet {
-	private SimSettings.APP_TYPES type;
 	private Location submittedLocation;
+	private int type;
 	private int mobileDeviceId;
 	private int hostIndex;
+	private int vmIndex;
+	private int datacenterId;
 
 	public Task(int _mobileDeviceId, int cloudletId, long cloudletLength, int pesNumber,
 			long cloudletFileSize, long cloudletOutputSize,
@@ -39,12 +40,20 @@ public class Task extends Cloudlet {
 	public void setSubmittedLocation(Location _submittedLocation){
 		submittedLocation =_submittedLocation;
 	}
+
+	public void setAssociatedDatacenterId(int _datacenterId){
+		datacenterId=_datacenterId;
+	}
 	
 	public void setAssociatedHostId(int _hostIndex){
 		hostIndex=_hostIndex;
 	}
 
-	public void setTaskType(SimSettings.APP_TYPES _type){
+	public void setAssociatedVmId(int _vmIndex){
+		vmIndex=_vmIndex;
+	}
+	
+	public void setTaskType(int _type){
 		type=_type;
 	}
 
@@ -56,11 +65,19 @@ public class Task extends Cloudlet {
 		return submittedLocation;
 	}
 	
+	public int getAssociatedDatacenterId(){
+		return datacenterId;
+	}
+	
 	public int getAssociatedHostId(){
 		return hostIndex;
 	}
 
-	public SimSettings.APP_TYPES getTaskType(){
+	public int getAssociatedVmId(){
+		return vmIndex;
+	}
+	
+	public int getTaskType(){
 		return type;
 	}
 }

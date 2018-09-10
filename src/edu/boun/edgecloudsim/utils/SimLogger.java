@@ -26,10 +26,16 @@ import java.util.stream.IntStream;
 
 import edu.boun.edgecloudsim.core.SimManager;
 import edu.boun.edgecloudsim.core.SimSettings;
+import edu.boun.edgecloudsim.core.SimSettings.NETWORK_DELAY_TYPES;
+import edu.boun.edgecloudsim.utils.SimLogger.NETWORK_ERRORS;
 
 public class SimLogger {
 	public static enum TASK_STATUS {
 		CREATED, UPLOADING, PROCESSING, DOWNLOADING, COMLETED, REJECTED_DUE_TO_VM_CAPACITY, REJECTED_DUE_TO_BANDWIDTH, UNFINISHED_DUE_TO_BANDWIDTH, UNFINISHED_DUE_TO_MOBILITY
+	}
+	
+	public static enum NETWORK_ERRORS {
+		LAN_ERROR, MAN_ERROR, WAN_ERROR, NONE
 	}
 
 	private static boolean fileLogEnabled;
@@ -92,46 +98,54 @@ public class SimLogger {
 		vmLoadList = new LinkedList<VmLoadLogItem>();
 	}
 
-	public void addLog(double taskStartTime, int taskId, int taskType, int taskLenght, int taskInputType,
+	public void addLog(int taskId, int taskType, int taskLenght, int taskInputType,
 			int taskOutputSize) {
 		// printLine(taskId+"->"+taskStartTime);
-		taskMap.put(taskId, new LogItem(taskStartTime, taskType, taskLenght, taskInputType, taskOutputSize));
+		taskMap.put(taskId, new LogItem(taskType, taskLenght, taskInputType, taskOutputSize));
 	}
 
-	public void uploadStarted(int taskId, double taskUploadTime) {
-		taskMap.get(taskId).taskUploadStarted(taskUploadTime);
+	public void taskStarted(int taskId, double time) {
+		taskMap.get(taskId).taskStarted(time);
 	}
 
-	public void uploaded(int taskId, int datacenterId, int hostId, int vmId, int vmType) {
-		taskMap.get(taskId).taskUploaded(datacenterId, hostId, vmId, vmType);
+	public void setUploadDelay(int taskId, double delay, NETWORK_DELAY_TYPES delayType) {
+		taskMap.get(taskId).setUploadDelay(delay, delayType);
 	}
 
-	public void downloadStarted(int taskId, double taskDownloadTime) {
-		taskMap.get(taskId).taskDownloadStarted(taskDownloadTime);
+	public void setDownloadDelay(int taskId, double delay, NETWORK_DELAY_TYPES delayType) {
+		taskMap.get(taskId).setDownloadDelay(delay, delayType);
+	}
+	
+	public void taskAssigned(int taskId, int datacenterId, int hostId, int vmId, int vmType) {
+		taskMap.get(taskId).taskAssigned(datacenterId, hostId, vmId, vmType);
 	}
 
-	public void downloaded(int taskId, double taskEndTime) {
-		taskMap.get(taskId).taskDownloaded(taskEndTime);
+	public void taskExecuted(int taskId) {
+		taskMap.get(taskId).taskExecuted();
 	}
 
-	public void rejectedDueToVMCapacity(int taskId, double taskRejectTime) {
-		taskMap.get(taskId).taskRejectedDueToVMCapacity(taskRejectTime);
+	public void taskEnded(int taskId, double time) {
+		taskMap.get(taskId).taskEnded(time);
 	}
 
-	public void rejectedDueToBandwidth(int taskId, double taskRejectTime, int vmType) {
-		taskMap.get(taskId).taskRejectedDueToBandwidth(taskRejectTime, vmType);
+	public void rejectedDueToVMCapacity(int taskId, double time, int vmType) {
+		taskMap.get(taskId).taskRejectedDueToVMCapacity(time, vmType);
 	}
 
-	public void failedDueToBandwidth(int taskId, double taskRejectTime) {
-		taskMap.get(taskId).taskFailedDueToBandwidth(taskRejectTime);
+	public void rejectedDueToBandwidth(int taskId, double time, int vmType, NETWORK_DELAY_TYPES delayType) {
+		taskMap.get(taskId).taskRejectedDueToBandwidth(time, vmType, delayType);
+	}
+
+	public void failedDueToBandwidth(int taskId, double time, NETWORK_DELAY_TYPES delayType) {
+		taskMap.get(taskId).taskFailedDueToBandwidth(time, delayType);
 	}
 
 	public void failedDueToMobility(int taskId, double time) {
 		taskMap.get(taskId).taskFailedDueToMobility(time);
 	}
 
-	public void addVmUtilizationLog(double time, double load) {
-		vmLoadList.add(new VmLoadLogItem(time, load));
+	public void addVmUtilizationLog(double time, double loadOnEdge, double loadOnCloud) {
+		vmLoadList.add(new VmLoadLogItem(time, loadOnEdge, loadOnCloud));
 	}
 
 	public void simStopped() throws IOException {
@@ -151,34 +165,40 @@ public class SimLogger {
 		// all app types
 		int[] uncompletedTask = new int[numOfAppTypes + 1];
 		int[] uncompletedTaskOnCloud = new int[numOfAppTypes + 1];
-		int[] uncompletedTaskOnCloudlet = new int[numOfAppTypes + 1];
+		int[] uncompletedTaskOnEdge = new int[numOfAppTypes + 1];
 
 		int[] completedTask = new int[numOfAppTypes + 1];
 		int[] completedTaskOnCloud = new int[numOfAppTypes + 1];
-		int[] completedTaskOnCloudlet = new int[numOfAppTypes + 1];
+		int[] completedTaskOnEdge = new int[numOfAppTypes + 1];
+		int[] completedTaskOnRemoteEdge = new int[numOfAppTypes + 1];
 
 		int[] failedTask = new int[numOfAppTypes + 1];
 		int[] failedTaskOnCloud = new int[numOfAppTypes + 1];
-		int[] failedTaskOnCloudlet = new int[numOfAppTypes + 1];
+		int[] failedTaskOnEdge = new int[numOfAppTypes + 1];
 
 		double[] networkDelay = new double[numOfAppTypes + 1];
 		double[] wanDelay = new double[numOfAppTypes + 1];
+		double[] manDelay = new double[numOfAppTypes + 1];
 		double[] lanDelay = new double[numOfAppTypes + 1];
 
 		double[] serviceTime = new double[numOfAppTypes + 1];
 		double[] serviceTimeOnCloud = new double[numOfAppTypes + 1];
-		double[] serviceTimeOnCloudlet = new double[numOfAppTypes + 1];
+		double[] serviceTimeOnEdge = new double[numOfAppTypes + 1];
 
 		double[] processingTime = new double[numOfAppTypes + 1];
 		double[] processingTimeOnCloud = new double[numOfAppTypes + 1];
-		double[] processingTimeOnCloudlet = new double[numOfAppTypes + 1];
+		double[] processingTimeOnEdge = new double[numOfAppTypes + 1];
 
+		int[] failedTaskDueToVmCapacity = new int[numOfAppTypes + 1];
+		int[] failedTaskDueToVmCapacityOnCloud = new int[numOfAppTypes + 1];
+		int[] failedTaskDueToVmCapacityOnEdge = new int[numOfAppTypes + 1];
+		
 		double[] cost = new double[numOfAppTypes + 1];
 		int[] failedTaskDuetoBw = new int[numOfAppTypes + 1];
 		int[] failedTaskDuetoLanBw = new int[numOfAppTypes + 1];
+		int[] failedTaskDuetoManBw = new int[numOfAppTypes + 1];
 		int[] failedTaskDuetoWanBw = new int[numOfAppTypes + 1];
 		int[] failedTaskDuetoMobility = new int[numOfAppTypes + 1];
-		int[] rejectedTaskDoToVmCapacity = new int[numOfAppTypes + 1];
 
 		// open all files and prepare them for write
 		if (fileLogEnabled) {
@@ -209,7 +229,7 @@ public class SimLogger {
 					if (SimSettings.getInstance().getTaskLookUpTable()[i][0] == 0)
 						continue;
 
-					fileName = SimSettings.APP_TYPES.values()[i] + "_GENERIC.log";
+					fileName = SimSettings.getInstance().getTaskName(i) + "_GENERIC.log";
 				}
 
 				genericFiles[i] = new File(outputFolder, filePrefix + "_" + fileName);
@@ -240,15 +260,27 @@ public class SimLogger {
 
 				if (value.getVmType() == SimSettings.VM_TYPES.CLOUD_VM.ordinal())
 					completedTaskOnCloud[value.getTaskType()]++;
-				else
-					completedTaskOnCloudlet[value.getTaskType()]++;
-			} else {
+				else if (value.getVmType() == SimSettings.VM_TYPES.EDGE_VM.ordinal())
+					completedTaskOnEdge[value.getTaskType()]++;
+			}
+			else if(value.getStatus() == SimLogger.TASK_STATUS.CREATED ||
+					value.getStatus() == SimLogger.TASK_STATUS.UPLOADING ||
+					value.getStatus() == SimLogger.TASK_STATUS.PROCESSING ||
+					value.getStatus() == SimLogger.TASK_STATUS.DOWNLOADING)
+			{
+				uncompletedTask[value.getTaskType()]++;
+				if (value.getVmType() == SimSettings.VM_TYPES.CLOUD_VM.ordinal())
+					uncompletedTaskOnCloud[value.getTaskType()]++;
+				else if (value.getVmType() == SimSettings.VM_TYPES.EDGE_VM.ordinal())
+					uncompletedTaskOnEdge[value.getTaskType()]++;
+			}
+			else {
 				failedTask[value.getTaskType()]++;
 
 				if (value.getVmType() == SimSettings.VM_TYPES.CLOUD_VM.ordinal())
 					failedTaskOnCloud[value.getTaskType()]++;
-				else
-					failedTaskOnCloudlet[value.getTaskType()]++;
+				else if (value.getVmType() == SimSettings.VM_TYPES.EDGE_VM.ordinal())
+					failedTaskOnEdge[value.getTaskType()]++;
 			}
 
 			if (value.getStatus() == SimLogger.TASK_STATUS.COMLETED) {
@@ -258,29 +290,41 @@ public class SimLogger {
 				processingTime[value.getTaskType()] += (value.getServiceTime() - value.getNetworkDelay());
 
 				if (value.getVmType() == SimSettings.VM_TYPES.CLOUD_VM.ordinal()) {
-					wanDelay[value.getTaskType()] += value.getNetworkDelay();
+					wanDelay[value.getTaskType()] += value.getNetworkDelay(NETWORK_DELAY_TYPES.WAN_DELAY);
 					serviceTimeOnCloud[value.getTaskType()] += value.getServiceTime();
-					processingTimeOnCloud[value.getTaskType()] += (value.getServiceTime() - value.getNetworkDelay());
-				} else {
-					lanDelay[value.getTaskType()] += value.getNetworkDelay();
-					serviceTimeOnCloudlet[value.getTaskType()] += value.getServiceTime();
-					processingTimeOnCloudlet[value.getTaskType()] += (value.getServiceTime() - value.getNetworkDelay());
+					processingTimeOnCloud[value.getTaskType()] += (value.getServiceTime() - value.getNetworkDelay(NETWORK_DELAY_TYPES.WAN_DELAY));
+				}
+				else if (value.getVmType() == SimSettings.VM_TYPES.EDGE_VM.ordinal()) {
+					if(value.getNetworkDelay(NETWORK_DELAY_TYPES.MAN_DELAY) != 0){
+						completedTaskOnRemoteEdge[value.getTaskType()]++;
+						manDelay[value.getTaskType()] += value.getNetworkDelay(NETWORK_DELAY_TYPES.MAN_DELAY);
+					}
+					lanDelay[value.getTaskType()] += value.getNetworkDelay(NETWORK_DELAY_TYPES.WLAN_DELAY);
+					serviceTimeOnEdge[value.getTaskType()] += value.getServiceTime();
+					processingTimeOnEdge[value.getTaskType()] += (value.getServiceTime() - value.getNetworkDelay());
 				}
 
 				if (fileLogEnabled && SimSettings.getInstance().getDeepFileLoggingEnabled())
 					appendToFile(successBW, value.toString(key));
 			} else if (value.getStatus() == SimLogger.TASK_STATUS.REJECTED_DUE_TO_VM_CAPACITY) {
-				rejectedTaskDoToVmCapacity[value.getTaskType()]++;
+				failedTaskDueToVmCapacity[value.getTaskType()]++;
+				
 				if (value.getVmType() == SimSettings.VM_TYPES.CLOUD_VM.ordinal())
-					if (fileLogEnabled && SimSettings.getInstance().getDeepFileLoggingEnabled())
-						appendToFile(failBW, value.toString(key));
+					failedTaskDueToVmCapacityOnCloud[value.getTaskType()]++;
+				else if (value.getVmType() == SimSettings.VM_TYPES.EDGE_VM.ordinal())
+					failedTaskDueToVmCapacityOnEdge[value.getTaskType()]++;
+				
+				if (fileLogEnabled && SimSettings.getInstance().getDeepFileLoggingEnabled())
+					appendToFile(failBW, value.toString(key));
 			} else if (value.getStatus() == SimLogger.TASK_STATUS.REJECTED_DUE_TO_BANDWIDTH
 					|| value.getStatus() == SimLogger.TASK_STATUS.UNFINISHED_DUE_TO_BANDWIDTH) {
 				failedTaskDuetoBw[value.getTaskType()]++;
-				if (value.getVmType() == SimSettings.VM_TYPES.CLOUD_VM.ordinal())
-					failedTaskDuetoWanBw[value.getTaskType()]++;
-				else
+				if (value.getNetworkError() == NETWORK_ERRORS.LAN_ERROR)
 					failedTaskDuetoLanBw[value.getTaskType()]++;
+				else if (value.getNetworkError() == NETWORK_ERRORS.MAN_ERROR)
+					failedTaskDuetoManBw[value.getTaskType()]++;
+				else if (value.getNetworkError() == NETWORK_ERRORS.WAN_ERROR)
+					failedTaskDuetoWanBw[value.getTaskType()]++;
 
 				if (fileLogEnabled && SimSettings.getInstance().getDeepFileLoggingEnabled())
 					appendToFile(failBW, value.toString(key));
@@ -288,51 +332,53 @@ public class SimLogger {
 				failedTaskDuetoMobility[value.getTaskType()]++;
 				if (fileLogEnabled && SimSettings.getInstance().getDeepFileLoggingEnabled())
 					appendToFile(failBW, value.toString(key));
-			} else {
-				uncompletedTask[value.getTaskType()]++;
-				if (value.getVmType() == SimSettings.VM_TYPES.CLOUD_VM.ordinal())
-					uncompletedTaskOnCloud[value.getTaskType()]++;
-				else
-					uncompletedTaskOnCloudlet[value.getTaskType()]++;
 			}
 		}
 
 		// calculate total values
 		uncompletedTask[numOfAppTypes] = IntStream.of(uncompletedTask).sum();
 		uncompletedTaskOnCloud[numOfAppTypes] = IntStream.of(uncompletedTaskOnCloud).sum();
-		uncompletedTaskOnCloudlet[numOfAppTypes] = IntStream.of(uncompletedTaskOnCloudlet).sum();
+		uncompletedTaskOnEdge[numOfAppTypes] = IntStream.of(uncompletedTaskOnEdge).sum();
 
 		completedTask[numOfAppTypes] = IntStream.of(completedTask).sum();
 		completedTaskOnCloud[numOfAppTypes] = IntStream.of(completedTaskOnCloud).sum();
-		completedTaskOnCloudlet[numOfAppTypes] = IntStream.of(completedTaskOnCloudlet).sum();
+		completedTaskOnEdge[numOfAppTypes] = IntStream.of(completedTaskOnEdge).sum();
+		completedTaskOnRemoteEdge[numOfAppTypes] = IntStream.of(completedTaskOnRemoteEdge).sum();
 
 		failedTask[numOfAppTypes] = IntStream.of(failedTask).sum();
 		failedTaskOnCloud[numOfAppTypes] = IntStream.of(failedTaskOnCloud).sum();
-		failedTaskOnCloudlet[numOfAppTypes] = IntStream.of(failedTaskOnCloudlet).sum();
+		failedTaskOnEdge[numOfAppTypes] = IntStream.of(failedTaskOnEdge).sum();
 
 		networkDelay[numOfAppTypes] = DoubleStream.of(networkDelay).sum();
 		lanDelay[numOfAppTypes] = DoubleStream.of(lanDelay).sum();
+		manDelay[numOfAppTypes] = DoubleStream.of(manDelay).sum();
 		wanDelay[numOfAppTypes] = DoubleStream.of(wanDelay).sum();
 
 		serviceTime[numOfAppTypes] = DoubleStream.of(serviceTime).sum();
 		serviceTimeOnCloud[numOfAppTypes] = DoubleStream.of(serviceTimeOnCloud).sum();
-		serviceTimeOnCloudlet[numOfAppTypes] = DoubleStream.of(serviceTimeOnCloudlet).sum();
+		serviceTimeOnEdge[numOfAppTypes] = DoubleStream.of(serviceTimeOnEdge).sum();
 
 		processingTime[numOfAppTypes] = DoubleStream.of(processingTime).sum();
 		processingTimeOnCloud[numOfAppTypes] = DoubleStream.of(processingTimeOnCloud).sum();
-		processingTimeOnCloudlet[numOfAppTypes] = DoubleStream.of(processingTimeOnCloudlet).sum();
+		processingTimeOnEdge[numOfAppTypes] = DoubleStream.of(processingTimeOnEdge).sum();
 
+		failedTaskDueToVmCapacity[numOfAppTypes] = IntStream.of(failedTaskDueToVmCapacity).sum();
+		failedTaskDueToVmCapacityOnCloud[numOfAppTypes] = IntStream.of(failedTaskDueToVmCapacityOnCloud).sum();
+		failedTaskDueToVmCapacityOnEdge[numOfAppTypes] = IntStream.of(failedTaskDueToVmCapacityOnEdge).sum();
+		
 		cost[numOfAppTypes] = DoubleStream.of(cost).sum();
 		failedTaskDuetoBw[numOfAppTypes] = IntStream.of(failedTaskDuetoBw).sum();
 		failedTaskDuetoWanBw[numOfAppTypes] = IntStream.of(failedTaskDuetoWanBw).sum();
+		failedTaskDuetoManBw[numOfAppTypes] = IntStream.of(failedTaskDuetoManBw).sum();
 		failedTaskDuetoLanBw[numOfAppTypes] = IntStream.of(failedTaskDuetoLanBw).sum();
 		failedTaskDuetoMobility[numOfAppTypes] = IntStream.of(failedTaskDuetoMobility).sum();
-		rejectedTaskDoToVmCapacity[numOfAppTypes] = IntStream.of(rejectedTaskDoToVmCapacity).sum();
 
 		// calculate server load
-		double totalVmLoad = 0;
+		double totalVmLoadOnEdge = 0;
+		double totalVmLoadOnCloud = 0;
 		for (VmLoadLogItem entry : vmLoadList) {
-			totalVmLoad += entry.getLoad();
+			totalVmLoadOnEdge += entry.getEdgeLoad();
+			totalVmLoadOnCloud += entry.getCloudLoad();
 			if (fileLogEnabled)
 				appendToFile(vmLoadBW, entry.toString());
 		}
@@ -341,7 +387,7 @@ public class SimLogger {
 			// write location info to file
 			for (int t = 1; t < (SimSettings.getInstance().getSimulationTime()
 					/ SimSettings.getInstance().getVmLocationLogInterval()); t++) {
-				int[] locationInfo = new int[SimSettings.PLACE_TYPES.values().length];
+				int[] locationInfo = new int[SimSettings.getInstance().getNumOfPlaceTypes()];
 				Double time = t * SimSettings.getInstance().getVmLocationLogInterval();
 
 				if (time < SimSettings.getInstance().getWarmUpPeriod())
@@ -350,8 +396,8 @@ public class SimLogger {
 				for (int i = 0; i < SimManager.getInstance().getNumOfMobileDevice(); i++) {
 
 					Location loc = SimManager.getInstance().getMobilityModel().getLocation(i, time);
-					SimSettings.PLACE_TYPES placeType = loc.getPlaceType();
-					locationInfo[placeType.ordinal()]++;
+					int placeTypeIndex = loc.getPlaceTypeIndex();
+					locationInfo[placeTypeIndex]++;
 				}
 
 				locationBW.write(time.toString());
@@ -375,9 +421,17 @@ public class SimLogger {
 				double _serviceTime = (completedTask[i] == 0) ? 0.0 : (serviceTime[i] / (double) completedTask[i]);
 				double _networkDelay = (completedTask[i] == 0) ? 0.0 : (networkDelay[i] / (double) completedTask[i]);
 				double _processingTime = (completedTask[i] == 0) ? 0.0 : (processingTime[i] / (double) completedTask[i]);
-				double _vmLoad = (vmLoadList.size() == 0) ? 0.0 : (totalVmLoad / (double) vmLoadList.size());
+				double _vmLoadOnEdge = (vmLoadList.size() == 0) ? 0.0 : (totalVmLoadOnEdge / (double) vmLoadList.size());
+				double _vmLoadOnClould = (vmLoadList.size() == 0) ? 0.0 : (totalVmLoadOnCloud / (double) vmLoadList.size());
 				double _cost = (completedTask[i] == 0) ? 0.0 : (cost[i] / (double) completedTask[i]);
 
+				double _lanDelay = (completedTaskOnEdge[i] == 0) ? 0.0
+						: (lanDelay[i] / (double) completedTaskOnEdge[i]);
+				double _manDelay = (completedTaskOnRemoteEdge[i] == 0) ? 0.0
+						: (manDelay[i] / (double) completedTaskOnRemoteEdge[i]);
+				double _wanDelay = (completedTaskOnCloud[i] == 0) ? 0.0
+						: (wanDelay[i] / (double) completedTaskOnCloud[i]);
+				
 				// write generic results
 				String genericResult1 = Integer.toString(completedTask[i]) + SimSettings.DELIMITER
 						+ Integer.toString(failedTask[i]) + SimSettings.DELIMITER 
@@ -386,31 +440,27 @@ public class SimLogger {
 						+ Double.toString(_serviceTime) + SimSettings.DELIMITER 
 						+ Double.toString(_processingTime) + SimSettings.DELIMITER 
 						+ Double.toString(_networkDelay) + SimSettings.DELIMITER
-						+ Double.toString(_vmLoad) + SimSettings.DELIMITER 
+						+ Double.toString(0) + SimSettings.DELIMITER 
 						+ Double.toString(_cost) + SimSettings.DELIMITER 
-						+ Integer.toString(rejectedTaskDoToVmCapacity[i]) + SimSettings.DELIMITER 
+						+ Integer.toString(failedTaskDueToVmCapacity[i]) + SimSettings.DELIMITER 
 						+ Integer.toString(failedTaskDuetoMobility[i]);
 
-				// check if the divisor is zero in order to avoid division by
-				// zero problem
-				double _lanDelay = (completedTaskOnCloudlet[i] == 0) ? 0.0
-						: (lanDelay[i] / (double) completedTaskOnCloudlet[i]);
-				double _serviceTimeOnCloudlet = (completedTaskOnCloudlet[i] == 0) ? 0.0
-						: (serviceTimeOnCloudlet[i] / (double) completedTaskOnCloudlet[i]);
-				double _processingTimeOnCloudlet = (completedTaskOnCloudlet[i] == 0) ? 0.0
-						: (processingTimeOnCloudlet[i] / (double) completedTaskOnCloudlet[i]);
-				String genericResult2 = Integer.toString(completedTaskOnCloudlet[i]) + SimSettings.DELIMITER
-						+ Integer.toString(failedTaskOnCloudlet[i]) + SimSettings.DELIMITER
-						+ Integer.toString(uncompletedTaskOnCloudlet[i]) + SimSettings.DELIMITER
-						+ Integer.toString(failedTaskDuetoLanBw[i]) + SimSettings.DELIMITER
-						+ Double.toString(_serviceTimeOnCloudlet) + SimSettings.DELIMITER
-						+ Double.toString(_processingTimeOnCloudlet) + SimSettings.DELIMITER
-						+ Double.toString(_lanDelay);
+				// check if the divisor is zero in order to avoid division by zero problem
+				double _serviceTimeOnEdge = (completedTaskOnEdge[i] == 0) ? 0.0
+						: (serviceTimeOnEdge[i] / (double) completedTaskOnEdge[i]);
+				double _processingTimeOnEdge = (completedTaskOnEdge[i] == 0) ? 0.0
+						: (processingTimeOnEdge[i] / (double) completedTaskOnEdge[i]);
+				String genericResult2 = Integer.toString(completedTaskOnEdge[i]) + SimSettings.DELIMITER
+						+ Integer.toString(failedTaskOnEdge[i]) + SimSettings.DELIMITER
+						+ Integer.toString(uncompletedTaskOnEdge[i]) + SimSettings.DELIMITER
+						+ Integer.toString(0) + SimSettings.DELIMITER
+						+ Double.toString(_serviceTimeOnEdge) + SimSettings.DELIMITER
+						+ Double.toString(_processingTimeOnEdge) + SimSettings.DELIMITER
+						+ Double.toString(0.0) + SimSettings.DELIMITER 
+						+ Double.toString(_vmLoadOnEdge) + SimSettings.DELIMITER 
+						+ Integer.toString(failedTaskDueToVmCapacityOnEdge[i]);
 
-				// check if the divisor is zero in order to avoid division by
-				// zero problem
-				double _wanDelay = (completedTaskOnCloud[i] == 0) ? 0.0
-						: (wanDelay[i] / (double) completedTaskOnCloud[i]);
+				// check if the divisor is zero in order to avoid division by zero problem
 				double _serviceTimeOnCloud = (completedTaskOnCloud[i] == 0) ? 0.0
 						: (serviceTimeOnCloud[i] / (double) completedTaskOnCloud[i]);
 				double _processingTimeOnCloud = (completedTaskOnCloud[i] == 0) ? 0.0
@@ -418,14 +468,28 @@ public class SimLogger {
 				String genericResult3 = Integer.toString(completedTaskOnCloud[i]) + SimSettings.DELIMITER
 						+ Integer.toString(failedTaskOnCloud[i]) + SimSettings.DELIMITER
 						+ Integer.toString(uncompletedTaskOnCloud[i]) + SimSettings.DELIMITER
-						+ Integer.toString(failedTaskDuetoWanBw[i]) + SimSettings.DELIMITER
+						+ Integer.toString(0) + SimSettings.DELIMITER
 						+ Double.toString(_serviceTimeOnCloud) + SimSettings.DELIMITER
 						+ Double.toString(_processingTimeOnCloud) + SimSettings.DELIMITER 
-						+ Double.toString(_wanDelay);
+						+ Double.toString(0.0) + SimSettings.DELIMITER
+						+ Double.toString(_vmLoadOnClould) + SimSettings.DELIMITER 
+						+ Integer.toString(failedTaskDueToVmCapacityOnCloud[i]);
+
+				//for future use
+				String genericResult4 = "0;0;0;0;0;0;0;0;0";
+
+				String genericResult5 = Double.toString(_lanDelay) + SimSettings.DELIMITER
+						+ Double.toString(_manDelay) + SimSettings.DELIMITER
+						+ Double.toString(_wanDelay) + SimSettings.DELIMITER
+						+ Integer.toString(failedTaskDuetoLanBw[i]) + SimSettings.DELIMITER
+						+ Integer.toString(failedTaskDuetoManBw[i]) + SimSettings.DELIMITER
+						+ Integer.toString(failedTaskDuetoWanBw[i]);
 
 				appendToFile(genericBWs[i], genericResult1);
 				appendToFile(genericBWs[i], genericResult2);
 				appendToFile(genericBWs[i], genericResult3);
+				appendToFile(genericBWs[i], genericResult4);
+				appendToFile(genericBWs[i], genericResult5);
 			}
 
 			// close open files
@@ -447,31 +511,37 @@ public class SimLogger {
 		}
 
 		// printout important results
-		printLine("# of tasks (Cloudlet/Cloud): "
+		printLine("# of tasks (Edge/Cloud): "
 				+ (failedTask[numOfAppTypes] + completedTask[numOfAppTypes]) + "("
-				+ (failedTaskOnCloudlet[numOfAppTypes] + completedTaskOnCloudlet[numOfAppTypes]) + "/" 
+				+ (failedTaskOnEdge[numOfAppTypes] + completedTaskOnEdge[numOfAppTypes]) + "/" 
 				+ (failedTaskOnCloud[numOfAppTypes]+ completedTaskOnCloud[numOfAppTypes]) + ")");
 		
-		printLine("# of failed tasks (Cloudlet/Cloud): "
+		printLine("# of failed tasks (Edge/Cloud): "
 				+ failedTask[numOfAppTypes] + "("
-				+ failedTaskOnCloudlet[numOfAppTypes]
-				+ "/" + failedTaskOnCloud[numOfAppTypes] + ")");
+				+ failedTaskOnEdge[numOfAppTypes] + "/"
+				+ failedTaskOnCloud[numOfAppTypes] + ")");
 		
-		printLine("# of completed tasks (Cloudlet/Cloud): "
+		printLine("# of completed tasks (Edge/Cloud): "
 				+ completedTask[numOfAppTypes] + "("
-				+ completedTaskOnCloudlet[numOfAppTypes]
-				+ "/" + completedTaskOnCloud[numOfAppTypes] + ")");
+				+ completedTaskOnEdge[numOfAppTypes] + "/"
+				+ completedTaskOnCloud[numOfAppTypes] + ")");
 		
-		printLine("# of uncompleted tasks (Cloudlet/Cloud): "
+		printLine("# of uncompleted tasks (Edge/Cloud): "
 				+ uncompletedTask[numOfAppTypes] + "("
-				+ uncompletedTaskOnCloudlet[numOfAppTypes]
-				+ "/" + uncompletedTaskOnCloud[numOfAppTypes] + ")");
+				+ uncompletedTaskOnEdge[numOfAppTypes] + "/"
+				+ uncompletedTaskOnCloud[numOfAppTypes] + ")");
+
+		printLine("# of failed tasks due to vm capacity (Edge/Cloud): "
+				+ failedTaskDueToVmCapacity[numOfAppTypes] + "("
+				+ failedTaskDueToVmCapacityOnEdge[numOfAppTypes] + "/"
+				+ failedTaskDueToVmCapacityOnCloud[numOfAppTypes] + ")");
 		
-		printLine("# of failed tasks due to vm capacity/LAN bw/WAN bw/mobility: "
-				+ rejectedTaskDoToVmCapacity[numOfAppTypes]
-				+ "/" + +failedTaskDuetoLanBw[numOfAppTypes] 
-				+ "/" + +failedTaskDuetoWanBw[numOfAppTypes] 
-				+ "/" + failedTaskDuetoMobility[numOfAppTypes]);
+		printLine("# of failed tasks due to Mobility/Network(WLAN/MAN/WAN): "
+				+ failedTaskDuetoMobility[numOfAppTypes]
+				+ "/" + failedTaskDuetoBw[numOfAppTypes] 
+				+ "(" + failedTaskDuetoLanBw[numOfAppTypes] 
+				+ "/" + failedTaskDuetoManBw[numOfAppTypes] 
+				+ "/" + failedTaskDuetoWanBw[numOfAppTypes] + ")");
 		
 		printLine("percentage of failed tasks: "
 				+ String.format("%.6f", ((double) failedTask[numOfAppTypes] * (double) 100)
@@ -480,29 +550,32 @@ public class SimLogger {
 
 		printLine("average service time: "
 				+ String.format("%.6f", serviceTime[numOfAppTypes] / (double) completedTask[numOfAppTypes])
-				+ " seconds. (" + "on Cloudlet: "
-				+ String.format("%.6f", serviceTimeOnCloudlet[numOfAppTypes] / (double) completedTaskOnCloudlet[numOfAppTypes])
+				+ " seconds. (" + "on Edge: "
+				+ String.format("%.6f", serviceTimeOnEdge[numOfAppTypes] / (double) completedTaskOnEdge[numOfAppTypes])
 				+ ", " + "on Cloud: "
 				+ String.format("%.6f", serviceTimeOnCloud[numOfAppTypes] / (double) completedTaskOnCloud[numOfAppTypes])
 				+ ")");
 
 		printLine("average processing time: "
 				+ String.format("%.6f", processingTime[numOfAppTypes] / (double) completedTask[numOfAppTypes])
-				+ " seconds. (" + "on Cloudlet: "
-				+ String.format("%.6f", processingTimeOnCloudlet[numOfAppTypes] / (double) completedTaskOnCloudlet[numOfAppTypes])
+				+ " seconds. (" + "on Edge: "
+				+ String.format("%.6f", processingTimeOnEdge[numOfAppTypes] / (double) completedTaskOnEdge[numOfAppTypes])
 				+ ", " + "on Cloud: " 
 				+ String.format("%.6f", processingTimeOnCloud[numOfAppTypes] / (double) completedTaskOnCloud[numOfAppTypes])
 				+ ")");
 
-		printLine("average netwrok delay: "
+		printLine("average network delay: "
 				+ String.format("%.6f", networkDelay[numOfAppTypes] / (double) completedTask[numOfAppTypes])
 				+ " seconds. (" + "LAN delay: "
-				+ String.format("%.6f", lanDelay[numOfAppTypes] / (double) completedTaskOnCloudlet[numOfAppTypes])
+				+ String.format("%.6f", lanDelay[numOfAppTypes] / (double) completedTaskOnEdge[numOfAppTypes])
+				+ ", " + "MAN delay: "
+				+ String.format("%.6f", manDelay[numOfAppTypes] / (double) completedTaskOnRemoteEdge[numOfAppTypes])
 				+ ", " + "WAN delay: "
 				+ String.format("%.6f", wanDelay[numOfAppTypes] / (double) completedTaskOnCloud[numOfAppTypes]) + ")");
 
-		printLine("average server utilization: " 
-				+ String.format("%.6f", totalVmLoad / (double) vmLoadList.size()) + "%");
+		printLine("average server utilization Edge/Cloud: " 
+				+ String.format("%.6f", totalVmLoadOnEdge / (double) vmLoadList.size()) + "/"
+				+ String.format("%.6f", totalVmLoadOnCloud / (double) vmLoadList.size()));
 		
 		printLine("average cost: " + cost[numOfAppTypes] / completedTask[numOfAppTypes] + "$");
 
@@ -514,24 +587,33 @@ public class SimLogger {
 
 class VmLoadLogItem {
 	private double time;
-	private double vmLoad;
+	private double vmLoadOnEdge;
+	private double vmLoadOnCloud;
 
-	VmLoadLogItem(double _time, double _vmLoad) {
+	VmLoadLogItem(double _time, double _vmLoadOnEdge, double _vmLoadOnCloud) {
 		time = _time;
-		vmLoad = _vmLoad;
+		vmLoadOnEdge = _vmLoadOnEdge;
+		vmLoadOnCloud = _vmLoadOnCloud;
 	}
 
-	public double getLoad() {
-		return vmLoad;
+	public double getEdgeLoad() {
+		return vmLoadOnEdge;
 	}
 
+	public double getCloudLoad() {
+		return vmLoadOnCloud;
+	}
+	
 	public String toString() {
-		return time + SimSettings.DELIMITER + vmLoad;
+		return time + 
+				SimSettings.DELIMITER + vmLoadOnEdge +
+				SimSettings.DELIMITER + vmLoadOnCloud;
 	}
 }
 
 class LogItem {
 	private SimLogger.TASK_STATUS status;
+	private SimLogger.NETWORK_ERRORS networkError;
 	private int datacenterId;
 	private int hostId;
 	private int vmId;
@@ -542,32 +624,55 @@ class LogItem {
 	private int taskOutputSize;
 	private double taskStartTime;
 	private double taskEndTime;
-	private double networkDelay;
+	private double lanUploadDelay;
+	private double manUploadDelay;
+	private double wanUploadDelay;
+	private double lanDownloadDelay;
+	private double manDownloadDelay;
+	private double wanDownloadDelay;
 	private double bwCost;
 	private double cpuCost;
 	private boolean isInWarmUpPeriod;
 
-	LogItem(double _taskStartTime, int _taskType, int _taskLenght, int _taskInputType, int _taskOutputSize) {
-		taskStartTime = _taskStartTime;
+	LogItem(int _taskType, int _taskLenght, int _taskInputType, int _taskOutputSize) {
 		taskType = _taskType;
 		taskLenght = _taskLenght;
 		taskInputType = _taskInputType;
 		taskOutputSize = _taskOutputSize;
+		networkError = NETWORK_ERRORS.NONE;
 		status = SimLogger.TASK_STATUS.CREATED;
 		taskEndTime = 0;
-
-		if (_taskStartTime < SimSettings.getInstance().getWarmUpPeriod())
+	}
+	
+	public void taskStarted(double time) {
+		taskStartTime = time;
+		status = SimLogger.TASK_STATUS.UPLOADING;
+		
+		if (time < SimSettings.getInstance().getWarmUpPeriod())
 			isInWarmUpPeriod = true;
 		else
 			isInWarmUpPeriod = false;
 	}
 	
-	public void taskUploadStarted(double taskUploadTime) {
-		networkDelay += taskUploadTime;
-		status = SimLogger.TASK_STATUS.UPLOADING;
+	public void setUploadDelay(double delay, NETWORK_DELAY_TYPES delayType) {
+		if(delayType == NETWORK_DELAY_TYPES.WLAN_DELAY)
+			lanUploadDelay = delay;
+		else if(delayType == NETWORK_DELAY_TYPES.MAN_DELAY)
+			manUploadDelay = delay;
+		else if(delayType == NETWORK_DELAY_TYPES.WAN_DELAY)
+			wanUploadDelay = delay;
 	}
-
-	public void taskUploaded(int _datacenterId, int _hostId, int _vmId, int _vmType) {
+	
+	public void setDownloadDelay(double delay, NETWORK_DELAY_TYPES delayType) {
+		if(delayType == NETWORK_DELAY_TYPES.WLAN_DELAY)
+			lanDownloadDelay = delay;
+		else if(delayType == NETWORK_DELAY_TYPES.MAN_DELAY)
+			manDownloadDelay = delay;
+		else if(delayType == NETWORK_DELAY_TYPES.WAN_DELAY)
+			wanDownloadDelay = delay;
+	}
+	
+	public void taskAssigned(int _datacenterId, int _hostId, int _vmId, int _vmType) {
 		status = SimLogger.TASK_STATUS.PROCESSING;
 		datacenterId = _datacenterId;
 		hostId = _hostId;
@@ -575,34 +680,48 @@ class LogItem {
 		vmType = _vmType;
 	}
 
-	public void taskDownloadStarted(double taskDownloadTime) {
-		networkDelay += taskDownloadTime;
+	public void taskExecuted() {
 		status = SimLogger.TASK_STATUS.DOWNLOADING;
 	}
 
-	public void taskDownloaded(double _taskEndTime) {
-		taskEndTime = _taskEndTime;
+	public void taskEnded(double time) {
+		taskEndTime = time;
 		status = SimLogger.TASK_STATUS.COMLETED;
 	}
 
-	public void taskRejectedDueToVMCapacity(double _taskRejectTime) {
-		taskEndTime = _taskRejectTime;
+	public void taskRejectedDueToVMCapacity(double time, int _vmType) {
+		vmType = _vmType;
+		taskEndTime = time;
 		status = SimLogger.TASK_STATUS.REJECTED_DUE_TO_VM_CAPACITY;
 	}
 
-	public void taskRejectedDueToBandwidth(double _taskRejectTime, int _vmType) {
+	public void taskRejectedDueToBandwidth(double time, int _vmType, NETWORK_DELAY_TYPES delayType) {
 		vmType = _vmType;
-		taskEndTime = _taskRejectTime;
+		taskEndTime = time;
 		status = SimLogger.TASK_STATUS.REJECTED_DUE_TO_BANDWIDTH;
+		
+		if(delayType == NETWORK_DELAY_TYPES.WLAN_DELAY)
+			networkError = NETWORK_ERRORS.LAN_ERROR;
+		else if(delayType == NETWORK_DELAY_TYPES.MAN_DELAY)
+			networkError = NETWORK_ERRORS.MAN_ERROR;
+		else if(delayType == NETWORK_DELAY_TYPES.WAN_DELAY)
+			networkError = NETWORK_ERRORS.WAN_ERROR;
 	}
 
-	public void taskFailedDueToBandwidth(double _time) {
-		taskEndTime = _time;
+	public void taskFailedDueToBandwidth(double time, NETWORK_DELAY_TYPES delayType) {
+		taskEndTime = time;
 		status = SimLogger.TASK_STATUS.UNFINISHED_DUE_TO_BANDWIDTH;
+		
+		if(delayType == NETWORK_DELAY_TYPES.WLAN_DELAY)
+			networkError = NETWORK_ERRORS.LAN_ERROR;
+		else if(delayType == NETWORK_DELAY_TYPES.MAN_DELAY)
+			networkError = NETWORK_ERRORS.MAN_ERROR;
+		else if(delayType == NETWORK_DELAY_TYPES.WAN_DELAY)
+			networkError = NETWORK_ERRORS.WAN_ERROR;
 	}
 
-	public void taskFailedDueToMobility(double _time) {
-		taskEndTime = _time;
+	public void taskFailedDueToMobility(double time) {
+		taskEndTime = time;
 		status = SimLogger.TASK_STATUS.UNFINISHED_DUE_TO_MOBILITY;
 	}
 
@@ -619,10 +738,51 @@ class LogItem {
 		return bwCost + cpuCost;
 	}
 
-	public double getNetworkDelay() {
-		return networkDelay;
+	public double getNetworkUploadDelay(NETWORK_DELAY_TYPES delayType) {
+		double result = 0;
+		if(delayType == NETWORK_DELAY_TYPES.WLAN_DELAY)
+			result = lanUploadDelay;
+		else if(delayType == NETWORK_DELAY_TYPES.MAN_DELAY)
+			result = manUploadDelay;
+		else if(delayType == NETWORK_DELAY_TYPES.WAN_DELAY)
+			result = wanUploadDelay;
+		
+		return result;
 	}
 
+	public double getNetworkDownloadDelay(NETWORK_DELAY_TYPES delayType) {
+		double result = 0;
+		if(delayType == NETWORK_DELAY_TYPES.WLAN_DELAY)
+			result = lanDownloadDelay;
+		else if(delayType == NETWORK_DELAY_TYPES.MAN_DELAY)
+			result = manDownloadDelay;
+		else if(delayType == NETWORK_DELAY_TYPES.WAN_DELAY)
+			result = wanDownloadDelay;
+		
+		return result;
+	}
+	
+	public double getNetworkDelay(NETWORK_DELAY_TYPES delayType){
+		double result = 0;
+		if(delayType == NETWORK_DELAY_TYPES.WLAN_DELAY)
+			result = lanDownloadDelay + lanUploadDelay;
+		else if(delayType == NETWORK_DELAY_TYPES.MAN_DELAY)
+			result = manDownloadDelay + manUploadDelay;
+		else if(delayType == NETWORK_DELAY_TYPES.WAN_DELAY)
+			result = wanDownloadDelay + wanUploadDelay;
+		
+		return result;
+	}
+	
+	public double getNetworkDelay(){
+		return  lanUploadDelay +
+				manUploadDelay +
+				wanUploadDelay +
+				lanDownloadDelay +
+				manDownloadDelay +
+				wanDownloadDelay;
+	}
+	
 	public double getServiceTime() {
 		return taskEndTime - taskStartTime;
 	}
@@ -631,6 +791,10 @@ class LogItem {
 		return status;
 	}
 
+	public SimLogger.NETWORK_ERRORS getNetworkError() {
+		return networkError;
+	}
+	
 	public int getVmType() {
 		return vmType;
 	}
@@ -646,8 +810,12 @@ class LogItem {
 				+ taskOutputSize + SimSettings.DELIMITER + taskStartTime + SimSettings.DELIMITER + taskEndTime
 				+ SimSettings.DELIMITER;
 
-		if (status == SimLogger.TASK_STATUS.COMLETED)
-			result += networkDelay;
+		if (status == SimLogger.TASK_STATUS.COMLETED){
+			result += getNetworkDelay() + SimSettings.DELIMITER;
+			result += getNetworkDelay(NETWORK_DELAY_TYPES.WLAN_DELAY) + SimSettings.DELIMITER;
+			result += getNetworkDelay(NETWORK_DELAY_TYPES.MAN_DELAY) + SimSettings.DELIMITER;
+			result += getNetworkDelay(NETWORK_DELAY_TYPES.WAN_DELAY);
+		}
 		else if (status == SimLogger.TASK_STATUS.REJECTED_DUE_TO_VM_CAPACITY)
 			result += "1"; // failure reason 1
 		else if (status == SimLogger.TASK_STATUS.REJECTED_DUE_TO_BANDWIDTH)

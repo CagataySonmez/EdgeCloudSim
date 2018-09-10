@@ -33,24 +33,21 @@ public class SimSettings {
 	private static SimSettings instance = null;
 	private Document edgeDevicesDoc = null;
 	
-	//enumarations for the VM, appplication, and place.
-	//if you want to add different types on your config file,
-	//you may modify current types or add new types here. 
+	public static final double CLIENT_ACTIVITY_START_TIME = 10;
+	
+	//enumarations for the VM types
 	public static enum VM_TYPES { EDGE_VM, CLOUD_VM }
-	public static enum APP_TYPES { AUGMENTED_REALITY, HEALTH_APP, HEAVY_COMP_APP, INFOTAINMENT_APP }
-	public static enum PLACE_TYPES { ATTRACTIVENESS_L1, ATTRACTIVENESS_L2, ATTRACTIVENESS_L3 }
 	
-	//predifined IDs for cloud components.
-	public static int CLOUD_DATACENTER_ID = 1000;
-	public static int CLOUD_HOST_ID = CLOUD_DATACENTER_ID + 1;
-	public static int CLOUD_VM_ID = CLOUD_DATACENTER_ID + 2;
+	//enumarations for the VM types
+	public static enum NETWORK_DELAY_TYPES { WLAN_DELAY, MAN_DELAY, WAN_DELAY }
 	
-	//predifined IDs for edge devices
-	public static int EDGE_ORCHESTRATOR_ID = 2000;
-	public static int GENERIC_EDGE_DEVICE_ID = EDGE_ORCHESTRATOR_ID + 1;
+	//predifined IDs for the components.
+	public static final int CLOUD_DATACENTER_ID = 1000;
+	public static final int EDGE_ORCHESTRATOR_ID = 1001;
+	public static final int GENERIC_EDGE_DEVICE_ID = 1002;
 
 	//delimiter for output file.
-	public static String DELIMITER = ";";
+	public static final String DELIMITER = ";";
 	
     private double SIMULATION_TIME; //minutes unit in properties file
     private double WARM_UP_PERIOD; //minutes unit in properties file
@@ -66,6 +63,7 @@ public class SimSettings {
     private int NUM_OF_EDGE_DATACENTERS;
     private int NUM_OF_EDGE_HOSTS;
     private int NUM_OF_EDGE_VMS;
+    private int NUM_OF_PLACE_TYPES;
     
     private double WAN_PROPOGATION_DELAY; //seconds unit in properties file
     private double LAN_INTERNAL_DELAY; //seconds unit in properties file
@@ -73,7 +71,12 @@ public class SimSettings {
     private int BANDWITH_WAN; //Mbps unit in properties file
     private int BANDWITH_GSM; //Mbps unit in properties file
 
-    private int MIPS_FOR_CLOUD; //MIPS
+    private int NUM_OF_HOST_ON_CLOUD_DATACENTER;
+    private int NUM_OF_VM_ON_CLOUD_HOST;
+    private int CORE_FOR_CLOUD_VM;
+    private int MIPS_FOR_CLOUD_VM; //MIPS
+    private int RAM_FOR_CLOUD_VM; //MB
+	private int STORAGE_FOR_CLOUD_VM; //Byte
     
     private String[] SIMULATION_SCENARIOS;
     private String[] ORCHESTRATOR_POLICIES;
@@ -91,10 +94,16 @@ public class SimSettings {
     // [6] avg data download (KB)
     // [7] avg task length (MI)
     // [8] required # of cores
-    // [9] vm utilization (%)
-    private double[][] taskLookUpTable = new double[APP_TYPES.values().length][11];
+    // [9] vm utilization on edge (%)
+    // [10] vm utilization on cloud (%)
+    // [11] vm utilization on mobile (%)
+    // [12] delay sensitivity [0-1]
+    private double[][] taskLookUpTable = null;
+    
+    private String[] taskNames = null;
 
 	private SimSettings() {
+		NUM_OF_PLACE_TYPES = 0;
 	}
 	
 	public static SimSettings getInstance() {
@@ -136,10 +145,12 @@ public class SimSettings {
 			BANDWITH_WAN = 1000 * Integer.parseInt(prop.getProperty("wan_bandwidth"));
 			BANDWITH_GSM =  1000 * Integer.parseInt(prop.getProperty("gsm_bandwidth"));
 
-			//It is assumed that
-			//-Storage and RAM are unlimited in cloud
-			//-Each task is executed with maximum capacity (as if there is no task in the cloud) 
-			MIPS_FOR_CLOUD = Integer.parseInt(prop.getProperty("mips_for_cloud"));
+		    NUM_OF_HOST_ON_CLOUD_DATACENTER = Integer.parseInt(prop.getProperty("number_of_host_on_cloud_datacenter"));
+		    NUM_OF_VM_ON_CLOUD_HOST = Integer.parseInt(prop.getProperty("number_of_vm_on_cloud_host"));
+		    CORE_FOR_CLOUD_VM = Integer.parseInt(prop.getProperty("core_for_cloud_vm"));
+		    MIPS_FOR_CLOUD_VM = Integer.parseInt(prop.getProperty("mips_for_cloud_vm"));
+		    RAM_FOR_CLOUD_VM = Integer.parseInt(prop.getProperty("ram_for_cloud_vm"));
+			STORAGE_FOR_CLOUD_VM = Integer.parseInt(prop.getProperty("storage_for_cloud_vm"));
 
 			ORCHESTRATOR_POLICIES = prop.getProperty("orchestrator_policies").split(",");
 			
@@ -320,13 +331,69 @@ public class SimSettings {
 	{
 		return NUM_OF_EDGE_VMS;
 	}
+	
+	/**
+	 * returns the number of different place types
+	 */
+	public int getNumOfPlaceTypes()
+	{
+		return NUM_OF_PLACE_TYPES;
+	}
 
 	/**
-	 * returns MIPS of the central cloud
+	 * returns the number of cloud datacenters
 	 */
-	public int getMipsForCloud()
+	public int getNumOfCoudHost()
 	{
-		return MIPS_FOR_CLOUD;
+		return NUM_OF_HOST_ON_CLOUD_DATACENTER;
+	}
+	
+	/**
+	 * returns the number of cloud VMs per Host
+	 */
+	public int getNumOfCloudVMsPerHost()
+	{
+		return NUM_OF_VM_ON_CLOUD_HOST;
+	}
+	
+	/**
+	 * returns the total number of cloud VMs
+	 */
+	public int getNumOfCloudVMs()
+	{
+		return NUM_OF_VM_ON_CLOUD_HOST * NUM_OF_HOST_ON_CLOUD_DATACENTER;
+	}
+	
+	/**
+	 * returns the number of cores for cloud VMs
+	 */
+	public int getCoreForCloudVM()
+	{
+		return CORE_FOR_CLOUD_VM;
+	}
+	
+	/**
+	 * returns MIPS of the central cloud VMs
+	 */
+	public int getMipsForCloudVM()
+	{
+		return MIPS_FOR_CLOUD_VM;
+	}
+	
+	/**
+	 * returns RAM of the central cloud VMs
+	 */
+	public int getRamForCloudVM()
+	{
+		return RAM_FOR_CLOUD_VM;
+	}
+	
+	/**
+	 * returns Storage of the central cloud VMs
+	 */
+	public int getStorageForCloudVM()
+	{
+		return STORAGE_FOR_CLOUD_VM;
 	}
 
 	/**
@@ -366,11 +433,17 @@ public class SimSettings {
 	 * [6] avg data download (KB)
 	 * [7] avg task length (MI)
 	 * [8] required # of cores
-	 * [9] vm utilization (%)
+     * [9] vm utilization on edge (%)
+     * [10] vm utilization on cloud (%)
 	 */ 
 	public double[][] getTaskLookUpTable()
 	{
 		return taskLookUpTable;
+	}
+	
+	public String getTaskName(int taskType)
+	{
+		return taskNames[taskType];
 	}
 	
 	private void isAttribtuePresent(Element element, String key) {
@@ -402,6 +475,8 @@ public class SimSettings {
 			doc.getDocumentElement().normalize();
 
 			NodeList appList = doc.getElementsByTagName("application");
+			taskLookUpTable = new double[appList.getLength()][13];
+			taskNames = new String[appList.getLength()];
 			for (int i = 0; i < appList.getLength(); i++) {
 				Node appNode = appList.item(i);
 	
@@ -416,10 +491,12 @@ public class SimSettings {
 				isElementPresent(appElement, "data_download");
 				isElementPresent(appElement, "task_length");
 				isElementPresent(appElement, "required_core");
-				isElementPresent(appElement, "vm_utilization");
+				isElementPresent(appElement, "vm_utilization_on_edge");
+				isElementPresent(appElement, "vm_utilization_on_cloud");
 
-				String appName = appElement.getAttribute("name");
-				SimSettings.APP_TYPES appType = APP_TYPES.valueOf(appName);
+				String taskName = appElement.getAttribute("name");
+				taskNames[i] = taskName;
+				
 				double usage_percentage = Double.parseDouble(appElement.getElementsByTagName("usage_percentage").item(0).getTextContent());
 				double prob_cloud_selection = Double.parseDouble(appElement.getElementsByTagName("prob_cloud_selection").item(0).getTextContent());
 				double poisson_interarrival = Double.parseDouble(appElement.getElementsByTagName("poisson_interarrival").item(0).getTextContent());
@@ -429,20 +506,20 @@ public class SimSettings {
 				double data_download = Double.parseDouble(appElement.getElementsByTagName("data_download").item(0).getTextContent());
 				double task_length = Double.parseDouble(appElement.getElementsByTagName("task_length").item(0).getTextContent());
 				double required_core = Double.parseDouble(appElement.getElementsByTagName("required_core").item(0).getTextContent());
-				double vm_utilization = Double.parseDouble(appElement.getElementsByTagName("vm_utilization").item(0).getTextContent());
-				double delay_sensitivity = Double.parseDouble(appElement.getElementsByTagName("delay_sensitivity").item(0).getTextContent());
-				
-			    taskLookUpTable[appType.ordinal()][0] = usage_percentage; //usage percentage [0-100]
-			    taskLookUpTable[appType.ordinal()][1] = prob_cloud_selection; //prob. of selecting cloud [0-100]
-			    taskLookUpTable[appType.ordinal()][2] = poisson_interarrival; //poisson mean (sec)
-			    taskLookUpTable[appType.ordinal()][3] = active_period; //active period (sec)
-			    taskLookUpTable[appType.ordinal()][4] = idle_period; //idle period (sec)
-			    taskLookUpTable[appType.ordinal()][5] = data_upload; //avg data upload (KB)
-			    taskLookUpTable[appType.ordinal()][6] = data_download; //avg data download (KB)
-			    taskLookUpTable[appType.ordinal()][7] = task_length; //avg task length (MI)
-			    taskLookUpTable[appType.ordinal()][8] = required_core; //required # of core
-			    taskLookUpTable[appType.ordinal()][9] = vm_utilization; //vm utilization [0-100]
-			    taskLookUpTable[appType.ordinal()][10] = delay_sensitivity; //delay_sensitivity [0-1]
+				double vm_utilization_on_edge = Double.parseDouble(appElement.getElementsByTagName("vm_utilization_on_edge").item(0).getTextContent());
+				double vm_utilization_on_cloud = Double.parseDouble(appElement.getElementsByTagName("vm_utilization_on_cloud").item(0).getTextContent());
+
+			    taskLookUpTable[i][0] = usage_percentage; //usage percentage [0-100]
+			    taskLookUpTable[i][1] = prob_cloud_selection; //prob. of selecting cloud [0-100]
+			    taskLookUpTable[i][2] = poisson_interarrival; //poisson mean (sec)
+			    taskLookUpTable[i][3] = active_period; //active period (sec)
+			    taskLookUpTable[i][4] = idle_period; //idle period (sec)
+			    taskLookUpTable[i][5] = data_upload; //avg data upload (KB)
+			    taskLookUpTable[i][6] = data_download; //avg data download (KB)
+			    taskLookUpTable[i][7] = task_length; //avg task length (MI)
+			    taskLookUpTable[i][8] = required_core; //required # of core
+			    taskLookUpTable[i][9] = vm_utilization_on_edge; //vm utilization on edge vm [0-100]
+			    taskLookUpTable[i][10] = vm_utilization_on_cloud; //vm utilization on cloud vm [0-100]
 			}
 	
 		} catch (Exception e) {
@@ -480,6 +557,11 @@ public class SimSettings {
 				isElementPresent(location, "wlan_id");
 				isElementPresent(location, "x_pos");
 				isElementPresent(location, "y_pos");
+				
+				String attractiveness = location.getElementsByTagName("attractiveness").item(0).getTextContent();
+				int placeTypeIndex = Integer.parseInt(attractiveness);
+				if(NUM_OF_PLACE_TYPES < placeTypeIndex+1)
+					NUM_OF_PLACE_TYPES = placeTypeIndex+1;
 
 				NodeList hostList = datacenterElement.getElementsByTagName("host");
 				for (int j = 0; j < hostList.getLength(); j++) {
