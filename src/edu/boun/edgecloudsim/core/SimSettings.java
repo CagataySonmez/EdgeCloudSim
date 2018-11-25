@@ -36,15 +36,16 @@ public class SimSettings {
 	public static final double CLIENT_ACTIVITY_START_TIME = 10;
 	
 	//enumarations for the VM types
-	public static enum VM_TYPES { EDGE_VM, CLOUD_VM }
+	public static enum VM_TYPES { MOBILE_VM, EDGE_VM, CLOUD_VM }
 	
 	//enumarations for the VM types
 	public static enum NETWORK_DELAY_TYPES { WLAN_DELAY, MAN_DELAY, WAN_DELAY }
 	
 	//predifined IDs for the components.
 	public static final int CLOUD_DATACENTER_ID = 1000;
-	public static final int EDGE_ORCHESTRATOR_ID = 1001;
-	public static final int GENERIC_EDGE_DEVICE_ID = 1002;
+	public static final int MOBILE_DATACENTER_ID = 1001;
+	public static final int EDGE_ORCHESTRATOR_ID = 1002;
+	public static final int GENERIC_EDGE_DEVICE_ID = 1003;
 
 	//delimiter for output file.
 	public static final String DELIMITER = ";";
@@ -77,6 +78,11 @@ public class SimSettings {
     private int MIPS_FOR_CLOUD_VM; //MIPS
     private int RAM_FOR_CLOUD_VM; //MB
 	private int STORAGE_FOR_CLOUD_VM; //Byte
+    
+    private int CORE_FOR_VM;
+    private int MIPS_FOR_VM; //MIPS
+    private int RAM_FOR_VM; //MB
+    private int STORAGE_FOR_VM; //Byte
     
     private String[] SIMULATION_SCENARIOS;
     private String[] ORCHESTRATOR_POLICIES;
@@ -151,6 +157,11 @@ public class SimSettings {
 		    MIPS_FOR_CLOUD_VM = Integer.parseInt(prop.getProperty("mips_for_cloud_vm"));
 		    RAM_FOR_CLOUD_VM = Integer.parseInt(prop.getProperty("ram_for_cloud_vm"));
 			STORAGE_FOR_CLOUD_VM = Integer.parseInt(prop.getProperty("storage_for_cloud_vm"));
+
+			RAM_FOR_VM = Integer.parseInt(prop.getProperty("ram_for_mobile_vm"));
+			CORE_FOR_VM = Integer.parseInt(prop.getProperty("core_for_mobile_vm"));
+			MIPS_FOR_VM = Integer.parseInt(prop.getProperty("mips_for_mobile_vm"));
+			STORAGE_FOR_VM = Integer.parseInt(prop.getProperty("storage_for_mobile_vm"));
 
 			ORCHESTRATOR_POLICIES = prop.getProperty("orchestrator_policies").split(",");
 			
@@ -395,6 +406,38 @@ public class SimSettings {
 	{
 		return STORAGE_FOR_CLOUD_VM;
 	}
+	
+	/**
+	 * returns RAM of the mobile (processing unit) VMs
+	 */
+	public int getRamForMobileVM()
+	{
+		return RAM_FOR_VM;
+	}
+	
+	/**
+	 * returns the number of cores for mobile VMs
+	 */
+	public int getCoreForMobileVM()
+	{
+		return CORE_FOR_VM;
+	}
+	
+	/**
+	 * returns MIPS of the mobile (processing unit) VMs
+	 */
+	public int getMipsForMobileVM()
+	{
+		return MIPS_FOR_VM;
+	}
+	
+	/**
+	 * returns Storage of the mobile (processing unit) VMs
+	 */
+	public int getStorageForMobileVM()
+	{
+		return STORAGE_FOR_VM;
+	}
 
 	/**
 	 * returns simulation screnarios as string
@@ -433,8 +476,9 @@ public class SimSettings {
 	 * [6] avg data download (KB)
 	 * [7] avg task length (MI)
 	 * [8] required # of cores
-     * [9] vm utilization on edge (%)
-     * [10] vm utilization on cloud (%)
+	 * [9] vm utilization on edge (%)
+	 * [10] vm utilization on cloud (%)
+	 * [11] vm utilization on mobile (%)
 	 */ 
 	public double[][] getTaskLookUpTable()
 	{
@@ -493,6 +537,7 @@ public class SimSettings {
 				isElementPresent(appElement, "required_core");
 				isElementPresent(appElement, "vm_utilization_on_edge");
 				isElementPresent(appElement, "vm_utilization_on_cloud");
+				isElementPresent(appElement, "vm_utilization_on_mobile");
 
 				String taskName = appElement.getAttribute("name");
 				taskNames[i] = taskName;
@@ -508,7 +553,8 @@ public class SimSettings {
 				double required_core = Double.parseDouble(appElement.getElementsByTagName("required_core").item(0).getTextContent());
 				double vm_utilization_on_edge = Double.parseDouble(appElement.getElementsByTagName("vm_utilization_on_edge").item(0).getTextContent());
 				double vm_utilization_on_cloud = Double.parseDouble(appElement.getElementsByTagName("vm_utilization_on_cloud").item(0).getTextContent());
-
+				double vm_utilization_on_mobile = Double.parseDouble(appElement.getElementsByTagName("vm_utilization_on_mobile").item(0).getTextContent());
+				
 			    taskLookUpTable[i][0] = usage_percentage; //usage percentage [0-100]
 			    taskLookUpTable[i][1] = prob_cloud_selection; //prob. of selecting cloud [0-100]
 			    taskLookUpTable[i][2] = poisson_interarrival; //poisson mean (sec)
@@ -520,6 +566,7 @@ public class SimSettings {
 			    taskLookUpTable[i][8] = required_core; //required # of core
 			    taskLookUpTable[i][9] = vm_utilization_on_edge; //vm utilization on edge vm [0-100]
 			    taskLookUpTable[i][10] = vm_utilization_on_cloud; //vm utilization on cloud vm [0-100]
+			    taskLookUpTable[i][11] = vm_utilization_on_mobile; //vm utilization on mobile vm [0-100]
 			}
 	
 		} catch (Exception e) {

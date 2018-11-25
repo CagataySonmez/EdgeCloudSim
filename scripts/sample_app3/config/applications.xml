@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<applications>
+	<application name="AUGMENTED_REALITY">
+		<usage_percentage>30</usage_percentage>
+		<prob_cloud_selection>20</prob_cloud_selection>
+		<poisson_interarrival>2</poisson_interarrival>
+		<active_period>40</active_period>
+		<idle_period>20</idle_period>
+		<data_upload>1500</data_upload>
+		<data_download>250</data_download>
+		<task_length>12000</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>8</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>0.8</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>20</vm_utilization_on_mobile>
+	</application>
+	<application name="HEALTH_APP">
+		<usage_percentage>20</usage_percentage>
+		<prob_cloud_selection>20</prob_cloud_selection>
+		<poisson_interarrival>3</poisson_interarrival>
+		<active_period>45</active_period>
+		<idle_period>90</idle_period>
+		<data_upload>200</data_upload>
+		<data_download>1250</data_download>
+		<task_length>6000</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>4</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>0.4</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>10</vm_utilization_on_mobile>
+	</application>
+	<application name="HEAVY_COMP_APP">
+		<usage_percentage>20</usage_percentage>
+		<prob_cloud_selection>40</prob_cloud_selection>
+		<poisson_interarrival>20</poisson_interarrival>
+		<active_period>60</active_period>
+		<idle_period>120</idle_period>
+		<data_upload>2500</data_upload>
+		<data_download>200</data_download>
+		<task_length>30000</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>20</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>2</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>50</vm_utilization_on_mobile>
+	</application>
+	<application name="INFOTAINMENT_APP">
+		<usage_percentage>30</usage_percentage>
+		<prob_cloud_selection>10</prob_cloud_selection>
+		<poisson_interarrival>7</poisson_interarrival>
+		<active_period>30</active_period>
+		<idle_period>45</idle_period>
+		<data_upload>250</data_upload>
+		<data_download>1000</data_download>
+		<task_length>15000</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>10</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>1</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>25</vm_utilization_on_mobile>
+	</application>
+</applications>

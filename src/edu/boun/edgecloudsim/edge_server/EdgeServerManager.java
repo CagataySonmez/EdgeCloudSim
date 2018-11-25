@@ -1,3 +1,19 @@
+/*
+ * Title:        EdgeCloudSim - EdgeServerManager
+ * 
+ * Description: 
+ * EdgeServerManager is responsible for creating and terminating
+ * the edge datacenters which operates the hosts and VMs.
+ * It also provides the list of VMs running on the hosts and
+ * the average utilization of all VMs.
+ *
+ * Please note that, EdgeCloudSim is built on top of CloudSim
+ * Therefore, all the computational units are handled by CloudSim
+ * 
+ * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
+ * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
+ */
+
 package edu.boun.edgecloudsim.edge_server;
 
 import java.util.ArrayList;

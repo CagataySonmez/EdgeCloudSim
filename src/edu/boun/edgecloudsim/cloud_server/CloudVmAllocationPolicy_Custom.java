@@ -3,9 +3,9 @@
  * 
  * Description: 
  * VmAllocationPolicy_Custom implements VmAllocationPolicy to decide which.
- * VM is created on which host locatied on the datacenters. For those
+ * VM is created on which host located on the datacenters. For those
  * who wants to add another Vm Allocation Policy to EdgeCloudSim should
- * provide another concreate instance of VmAllocationPolicy via ScenarioFactory
+ * provide another concrete instance of VmAllocationPolicy via ScenarioFactory
  *               
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
