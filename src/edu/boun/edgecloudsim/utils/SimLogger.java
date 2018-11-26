@@ -144,8 +144,8 @@ public class SimLogger {
 		taskMap.get(taskId).taskFailedDueToMobility(time);
 	}
 
-	public void addVmUtilizationLog(double time, double loadOnEdge, double loadOnCloud) {
-		vmLoadList.add(new VmLoadLogItem(time, loadOnEdge, loadOnCloud));
+	public void addVmUtilizationLog(double time, double loadOnEdge, double loadOnCloud, double loadOnMobile) {
+		vmLoadList.add(new VmLoadLogItem(time, loadOnEdge, loadOnCloud, loadOnMobile));
 	}
 
 	public void simStopped() throws IOException {
@@ -166,32 +166,41 @@ public class SimLogger {
 		int[] uncompletedTask = new int[numOfAppTypes + 1];
 		int[] uncompletedTaskOnCloud = new int[numOfAppTypes + 1];
 		int[] uncompletedTaskOnEdge = new int[numOfAppTypes + 1];
+		int[] uncompletedTaskOnMobile = new int[numOfAppTypes + 1];
 
 		int[] completedTask = new int[numOfAppTypes + 1];
 		int[] completedTaskOnCloud = new int[numOfAppTypes + 1];
 		int[] completedTaskOnEdge = new int[numOfAppTypes + 1];
-		int[] completedTaskOnRemoteEdge = new int[numOfAppTypes + 1];
+		int[] completedTaskOnMobile = new int[numOfAppTypes + 1];
 
 		int[] failedTask = new int[numOfAppTypes + 1];
 		int[] failedTaskOnCloud = new int[numOfAppTypes + 1];
 		int[] failedTaskOnEdge = new int[numOfAppTypes + 1];
+		int[] failedTaskOnMobile = new int[numOfAppTypes + 1];
 
 		double[] networkDelay = new double[numOfAppTypes + 1];
 		double[] wanDelay = new double[numOfAppTypes + 1];
 		double[] manDelay = new double[numOfAppTypes + 1];
 		double[] lanDelay = new double[numOfAppTypes + 1];
+		
+		double[] wanUsage = new double[numOfAppTypes + 1];
+		double[] manUsage = new double[numOfAppTypes + 1];
+		double[] lanUsage = new double[numOfAppTypes + 1];
 
 		double[] serviceTime = new double[numOfAppTypes + 1];
 		double[] serviceTimeOnCloud = new double[numOfAppTypes + 1];
 		double[] serviceTimeOnEdge = new double[numOfAppTypes + 1];
+		double[] serviceTimeOnMobile = new double[numOfAppTypes + 1];
 
 		double[] processingTime = new double[numOfAppTypes + 1];
 		double[] processingTimeOnCloud = new double[numOfAppTypes + 1];
 		double[] processingTimeOnEdge = new double[numOfAppTypes + 1];
+		double[] processingTimeOnMobile = new double[numOfAppTypes + 1];
 
 		int[] failedTaskDueToVmCapacity = new int[numOfAppTypes + 1];
 		int[] failedTaskDueToVmCapacityOnCloud = new int[numOfAppTypes + 1];
 		int[] failedTaskDueToVmCapacityOnEdge = new int[numOfAppTypes + 1];
+		int[] failedTaskDueToVmCapacityOnMobile = new int[numOfAppTypes + 1];
 		
 		double[] cost = new double[numOfAppTypes + 1];
 		int[] failedTaskDuetoBw = new int[numOfAppTypes + 1];
@@ -260,7 +269,9 @@ public class SimLogger {
 
 				if (value.getVmType() == SimSettings.VM_TYPES.CLOUD_VM.ordinal())
 					completedTaskOnCloud[value.getTaskType()]++;
-				else if (value.getVmType() == SimSettings.VM_TYPES.EDGE_VM.ordinal())
+				else if (value.getVmType() == SimSettings.VM_TYPES.MOBILE_VM.ordinal())
+					completedTaskOnMobile[value.getTaskType()]++;
+				else
 					completedTaskOnEdge[value.getTaskType()]++;
 			}
 			else if(value.getStatus() == SimLogger.TASK_STATUS.CREATED ||
@@ -271,7 +282,9 @@ public class SimLogger {
 				uncompletedTask[value.getTaskType()]++;
 				if (value.getVmType() == SimSettings.VM_TYPES.CLOUD_VM.ordinal())
 					uncompletedTaskOnCloud[value.getTaskType()]++;
-				else if (value.getVmType() == SimSettings.VM_TYPES.EDGE_VM.ordinal())
+				else if (value.getVmType() == SimSettings.VM_TYPES.MOBILE_VM.ordinal())
+					uncompletedTaskOnMobile[value.getTaskType()]++;
+				else
 					uncompletedTaskOnEdge[value.getTaskType()]++;
 			}
 			else {
@@ -279,7 +292,9 @@ public class SimLogger {
 
 				if (value.getVmType() == SimSettings.VM_TYPES.CLOUD_VM.ordinal())
 					failedTaskOnCloud[value.getTaskType()]++;
-				else if (value.getVmType() == SimSettings.VM_TYPES.EDGE_VM.ordinal())
+				else if (value.getVmType() == SimSettings.VM_TYPES.MOBILE_VM.ordinal())
+					failedTaskOnMobile[value.getTaskType()]++;
+				else
 					failedTaskOnEdge[value.getTaskType()]++;
 			}
 
@@ -288,18 +303,30 @@ public class SimLogger {
 				serviceTime[value.getTaskType()] += value.getServiceTime();
 				networkDelay[value.getTaskType()] += value.getNetworkDelay();
 				processingTime[value.getTaskType()] += (value.getServiceTime() - value.getNetworkDelay());
-
-				if (value.getVmType() == SimSettings.VM_TYPES.CLOUD_VM.ordinal()) {
-					wanDelay[value.getTaskType()] += value.getNetworkDelay(NETWORK_DELAY_TYPES.WAN_DELAY);
-					serviceTimeOnCloud[value.getTaskType()] += value.getServiceTime();
-					processingTimeOnCloud[value.getTaskType()] += (value.getServiceTime() - value.getNetworkDelay(NETWORK_DELAY_TYPES.WAN_DELAY));
-				}
-				else if (value.getVmType() == SimSettings.VM_TYPES.EDGE_VM.ordinal()) {
-					if(value.getNetworkDelay(NETWORK_DELAY_TYPES.MAN_DELAY) != 0){
-						completedTaskOnRemoteEdge[value.getTaskType()]++;
-						manDelay[value.getTaskType()] += value.getNetworkDelay(NETWORK_DELAY_TYPES.MAN_DELAY);
-					}
+				
+				if(value.getNetworkDelay(NETWORK_DELAY_TYPES.WLAN_DELAY) != 0) {
+					lanUsage[value.getTaskType()]++;
 					lanDelay[value.getTaskType()] += value.getNetworkDelay(NETWORK_DELAY_TYPES.WLAN_DELAY);
+				}
+				if(value.getNetworkDelay(NETWORK_DELAY_TYPES.MAN_DELAY) != 0) {
+					manUsage[value.getTaskType()]++;
+					manDelay[value.getTaskType()] += value.getNetworkDelay(NETWORK_DELAY_TYPES.MAN_DELAY);
+				}
+				if(value.getNetworkDelay(NETWORK_DELAY_TYPES.WAN_DELAY) != 0) {
+					wanUsage[value.getTaskType()]++;
+					wanDelay[value.getTaskType()] += value.getNetworkDelay(NETWORK_DELAY_TYPES.WAN_DELAY);
+				}
+
+				
+				if (value.getVmType() == SimSettings.VM_TYPES.CLOUD_VM.ordinal()) {
+					serviceTimeOnCloud[value.getTaskType()] += value.getServiceTime();
+					processingTimeOnCloud[value.getTaskType()] += (value.getServiceTime() - value.getNetworkDelay());
+				}
+				else if (value.getVmType() == SimSettings.VM_TYPES.MOBILE_VM.ordinal()) {
+					serviceTimeOnMobile[value.getTaskType()] += value.getServiceTime();
+					processingTimeOnMobile[value.getTaskType()] += value.getServiceTime();
+				}
+				else {
 					serviceTimeOnEdge[value.getTaskType()] += value.getServiceTime();
 					processingTimeOnEdge[value.getTaskType()] += (value.getServiceTime() - value.getNetworkDelay());
 				}
@@ -311,7 +338,9 @@ public class SimLogger {
 				
 				if (value.getVmType() == SimSettings.VM_TYPES.CLOUD_VM.ordinal())
 					failedTaskDueToVmCapacityOnCloud[value.getTaskType()]++;
-				else if (value.getVmType() == SimSettings.VM_TYPES.EDGE_VM.ordinal())
+				else if (value.getVmType() == SimSettings.VM_TYPES.MOBILE_VM.ordinal())
+					failedTaskDueToVmCapacityOnMobile[value.getTaskType()]++;
+				else
 					failedTaskDueToVmCapacityOnEdge[value.getTaskType()]++;
 				
 				if (fileLogEnabled && SimSettings.getInstance().getDeepFileLoggingEnabled())
@@ -339,32 +368,41 @@ public class SimLogger {
 		uncompletedTask[numOfAppTypes] = IntStream.of(uncompletedTask).sum();
 		uncompletedTaskOnCloud[numOfAppTypes] = IntStream.of(uncompletedTaskOnCloud).sum();
 		uncompletedTaskOnEdge[numOfAppTypes] = IntStream.of(uncompletedTaskOnEdge).sum();
+		uncompletedTaskOnMobile[numOfAppTypes] = IntStream.of(uncompletedTaskOnMobile).sum();
 
 		completedTask[numOfAppTypes] = IntStream.of(completedTask).sum();
 		completedTaskOnCloud[numOfAppTypes] = IntStream.of(completedTaskOnCloud).sum();
 		completedTaskOnEdge[numOfAppTypes] = IntStream.of(completedTaskOnEdge).sum();
-		completedTaskOnRemoteEdge[numOfAppTypes] = IntStream.of(completedTaskOnRemoteEdge).sum();
+		completedTaskOnMobile[numOfAppTypes] = IntStream.of(completedTaskOnMobile).sum();
 
 		failedTask[numOfAppTypes] = IntStream.of(failedTask).sum();
 		failedTaskOnCloud[numOfAppTypes] = IntStream.of(failedTaskOnCloud).sum();
 		failedTaskOnEdge[numOfAppTypes] = IntStream.of(failedTaskOnEdge).sum();
+		failedTaskOnMobile[numOfAppTypes] = IntStream.of(failedTaskOnMobile).sum();
 
 		networkDelay[numOfAppTypes] = DoubleStream.of(networkDelay).sum();
 		lanDelay[numOfAppTypes] = DoubleStream.of(lanDelay).sum();
 		manDelay[numOfAppTypes] = DoubleStream.of(manDelay).sum();
 		wanDelay[numOfAppTypes] = DoubleStream.of(wanDelay).sum();
+		
+		lanUsage[numOfAppTypes] = DoubleStream.of(lanUsage).sum();
+		manUsage[numOfAppTypes] = DoubleStream.of(manUsage).sum();
+		wanUsage[numOfAppTypes] = DoubleStream.of(wanUsage).sum();
 
 		serviceTime[numOfAppTypes] = DoubleStream.of(serviceTime).sum();
 		serviceTimeOnCloud[numOfAppTypes] = DoubleStream.of(serviceTimeOnCloud).sum();
 		serviceTimeOnEdge[numOfAppTypes] = DoubleStream.of(serviceTimeOnEdge).sum();
+		serviceTimeOnMobile[numOfAppTypes] = DoubleStream.of(serviceTimeOnMobile).sum();
 
 		processingTime[numOfAppTypes] = DoubleStream.of(processingTime).sum();
 		processingTimeOnCloud[numOfAppTypes] = DoubleStream.of(processingTimeOnCloud).sum();
 		processingTimeOnEdge[numOfAppTypes] = DoubleStream.of(processingTimeOnEdge).sum();
+		processingTimeOnMobile[numOfAppTypes] = DoubleStream.of(processingTimeOnMobile).sum();
 
 		failedTaskDueToVmCapacity[numOfAppTypes] = IntStream.of(failedTaskDueToVmCapacity).sum();
 		failedTaskDueToVmCapacityOnCloud[numOfAppTypes] = IntStream.of(failedTaskDueToVmCapacityOnCloud).sum();
 		failedTaskDueToVmCapacityOnEdge[numOfAppTypes] = IntStream.of(failedTaskDueToVmCapacityOnEdge).sum();
+		failedTaskDueToVmCapacityOnMobile[numOfAppTypes] = IntStream.of(failedTaskDueToVmCapacityOnMobile).sum();
 		
 		cost[numOfAppTypes] = DoubleStream.of(cost).sum();
 		failedTaskDuetoBw[numOfAppTypes] = IntStream.of(failedTaskDuetoBw).sum();
@@ -376,9 +414,11 @@ public class SimLogger {
 		// calculate server load
 		double totalVmLoadOnEdge = 0;
 		double totalVmLoadOnCloud = 0;
+		double totalVmLoadOnMobile = 0;
 		for (VmLoadLogItem entry : vmLoadList) {
 			totalVmLoadOnEdge += entry.getEdgeLoad();
 			totalVmLoadOnCloud += entry.getCloudLoad();
+			totalVmLoadOnMobile += entry.getMobileLoad();
 			if (fileLogEnabled)
 				appendToFile(vmLoadBW, entry.toString());
 		}
@@ -419,19 +459,20 @@ public class SimLogger {
 				// check if the divisor is zero in order to avoid division by
 				// zero problem
 				double _serviceTime = (completedTask[i] == 0) ? 0.0 : (serviceTime[i] / (double) completedTask[i]);
-				double _networkDelay = (completedTask[i] == 0) ? 0.0 : (networkDelay[i] / (double) completedTask[i]);
+				double _networkDelay = (completedTask[i] == 0) ? 0.0 : (networkDelay[i] / ((double) completedTask[i] - (double)completedTaskOnMobile[i]));
 				double _processingTime = (completedTask[i] == 0) ? 0.0 : (processingTime[i] / (double) completedTask[i]);
 				double _vmLoadOnEdge = (vmLoadList.size() == 0) ? 0.0 : (totalVmLoadOnEdge / (double) vmLoadList.size());
 				double _vmLoadOnClould = (vmLoadList.size() == 0) ? 0.0 : (totalVmLoadOnCloud / (double) vmLoadList.size());
+				double _vmLoadOnMobile = (vmLoadList.size() == 0) ? 0.0 : (totalVmLoadOnMobile / (double) vmLoadList.size());
 				double _cost = (completedTask[i] == 0) ? 0.0 : (cost[i] / (double) completedTask[i]);
 
-				double _lanDelay = (completedTaskOnEdge[i] == 0) ? 0.0
-						: (lanDelay[i] / (double) completedTaskOnEdge[i]);
-				double _manDelay = (completedTaskOnRemoteEdge[i] == 0) ? 0.0
-						: (manDelay[i] / (double) completedTaskOnRemoteEdge[i]);
-				double _wanDelay = (completedTaskOnCloud[i] == 0) ? 0.0
-						: (wanDelay[i] / (double) completedTaskOnCloud[i]);
-				
+				double _lanDelay = (lanUsage[i] == 0) ? 0.0
+						: (lanDelay[i] / (double) lanUsage[i]);
+				double _manDelay = (manUsage[i] == 0) ? 0.0
+						: (manDelay[i] / (double) manUsage[i]);
+				double _wanDelay = (wanUsage[i] == 0) ? 0.0
+						: (wanDelay[i] / (double) wanUsage[i]);
+
 				// write generic results
 				String genericResult1 = Integer.toString(completedTask[i]) + SimSettings.DELIMITER
 						+ Integer.toString(failedTask[i]) + SimSettings.DELIMITER 
@@ -474,13 +515,26 @@ public class SimLogger {
 						+ Double.toString(0.0) + SimSettings.DELIMITER
 						+ Double.toString(_vmLoadOnClould) + SimSettings.DELIMITER 
 						+ Integer.toString(failedTaskDueToVmCapacityOnCloud[i]);
-
-				//for future use
-				String genericResult4 = "0;0;0;0;0;0;0;0;0";
-
+				
+				// check if the divisor is zero in order to avoid division by zero problem
+				double _serviceTimeOnMobile = (completedTaskOnMobile[i] == 0) ? 0.0
+						: (serviceTimeOnMobile[i] / (double) completedTaskOnMobile[i]);
+				double _processingTimeOnMobile = (completedTaskOnMobile[i] == 0) ? 0.0
+						: (processingTimeOnMobile[i] / (double) completedTaskOnMobile[i]);
+				String genericResult4 = Integer.toString(completedTaskOnMobile[i]) + SimSettings.DELIMITER
+						+ Integer.toString(failedTaskOnMobile[i]) + SimSettings.DELIMITER
+						+ Integer.toString(uncompletedTaskOnMobile[i]) + SimSettings.DELIMITER
+						+ Integer.toString(0) + SimSettings.DELIMITER
+						+ Double.toString(_serviceTimeOnMobile) + SimSettings.DELIMITER
+						+ Double.toString(_processingTimeOnMobile) + SimSettings.DELIMITER 
+						+ Double.toString(0.0) + SimSettings.DELIMITER
+						+ Double.toString(_vmLoadOnMobile) + SimSettings.DELIMITER 
+						+ Integer.toString(failedTaskDueToVmCapacityOnMobile[i]);
+				
 				String genericResult5 = Double.toString(_lanDelay) + SimSettings.DELIMITER
 						+ Double.toString(_manDelay) + SimSettings.DELIMITER
 						+ Double.toString(_wanDelay) + SimSettings.DELIMITER
+						+ 0 + SimSettings.DELIMITER //for future use
 						+ Integer.toString(failedTaskDuetoLanBw[i]) + SimSettings.DELIMITER
 						+ Integer.toString(failedTaskDuetoManBw[i]) + SimSettings.DELIMITER
 						+ Integer.toString(failedTaskDuetoWanBw[i]);
@@ -511,30 +565,35 @@ public class SimLogger {
 		}
 
 		// printout important results
-		printLine("# of tasks (Edge/Cloud): "
+		printLine("# of tasks (Edge/Cloud/Mobile): "
 				+ (failedTask[numOfAppTypes] + completedTask[numOfAppTypes]) + "("
 				+ (failedTaskOnEdge[numOfAppTypes] + completedTaskOnEdge[numOfAppTypes]) + "/" 
-				+ (failedTaskOnCloud[numOfAppTypes]+ completedTaskOnCloud[numOfAppTypes]) + ")");
+				+ (failedTaskOnCloud[numOfAppTypes]+ completedTaskOnCloud[numOfAppTypes]) + "/" 
+				+ (failedTaskOnMobile[numOfAppTypes]+ completedTaskOnMobile[numOfAppTypes]) + ")");
 		
-		printLine("# of failed tasks (Edge/Cloud): "
+		printLine("# of failed tasks (Edge/Cloud/Mobile): "
 				+ failedTask[numOfAppTypes] + "("
 				+ failedTaskOnEdge[numOfAppTypes] + "/"
-				+ failedTaskOnCloud[numOfAppTypes] + ")");
+				+ failedTaskOnCloud[numOfAppTypes] + "/"
+				+ failedTaskOnMobile[numOfAppTypes] + ")");
 		
-		printLine("# of completed tasks (Edge/Cloud): "
+		printLine("# of completed tasks (Edge/Cloud/Mobile): "
 				+ completedTask[numOfAppTypes] + "("
 				+ completedTaskOnEdge[numOfAppTypes] + "/"
-				+ completedTaskOnCloud[numOfAppTypes] + ")");
+				+ completedTaskOnCloud[numOfAppTypes] + "/"
+				+ completedTaskOnMobile[numOfAppTypes] + ")");
 		
-		printLine("# of uncompleted tasks (Edge/Cloud): "
+		printLine("# of uncompleted tasks (Edge/Cloud/Mobile): "
 				+ uncompletedTask[numOfAppTypes] + "("
 				+ uncompletedTaskOnEdge[numOfAppTypes] + "/"
-				+ uncompletedTaskOnCloud[numOfAppTypes] + ")");
+				+ uncompletedTaskOnCloud[numOfAppTypes] + "/"
+				+ uncompletedTaskOnMobile[numOfAppTypes] + ")");
 
-		printLine("# of failed tasks due to vm capacity (Edge/Cloud): "
+		printLine("# of failed tasks due to vm capacity (Edge/Cloud/Mobile): "
 				+ failedTaskDueToVmCapacity[numOfAppTypes] + "("
 				+ failedTaskDueToVmCapacityOnEdge[numOfAppTypes] + "/"
-				+ failedTaskDueToVmCapacityOnCloud[numOfAppTypes] + ")");
+				+ failedTaskDueToVmCapacityOnCloud[numOfAppTypes] + "/"
+				+ failedTaskDueToVmCapacityOnMobile[numOfAppTypes] + ")");
 		
 		printLine("# of failed tasks due to Mobility/Network(WLAN/MAN/WAN): "
 				+ failedTaskDuetoMobility[numOfAppTypes]
@@ -554,6 +613,8 @@ public class SimLogger {
 				+ String.format("%.6f", serviceTimeOnEdge[numOfAppTypes] / (double) completedTaskOnEdge[numOfAppTypes])
 				+ ", " + "on Cloud: "
 				+ String.format("%.6f", serviceTimeOnCloud[numOfAppTypes] / (double) completedTaskOnCloud[numOfAppTypes])
+				+ ", " + "on Mobile: "
+				+ String.format("%.6f", serviceTimeOnMobile[numOfAppTypes] / (double) completedTaskOnMobile[numOfAppTypes])
 				+ ")");
 
 		printLine("average processing time: "
@@ -562,20 +623,23 @@ public class SimLogger {
 				+ String.format("%.6f", processingTimeOnEdge[numOfAppTypes] / (double) completedTaskOnEdge[numOfAppTypes])
 				+ ", " + "on Cloud: " 
 				+ String.format("%.6f", processingTimeOnCloud[numOfAppTypes] / (double) completedTaskOnCloud[numOfAppTypes])
+				+ ", " + "on Mobile: " 
+				+ String.format("%.6f", processingTimeOnMobile[numOfAppTypes] / (double) completedTaskOnMobile[numOfAppTypes])
 				+ ")");
 
 		printLine("average network delay: "
-				+ String.format("%.6f", networkDelay[numOfAppTypes] / (double) completedTask[numOfAppTypes])
+				+ String.format("%.6f", networkDelay[numOfAppTypes] / ((double) completedTask[numOfAppTypes] - (double) completedTaskOnMobile[numOfAppTypes]))
 				+ " seconds. (" + "LAN delay: "
-				+ String.format("%.6f", lanDelay[numOfAppTypes] / (double) completedTaskOnEdge[numOfAppTypes])
+				+ String.format("%.6f", lanDelay[numOfAppTypes] / (double) lanUsage[numOfAppTypes])
 				+ ", " + "MAN delay: "
-				+ String.format("%.6f", manDelay[numOfAppTypes] / (double) completedTaskOnRemoteEdge[numOfAppTypes])
+				+ String.format("%.6f", manDelay[numOfAppTypes] / (double) manUsage[numOfAppTypes])
 				+ ", " + "WAN delay: "
-				+ String.format("%.6f", wanDelay[numOfAppTypes] / (double) completedTaskOnCloud[numOfAppTypes]) + ")");
+				+ String.format("%.6f", wanDelay[numOfAppTypes] / (double) wanUsage[numOfAppTypes]) + ")");
 
-		printLine("average server utilization Edge/Cloud: " 
+		printLine("average server utilization Edge/Cloud/Mobile: " 
 				+ String.format("%.6f", totalVmLoadOnEdge / (double) vmLoadList.size()) + "/"
-				+ String.format("%.6f", totalVmLoadOnCloud / (double) vmLoadList.size()));
+				+ String.format("%.6f", totalVmLoadOnCloud / (double) vmLoadList.size()) + "/"
+				+ String.format("%.6f", totalVmLoadOnMobile / (double) vmLoadList.size()));
 		
 		printLine("average cost: " + cost[numOfAppTypes] / completedTask[numOfAppTypes] + "$");
 
@@ -589,11 +653,13 @@ class VmLoadLogItem {
 	private double time;
 	private double vmLoadOnEdge;
 	private double vmLoadOnCloud;
+	private double vmLoadOnMobile;
 
-	VmLoadLogItem(double _time, double _vmLoadOnEdge, double _vmLoadOnCloud) {
+	VmLoadLogItem(double _time, double _vmLoadOnEdge, double _vmLoadOnCloud, double _vmLoadOnMobile) {
 		time = _time;
 		vmLoadOnEdge = _vmLoadOnEdge;
 		vmLoadOnCloud = _vmLoadOnCloud;
+		vmLoadOnMobile = _vmLoadOnMobile;
 	}
 
 	public double getEdgeLoad() {
@@ -604,10 +670,15 @@ class VmLoadLogItem {
 		return vmLoadOnCloud;
 	}
 	
+	public double getMobileLoad() {
+		return vmLoadOnMobile;
+	}
+	
 	public String toString() {
 		return time + 
 				SimSettings.DELIMITER + vmLoadOnEdge +
-				SimSettings.DELIMITER + vmLoadOnCloud;
+				SimSettings.DELIMITER + vmLoadOnCloud +
+				SimSettings.DELIMITER + vmLoadOnMobile;
 	}
 }
 

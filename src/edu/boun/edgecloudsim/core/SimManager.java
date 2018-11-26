@@ -26,6 +26,7 @@ import edu.boun.edgecloudsim.edge_server.EdgeServerManager;
 import edu.boun.edgecloudsim.edge_server.EdgeVmAllocationPolicy_Custom;
 import edu.boun.edgecloudsim.cloud_server.CloudServerManager;
 import edu.boun.edgecloudsim.edge_client.MobileDeviceManager;
+import edu.boun.edgecloudsim.edge_client.mobile_processing_unit.MobileServerManager;
 import edu.boun.edgecloudsim.mobility.MobilityModel;
 import edu.boun.edgecloudsim.task_generator.LoadGeneratorModel;
 import edu.boun.edgecloudsim.network.NetworkModel;
@@ -48,6 +49,7 @@ public class SimManager extends SimEntity {
 	private EdgeOrchestrator edgeOrchestrator;
 	private EdgeServerManager edgeServerManager;
 	private CloudServerManager cloudServerManager;
+	private MobileServerManager mobileServerManager;
 	private LoadGeneratorModel loadGeneratorModel;
 	private MobileDeviceManager mobileDeviceManager;
 	
@@ -85,6 +87,10 @@ public class SimManager extends SimEntity {
 		//Create Physical Servers on cloud
 		cloudServerManager = scenarioFactory.getCloudServerManager();
 		cloudServerManager.initialize();
+		
+		//Create Physical Servers on mobile devices
+		mobileServerManager = scenarioFactory.getMobileServerManager();
+		mobileServerManager.initialize();
 
 		//Create Client Manager
 		mobileDeviceManager = scenarioFactory.getMobileDeviceManager();
@@ -111,7 +117,11 @@ public class SimManager extends SimEntity {
 		//Start Edge Datacenters & Generate VMs
 		cloudServerManager.startDatacenters();
 		cloudServerManager.createVmList(mobileDeviceManager.getId());
-
+		
+		//Start Mobile Datacenters & Generate VMs
+		mobileServerManager.startDatacenters();
+		mobileServerManager.createVmList(mobileDeviceManager.getId());
+		
 		CloudSim.startSimulation();
 	}
 
@@ -151,6 +161,10 @@ public class SimManager extends SimEntity {
 		return cloudServerManager;
 	}
 	
+	public MobileServerManager getMobileServerManager(){
+		return mobileServerManager;
+	}
+
 	public LoadGeneratorModel getLoadGeneratorModel(){
 		return loadGeneratorModel;
 	}
@@ -175,6 +189,11 @@ public class SimManager extends SimEntity {
 			mobileDeviceManager.submitVmList(cloudServerManager.getVmList(i));
 		}
 
+		for(int i=0; i<numOfMobileDevice; i++){
+			if(mobileServerManager.getVmList(i) != null)
+				mobileDeviceManager.submitVmList(mobileServerManager.getVmList(i));
+		}
+		
 		//Creation of tasks are scheduled here!
 		for(int i=0; i< loadGeneratorModel.getTaskList().size(); i++)
 			schedule(getId(), loadGeneratorModel.getTaskList().get(i).startTime, CREATE_TASK, loadGeneratorModel.getTaskList().get(i));
@@ -212,7 +231,8 @@ public class SimManager extends SimEntity {
 				SimLogger.getInstance().addVmUtilizationLog(
 						CloudSim.clock(),
 						edgeServerManager.getAvgUtilization(),
-						cloudServerManager.getAvgUtilization());
+						cloudServerManager.getAvgUtilization(),
+						mobileServerManager.getAvgUtilization());
 				
 				schedule(getId(), SimSettings.getInstance().getVmLoadLogInterval(), GET_LOAD_LOG);
 				break;
@@ -247,5 +267,6 @@ public class SimManager extends SimEntity {
 	public void shutdownEntity() {
 		edgeServerManager.terminateDatacenters();
 		cloudServerManager.terminateDatacenters();
+		mobileServerManager.terminateDatacenters();
 	}
 }
