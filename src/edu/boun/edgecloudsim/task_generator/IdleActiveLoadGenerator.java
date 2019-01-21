@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import org.apache.commons.math3.distribution.ExponentialDistribution;
 
 import edu.boun.edgecloudsim.core.SimSettings;
-import edu.boun.edgecloudsim.utils.EdgeTask;
+import edu.boun.edgecloudsim.utils.TaskProperty;
 import edu.boun.edgecloudsim.utils.SimLogger;
 import edu.boun.edgecloudsim.utils.SimUtils;
 
@@ -30,7 +30,7 @@ public class IdleActiveLoadGenerator extends LoadGeneratorModel{
 
 	@Override
 	public void initializeModel() {
-		taskList = new ArrayList<EdgeTask>();
+		taskList = new ArrayList<TaskProperty>();
 		
 		//exponential number generator for file input size, file output size and task length
 		ExponentialDistribution[][] expRngList = new ExponentialDistribution[SimSettings.getInstance().getTaskLookUpTable().length][3];
@@ -90,7 +90,7 @@ public class IdleActiveLoadGenerator extends LoadGeneratorModel{
 					continue;
 				}
 				
-				taskList.add(new EdgeTask(i,randomTaskType, virtualTime, expRngList));
+				taskList.add(new TaskProperty(i,randomTaskType, virtualTime, expRngList));
 			}
 		}
 	}
