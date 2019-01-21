@@ -26,7 +26,7 @@ import edu.boun.edgecloudsim.core.SimManager;
 import edu.boun.edgecloudsim.core.SimSettings;
 import edu.boun.edgecloudsim.core.SimSettings.NETWORK_DELAY_TYPES;
 import edu.boun.edgecloudsim.network.NetworkModel;
-import edu.boun.edgecloudsim.utils.EdgeTask;
+import edu.boun.edgecloudsim.utils.TaskProperty;
 import edu.boun.edgecloudsim.utils.Location;
 import edu.boun.edgecloudsim.utils.SimLogger;
 
@@ -167,7 +167,7 @@ public class DefaultMobileDeviceManager extends MobileDeviceManager {
 		}
 	}
 
-	public void submitTask(EdgeTask edgeTask) {
+	public void submitTask(TaskProperty edgeTask) {
 		NetworkModel networkModel = SimManager.getInstance().getNetworkModel();
 		
 		//create a task
@@ -271,18 +271,18 @@ public class DefaultMobileDeviceManager extends MobileDeviceManager {
 		}
 	}
 	
-	private Task createTask(EdgeTask edgeTask){
+	private Task createTask(TaskProperty edgeTask){
 		UtilizationModel utilizationModel = new UtilizationModelFull(); /*UtilizationModelStochastic*/
 		UtilizationModel utilizationModelCPU = getCpuUtilizationModel();
 
-		Task task = new Task(edgeTask.mobileDeviceId, ++taskIdCounter,
-				edgeTask.length, edgeTask.pesNumber,
-				edgeTask.inputFileSize, edgeTask.outputFileSize,
+		Task task = new Task(edgeTask.getMobileDeviceId(), ++taskIdCounter,
+				edgeTask.getLength(), edgeTask.getPesNumber(),
+				edgeTask.getInputFileSize(), edgeTask.getOutputFileSize(),
 				utilizationModelCPU, utilizationModel, utilizationModel);
 		
 		//set the owner of this task
 		task.setUserId(this.getId());
-		task.setTaskType(edgeTask.taskType);
+		task.setTaskType(edgeTask.getTaskType());
 		
 		if (utilizationModelCPU instanceof CpuUtilizationModel_Custom) {
 			((CpuUtilizationModel_Custom)utilizationModelCPU).setTask(task);

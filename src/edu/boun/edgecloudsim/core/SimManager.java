@@ -30,7 +30,7 @@ import edu.boun.edgecloudsim.edge_client.mobile_processing_unit.MobileServerMana
 import edu.boun.edgecloudsim.mobility.MobilityModel;
 import edu.boun.edgecloudsim.task_generator.LoadGeneratorModel;
 import edu.boun.edgecloudsim.network.NetworkModel;
-import edu.boun.edgecloudsim.utils.EdgeTask;
+import edu.boun.edgecloudsim.utils.TaskProperty;
 import edu.boun.edgecloudsim.utils.SimLogger;
 
 public class SimManager extends SimEntity {
@@ -196,7 +196,7 @@ public class SimManager extends SimEntity {
 		
 		//Creation of tasks are scheduled here!
 		for(int i=0; i< loadGeneratorModel.getTaskList().size(); i++)
-			schedule(getId(), loadGeneratorModel.getTaskList().get(i).startTime, CREATE_TASK, loadGeneratorModel.getTaskList().get(i));
+			schedule(getId(), loadGeneratorModel.getTaskList().get(i).getStartTime(), CREATE_TASK, loadGeneratorModel.getTaskList().get(i));
 		
 		//Periodic event loops starts from here!
 		schedule(getId(), 5, CHECK_ALL_VM);
@@ -213,7 +213,7 @@ public class SimManager extends SimEntity {
 			switch (ev.getTag()) {
 			case CREATE_TASK:
 				try {
-					EdgeTask edgeTask = (EdgeTask) ev.getData();
+					TaskProperty edgeTask = (TaskProperty) ev.getData();
 					mobileDeviceManager.submitTask(edgeTask);						
 				} catch (Exception e) {
 					e.printStackTrace();
