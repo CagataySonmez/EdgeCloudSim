@@ -4,6 +4,7 @@
 		<usage_percentage>30</usage_percentage>
 		<prob_cloud_selection>20</prob_cloud_selection>
 		<poisson_interarrival>5</poisson_interarrival>
+		<delay_sensitivity>0</delay_sensitivity>
 		<active_period>45</active_period>
 		<idle_period>15</idle_period>
 		<data_upload>1500</data_upload>
@@ -18,6 +19,7 @@
 		<usage_percentage>20</usage_percentage>
 		<prob_cloud_selection>20</prob_cloud_selection>
 		<poisson_interarrival>30</poisson_interarrival>
+		<delay_sensitivity>0</delay_sensitivity>
 		<active_period>10</active_period>
 		<idle_period>20</idle_period>
 		<data_upload>1250</data_upload>
@@ -32,6 +34,7 @@
 		<usage_percentage>20</usage_percentage>
 		<prob_cloud_selection>40</prob_cloud_selection>
 		<poisson_interarrival>60</poisson_interarrival>
+		<delay_sensitivity>0</delay_sensitivity>
 		<active_period>60</active_period>
 		<idle_period>60</idle_period>
 		<data_upload>2500</data_upload>
@@ -46,6 +49,7 @@
 		<usage_percentage>30</usage_percentage>
 		<prob_cloud_selection>15</prob_cloud_selection>
 		<poisson_interarrival>7</poisson_interarrival>
+		<delay_sensitivity>0</delay_sensitivity>
 		<active_period>15</active_period>
 		<idle_period>45</idle_period>
 		<data_upload>25</data_upload>

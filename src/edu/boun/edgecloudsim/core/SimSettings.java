@@ -479,6 +479,7 @@ public class SimSettings {
 	 * [9] vm utilization on edge (%)
 	 * [10] vm utilization on cloud (%)
 	 * [11] vm utilization on mobile (%)
+	 * [12] delay sensitivity [0-1]
 	 */ 
 	public double[][] getTaskLookUpTable()
 	{
@@ -538,6 +539,7 @@ public class SimSettings {
 				isElementPresent(appElement, "vm_utilization_on_edge");
 				isElementPresent(appElement, "vm_utilization_on_cloud");
 				isElementPresent(appElement, "vm_utilization_on_mobile");
+				isElementPresent(appElement, "delay_sensitivity");
 
 				String taskName = appElement.getAttribute("name");
 				taskNames[i] = taskName;
@@ -554,6 +556,7 @@ public class SimSettings {
 				double vm_utilization_on_edge = Double.parseDouble(appElement.getElementsByTagName("vm_utilization_on_edge").item(0).getTextContent());
 				double vm_utilization_on_cloud = Double.parseDouble(appElement.getElementsByTagName("vm_utilization_on_cloud").item(0).getTextContent());
 				double vm_utilization_on_mobile = Double.parseDouble(appElement.getElementsByTagName("vm_utilization_on_mobile").item(0).getTextContent());
+				double delay_sensitivity = Double.parseDouble(appElement.getElementsByTagName("delay_sensitivity").item(0).getTextContent());
 				
 			    taskLookUpTable[i][0] = usage_percentage; //usage percentage [0-100]
 			    taskLookUpTable[i][1] = prob_cloud_selection; //prob. of selecting cloud [0-100]
@@ -567,6 +570,7 @@ public class SimSettings {
 			    taskLookUpTable[i][9] = vm_utilization_on_edge; //vm utilization on edge vm [0-100]
 			    taskLookUpTable[i][10] = vm_utilization_on_cloud; //vm utilization on cloud vm [0-100]
 			    taskLookUpTable[i][11] = vm_utilization_on_mobile; //vm utilization on mobile vm [0-100]
+			    taskLookUpTable[i][12] = delay_sensitivity; //delay_sensitivity [0-1]
 			}
 	
 		} catch (Exception e) {
