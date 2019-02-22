@@ -61,7 +61,7 @@ In order to sync the a forked repository with the original repository, you need 
 Change directory to the forked repository and use 'git add remote' command to specify a new remote upstream repository.
 ```
 $ cd EdgeCloudSim
-$ git remote add upstream git remote add upstream https://github.com/CagataySonmez/EdgeCloudSim.git
+$ git remote add upstream https://github.com/CagataySonmez/EdgeCloudSim.git
 ```
 
 After this step, you will have two remotes on your local:
