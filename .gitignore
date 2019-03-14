@@ -19,3 +19,9 @@ bin
 .settings
 .classpath
 .project
+
+# IntelliJ project files
+.idea
+*.iml
+out
+gen
