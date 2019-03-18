@@ -91,12 +91,12 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 					result = SimSettings.GENERIC_EDGE_DEVICE_ID;
 			}
 			else {
-				SimLogger.printLine("Unknow edge orchestrator policy! Terminating simulation...");
+				SimLogger.printLine("Unknown edge orchestrator policy! Terminating simulation...");
 				System.exit(0);
 			}
 		}
 		else {
-			SimLogger.printLine("Unknow simulation scenario! Terminating simulation...");
+			SimLogger.printLine("Unknown simulation scenario! Terminating simulation...");
 			System.exit(0);
 		}
 		return result;

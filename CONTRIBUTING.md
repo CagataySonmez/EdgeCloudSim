@@ -37,7 +37,7 @@ If you want to specify more things, add additional notes here
 
 # How to Contribute to EdgeCloudSim
 
-You can simply follow below steps to contribute to EdgeClouldSim:
+You can simply follow below steps to contribute to EdgeCloudSim:
 
 1. Create a working copy (fork the project & clone it)
 2. Specify a new remote upstream repository

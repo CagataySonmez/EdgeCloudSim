@@ -5,7 +5,7 @@
  * MobilityModel is an abstract class which is used for calculating the
  * location of each mobile devices with respect to the time. For those who
  * wants to add a custom Mobility Model to EdgeCloudSim should extend
- * this class and provide a concreate instance via ScenarioFactory
+ * this class and provide a concrete instance via ScenarioFactory
  *               
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey

@@ -5,7 +5,7 @@
  * NetworkModel is an abstract class which is used for calculating the
  * network delay from device to device. For those who wants to add a
  * custom Network Model to EdgeCloudSim should extend this class and
- * provide a concreate instance via ScenarioFactory
+ * provide a concrete instance via ScenarioFactory
  *               
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey

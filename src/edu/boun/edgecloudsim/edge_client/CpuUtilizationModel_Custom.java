@@ -8,7 +8,7 @@
  * which decide CPU utilization of each application by using the
  * values defined in the applications.xml file. For those who wants to
  * add another VM Cpu Utilization Model to EdgeCloudSim should provide
- * another concreate instance of UtilizationModel via ScenarioFactory
+ * another concrete instance of UtilizationModel via ScenarioFactory
  *               
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey

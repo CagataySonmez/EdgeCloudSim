@@ -1,8 +1,8 @@
 /*
  * Title:        EdgeCloudSim - Poisson Distribution
- * 
+ *
  * Description:  Wrapper class for colt Poisson Distribution
- * 
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -22,18 +22,18 @@ public class PoissonDistr {
 
     /**
      * Creates a new exponential number generator.
-     * 
+     *
      * @param mean the mean for the distribution.
      */
     public PoissonDistr(double mean) {
 		engine = new MersenneTwister(new Date());
 		poisson = new Poisson(mean, engine);
-		
+
 		//always sleep for some milliseconds in order not to have same seed for iterative PoissonDistr contruction
 		try {
 			TimeUnit.MILLISECONDS.sleep(10);
 		} catch (InterruptedException e) {
-	    	SimLogger.printLine("impossible is occured! Poisson random number cannot be created!");
+	    	SimLogger.printLine("impossible is occurred! Poisson random number cannot be created!");
 			e.printStackTrace();
 	    	System.exit(0);
 		}
@@ -41,10 +41,10 @@ public class PoissonDistr {
 
     /**
      * Generate a new random number.
-     * 
+     *
      * @return the next random number in the sequence
      */
-        public double sample() {
+    public double sample() {
         	return poisson.nextDouble();
     }
 }
