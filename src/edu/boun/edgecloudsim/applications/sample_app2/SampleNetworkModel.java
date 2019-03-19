@@ -36,7 +36,7 @@ public class SampleNetworkModel extends NetworkModel {
 	private int[] wanClients;
 	private int[] wlanClients;
 	
-	private double lastMM1QueeuUpdateTime;
+	private double lastMM1QueueUpdateTime;
 	private double ManPoissonMeanForDownload; //seconds
 	private double ManPoissonMeanForUpload; //seconds
 
@@ -194,7 +194,7 @@ public class SampleNetworkModel extends NetworkModel {
 		SimSettings SS = SimSettings.getInstance();
 		for(int taskIndex=0; taskIndex<numOfApp; taskIndex++) {
 			if(SS.getTaskLookUpTable()[taskIndex][0] == 0) {
-				SimLogger.printLine("Usage percantage of task " + taskIndex + " is 0! Terminating simulation...");
+				SimLogger.printLine("Usage percentage of task " + taskIndex + " is 0! Terminating simulation...");
 				System.exit(0);
 			}
 			else{
@@ -214,7 +214,7 @@ public class SampleNetworkModel extends NetworkModel {
 		avgManTaskInputSize = avgManTaskInputSize/numOfApp;
 		avgManTaskOutputSize = avgManTaskOutputSize/numOfApp;
 		
-		lastMM1QueeuUpdateTime = SimSettings.CLIENT_ACTIVITY_START_TIME;
+		lastMM1QueueUpdateTime = SimSettings.CLIENT_ACTIVITY_START_TIME;
 		totalManTaskOutputSize = 0;
 		numOfManTaskForDownload = 0;
 		totalManTaskInputSize = 0;
@@ -364,7 +364,7 @@ public class SampleNetworkModel extends NetworkModel {
 		return getWanDownloadDelay(accessPointLocation, dataSize);
 	}
 	
-	private double calculateMM1(double propogationDelay, double bandwidth /*Kbps*/, double PoissonMean, double avgTaskSize /*KB*/, int deviceCount){
+	private double calculateMM1(double propagationDelay, double bandwidth /*Kbps*/, double PoissonMean, double avgTaskSize /*KB*/, int deviceCount){
 		double mu=0, lamda=0;
 		
 		avgTaskSize = avgTaskSize * 8; //convert from KB to Kb
@@ -376,7 +376,7 @@ public class SampleNetworkModel extends NetworkModel {
 		if(result < 0)
 			return 0;
 		
-		result += propogationDelay;
+		result += propagationDelay;
 		
 		return (result > 15) ? 0 : result;
 	}
@@ -412,8 +412,8 @@ public class SampleNetworkModel extends NetworkModel {
 	}
 	
 	public void updateMM1QueeuModel(){
-		double lastInterval = CloudSim.clock() - lastMM1QueeuUpdateTime;
-		lastMM1QueeuUpdateTime = CloudSim.clock();
+		double lastInterval = CloudSim.clock() - lastMM1QueueUpdateTime;
+		lastMM1QueueUpdateTime = CloudSim.clock();
 		
 		if(numOfManTaskForDownload != 0){
 			ManPoissonMeanForDownload = lastInterval / (numOfManTaskForDownload / (double)numberOfMobileDevices);

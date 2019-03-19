@@ -46,7 +46,7 @@ public class DefaultMobileServerManager extends MobileServerManager{
 	}
 
 	@Override
-	public void createVmList(int brockerId) {
+	public void createVmList(int brokerId) {
 		//local computation is not supported in default Mobile Device Manager
 	}
 

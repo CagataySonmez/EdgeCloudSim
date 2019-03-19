@@ -5,7 +5,7 @@
  * SimSettings provides system wide simulation settings. It is a
  * singleton class and provides all necessary information to other modules.
  * If you need to use another simulation setting variable in your
- * config file, add related getter methot in this class.
+ * config file, add related getter method in this class.
  *               
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
@@ -145,7 +145,7 @@ public class SimSettings {
 			MAX_NUM_OF_MOBILE_DEVICES = Integer.parseInt(prop.getProperty("max_number_of_mobile_devices"));
 			MOBILE_DEVICE_COUNTER_SIZE = Integer.parseInt(prop.getProperty("mobile_device_counter_size"));
 			
-			WAN_PROPOGATION_DELAY = Double.parseDouble(prop.getProperty("wan_propogation_delay"));
+			WAN_PROPOGATION_DELAY = Double.parseDouble(prop.getProperty("wan_propagation_delay"));
 			LAN_INTERNAL_DELAY = Double.parseDouble(prop.getProperty("lan_internal_delay"));
 			BANDWITH_WLAN = 1000 * Integer.parseInt(prop.getProperty("wlan_bandwidth"));
 			BANDWITH_WAN = 1000 * Integer.parseInt(prop.getProperty("wan_bandwidth"));
@@ -192,7 +192,7 @@ public class SimSettings {
 				}
 			}
 		}
-		parseApplicatinosXML(applicationsFile);
+		parseApplicationsXML(applicationsFile);
 		parseEdgeDevicesXML(edgeDevicesFile);
 		
 		return result;
@@ -255,15 +255,15 @@ public class SimSettings {
 	}
 	
 	/**
-	 * returns WAN propogation delay (in second unit) from properties file
+	 * returns WAN propagation delay (in second unit) from properties file
 	 */
-	public double getWanPropogationDelay()
+	public double getWanPropagationDelay()
 	{
 		return WAN_PROPOGATION_DELAY;
 	}
 
 	/**
-	 * returns internal LAN propogation delay (in second unit) from properties file
+	 * returns internal LAN propagation delay (in second unit) from properties file
 	 */
 	public double getInternalLanDelay()
 	{
@@ -303,7 +303,7 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns the maximunm number of the mobile devices used in the simulation
+	 * returns the maximum number of the mobile devices used in the simulation
 	 */
 	public int getMaxNumOfMobileDev()
 	{
@@ -354,7 +354,7 @@ public class SimSettings {
 	/**
 	 * returns the number of cloud datacenters
 	 */
-	public int getNumOfCoudHost()
+	public int getNumOfCouldHost()
 	{
 		return NUM_OF_HOST_ON_CLOUD_DATACENTER;
 	}
@@ -440,7 +440,7 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns simulation screnarios as string
+	 * returns simulation scenarios as string
 	 */
 	public String[] getSimulationScenarios()
 	{
@@ -491,10 +491,10 @@ public class SimSettings {
 		return taskNames[taskType];
 	}
 	
-	private void isAttribtuePresent(Element element, String key) {
+	private void isAttributePresent(Element element, String key) {
         String value = element.getAttribute(key);
         if (value.isEmpty() || value == null){
-        	throw new IllegalArgumentException("Attribure '" + key + "' is not found in '" + element.getNodeName() +"'");
+        	throw new IllegalArgumentException("Attribute '" + key + "' is not found in '" + element.getNodeName() +"'");
         }
 	}
 
@@ -509,7 +509,7 @@ public class SimSettings {
 		}
 	}
 	
-	private void parseApplicatinosXML(String filePath)
+	private void parseApplicationsXML(String filePath)
 	{
 		Document doc = null;
 		try {	
@@ -526,7 +526,7 @@ public class SimSettings {
 				Node appNode = appList.item(i);
 	
 				Element appElement = (Element) appNode;
-				isAttribtuePresent(appElement, "name");
+				isAttributePresent(appElement, "name");
 				isElementPresent(appElement, "usage_percentage");
 				isElementPresent(appElement, "prob_cloud_selection");
 				isElementPresent(appElement, "poisson_interarrival");
@@ -595,9 +595,9 @@ public class SimSettings {
 				Node datacenterNode = datacenterList.item(i);
 	
 				Element datacenterElement = (Element) datacenterNode;
-				isAttribtuePresent(datacenterElement, "arch");
-				isAttribtuePresent(datacenterElement, "os");
-				isAttribtuePresent(datacenterElement, "vmm");
+				isAttributePresent(datacenterElement, "arch");
+				isAttributePresent(datacenterElement, "os");
+				isAttributePresent(datacenterElement, "vmm");
 				isElementPresent(datacenterElement, "costPerBw");
 				isElementPresent(datacenterElement, "costPerSec");
 				isElementPresent(datacenterElement, "costPerMem");
@@ -631,7 +631,7 @@ public class SimSettings {
 						Node vmNode = vmList.item(k);
 						
 						Element vmElement = (Element) vmNode;
-						isAttribtuePresent(vmElement, "vmm");
+						isAttributePresent(vmElement, "vmm");
 						isElementPresent(vmElement, "core");
 						isElementPresent(vmElement, "mips");
 						isElementPresent(vmElement, "ram");

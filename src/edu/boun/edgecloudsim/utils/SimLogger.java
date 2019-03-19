@@ -31,7 +31,7 @@ import edu.boun.edgecloudsim.utils.SimLogger.NETWORK_ERRORS;
 
 public class SimLogger {
 	public static enum TASK_STATUS {
-		CREATED, UPLOADING, PROCESSING, DOWNLOADING, COMLETED, REJECTED_DUE_TO_VM_CAPACITY, REJECTED_DUE_TO_BANDWIDTH, UNFINISHED_DUE_TO_BANDWIDTH, UNFINISHED_DUE_TO_MOBILITY
+		CREATED, UPLOADING, PROCESSING, DOWNLOADING, COMPLETED, REJECTED_DUE_TO_VM_CAPACITY, REJECTED_DUE_TO_BANDWIDTH, UNFINISHED_DUE_TO_BANDWIDTH, UNFINISHED_DUE_TO_MOBILITY
 	}
 	
 	public static enum NETWORK_ERRORS {
@@ -264,7 +264,7 @@ public class SimLogger {
 			if (value.isInWarmUpPeriod())
 				continue;
 
-			if (value.getStatus() == SimLogger.TASK_STATUS.COMLETED) {
+			if (value.getStatus() == SimLogger.TASK_STATUS.COMPLETED) {
 				completedTask[value.getTaskType()]++;
 
 				if (value.getVmType() == SimSettings.VM_TYPES.CLOUD_VM.ordinal())
@@ -298,7 +298,7 @@ public class SimLogger {
 					failedTaskOnEdge[value.getTaskType()]++;
 			}
 
-			if (value.getStatus() == SimLogger.TASK_STATUS.COMLETED) {
+			if (value.getStatus() == SimLogger.TASK_STATUS.COMPLETED) {
 				cost[value.getTaskType()] += value.getCost();
 				serviceTime[value.getTaskType()] += value.getServiceTime();
 				networkDelay[value.getTaskType()] += value.getNetworkDelay();
@@ -705,9 +705,9 @@ class LogItem {
 	private double cpuCost;
 	private boolean isInWarmUpPeriod;
 
-	LogItem(int _taskType, int _taskLenght, int _taskInputType, int _taskOutputSize) {
+	LogItem(int _taskType, int _taskLength, int _taskInputType, int _taskOutputSize) {
 		taskType = _taskType;
-		taskLenght = _taskLenght;
+		taskLenght = _taskLength;
 		taskInputType = _taskInputType;
 		taskOutputSize = _taskOutputSize;
 		networkError = NETWORK_ERRORS.NONE;
@@ -757,7 +757,7 @@ class LogItem {
 
 	public void taskEnded(double time) {
 		taskEndTime = time;
-		status = SimLogger.TASK_STATUS.COMLETED;
+		status = SimLogger.TASK_STATUS.COMPLETED;
 	}
 
 	public void taskRejectedDueToVMCapacity(double time, int _vmType) {
@@ -881,7 +881,7 @@ class LogItem {
 				+ taskOutputSize + SimSettings.DELIMITER + taskStartTime + SimSettings.DELIMITER + taskEndTime
 				+ SimSettings.DELIMITER;
 
-		if (status == SimLogger.TASK_STATUS.COMLETED){
+		if (status == SimLogger.TASK_STATUS.COMPLETED){
 			result += getNetworkDelay() + SimSettings.DELIMITER;
 			result += getNetworkDelay(NETWORK_DELAY_TYPES.WLAN_DELAY) + SimSettings.DELIMITER;
 			result += getNetworkDelay(NETWORK_DELAY_TYPES.MAN_DELAY) + SimSettings.DELIMITER;

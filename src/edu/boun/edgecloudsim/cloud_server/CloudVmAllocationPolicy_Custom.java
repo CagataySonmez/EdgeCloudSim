@@ -53,7 +53,7 @@ public class CloudVmAllocationPolicy_Custom extends VmAllocationPolicy {
 				Host host = getHostList().get(hostIndex);
 				result = host.vmCreate(vm);
 	
-				if (result) { // if vm were succesfully created in the host
+				if (result) { // if vm were successfully created in the host
 					getVmTable().put(vm.getUid(), host);
 					createdVmNum++;
 					Log.formatLine("%.2f: Cloud VM #" + vm.getId() + " has been allocated to the host #" + host.getId(),CloudSim.clock());

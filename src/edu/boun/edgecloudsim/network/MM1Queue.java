@@ -122,7 +122,7 @@ public class MM1Queue extends NetworkModel {
 					getHostList().get(0));
 			
 			//if source device id is the edge server which is located in another location, add internal lan delay
-			//in our scenasrio, serving wlan ID is equal to the host id, because there is only one host in one place
+			//in our scenario, serving wlan ID is equal to the host id, because there is only one host in one place
 			if(host.getLocation().getServingWlanId() != accessPointLocation.getServingWlanId())
 				delay += (SimSettings.getInstance().getInternalLanDelay() * 2);
 		}
@@ -150,7 +150,7 @@ public class MM1Queue extends NetworkModel {
 		return deviceCount;
 	}
 	
-	private double calculateMM1(double propogationDelay, int bandwidth /*Kbps*/, double PoissonMean, double avgTaskSize /*KB*/, int deviceCount){
+	private double calculateMM1(double propagationDelay, int bandwidth /*Kbps*/, double PoissonMean, double avgTaskSize /*KB*/, int deviceCount){
 		double Bps=0, mu=0, lamda=0;
 		
 		avgTaskSize = avgTaskSize * (double)1000; //convert from KB to Byte
@@ -160,7 +160,7 @@ public class MM1Queue extends NetworkModel {
 		mu = Bps / avgTaskSize ; //task per seconds
 		double result = (double)1 / (mu-lamda*(double)deviceCount);
 		
-		result += propogationDelay;
+		result += propagationDelay;
 		
 		return (result > 5) ? -1 : result;
 	}
@@ -182,7 +182,7 @@ public class MM1Queue extends NetworkModel {
 	}
 	
 	private double getWanDownloadDelay(Location accessPointLocation, double time) {
-		return calculateMM1(SimSettings.getInstance().getWanPropogationDelay(),
+		return calculateMM1(SimSettings.getInstance().getWanPropagationDelay(),
 				SimSettings.getInstance().getWanBandwidth(),
 				WanPoissonMean,
 				avgTaskOutputSize,
@@ -190,7 +190,7 @@ public class MM1Queue extends NetworkModel {
 	}
 	
 	private double getWanUploadDelay(Location accessPointLocation, double time) {
-		return calculateMM1(SimSettings.getInstance().getWanPropogationDelay(),
+		return calculateMM1(SimSettings.getInstance().getWanPropagationDelay(),
 				SimSettings.getInstance().getWanBandwidth(),
 				WanPoissonMean,
 				avgTaskInputSize,
