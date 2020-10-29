@@ -63,7 +63,7 @@ public class DefaultEdgeServerManager extends EdgeServerManager{
 		}
 	}
 
-	public void createVmList(int brockerId){
+	public void createVmList(int brokerId){
 		int hostCounter=0;
 		int vmCounter=0;
 		
@@ -93,7 +93,7 @@ public class DefaultEdgeServerManager extends EdgeServerManager{
 					long bandwidth = SimSettings.getInstance().getWlanBandwidth() / (hostNodeList.getLength()+vmNodeList.getLength());
 					
 					//VM Parameters		
-					EdgeVM vm = new EdgeVM(vmCounter, brockerId, mips, numOfCores, ram, bandwidth, storage, vmm, new CloudletSchedulerTimeShared());
+					EdgeVM vm = new EdgeVM(vmCounter, brokerId, mips, numOfCores, ram, bandwidth, storage, vmm, new CloudletSchedulerTimeShared());
 					vmList.get(hostCounter).add(vm);
 					vmCounter++;
 				}

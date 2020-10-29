@@ -185,7 +185,7 @@ public class SimManager extends SimEntity {
 			}
 		}
 		
-		for(int i= 0; i<SimSettings.getInstance().getNumOfCoudHost(); i++) {
+		for(int i = 0; i<SimSettings.getInstance().getNumOfCouldHost(); i++) {
 			mobileDeviceManager.submitVmList(cloudServerManager.getVmList(i));
 		}
 

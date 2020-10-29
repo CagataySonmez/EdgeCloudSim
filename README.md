@@ -6,7 +6,7 @@ EdgeCloudSim provides a simulation environment specific to Edge Computing scenar
 
 The discussion forum for EdgeCloudSim can be found [here](https://groups.google.com/forum/#!forum/edgecloudsim).
 We hope to meet with all interested parties in this forum.
-Please feel free to join and let us discuss issues, share ideas related to EdgeCloudSim all togerther.
+Please feel free to join and let us discuss issues, share ideas related to EdgeCloudSim all together.
 
 ## Needed Features
 

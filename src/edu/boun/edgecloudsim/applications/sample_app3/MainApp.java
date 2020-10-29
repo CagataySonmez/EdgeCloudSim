@@ -32,7 +32,7 @@ public class MainApp {
 		//disable console output of cloudsim library
 		Log.disable();
 		
-		//enable console ourput and file output of this application
+		//enable console output and file output of this application
 		SimLogger.enablePrintLog();
 		
 		int iterationNumber = 1;

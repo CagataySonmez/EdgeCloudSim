@@ -78,7 +78,7 @@ public class IdleActiveLoadGenerator extends LoadGeneratorModel{
 				double interval = rng.sample();
 
 				if(interval <= 0){
-					SimLogger.printLine("Impossible is occured! interval is " + interval + " for device " + i + " time " + virtualTime);
+					SimLogger.printLine("Impossible is occurred! interval is " + interval + " for device " + i + " time " + virtualTime);
 					continue;
 				}
 				//SimLogger.printLine(virtualTime + " -> " + interval + " for device " + i + " time ");

@@ -96,16 +96,16 @@ public class FuzzyEdgeOrchestrator extends EdgeOrchestrator {
 			for(int hostIndex=0; hostIndex<numberOfHost; hostIndex++){
 				List<EdgeVM> vmArray = SimManager.getInstance().getEdgeServerManager().getVmList(hostIndex);
 	
-				double totalUtlization=0;
+				double totalUtilization=0;
 				for(int vmIndex=0; vmIndex<vmArray.size(); vmIndex++){
-					totalUtlization += vmArray.get(vmIndex).getCloudletScheduler().getTotalUtilizationOfCpu(CloudSim.clock());
+					totalUtilization += vmArray.get(vmIndex).getCloudletScheduler().getTotalUtilizationOfCpu(CloudSim.clock());
 				}
 				
-				double avgUtilization = (totalUtlization / (double)(vmArray.size()));
+				double avgUtilization = (totalUtilization / (double)(vmArray.size()));
 				
 				EdgeHost host = (EdgeHost)(vmArray.get(0).getHost()); //all VMs have the same host
 				if(host.getLocation().getServingWlanId() == task.getSubmittedLocation().getServingWlanId()){
-					nearestEdgeUtilization = totalUtlization / (double)(vmArray.size());
+					nearestEdgeUtilization = totalUtilization / (double)(vmArray.size());
 					nearestEdgeHostIndex = hostIndex;
 				}
 				else if(avgUtilization < bestRemoteEdgeUtilization){
@@ -220,12 +220,12 @@ public class FuzzyEdgeOrchestrator extends EdgeOrchestrator {
 					result = SimSettings.GENERIC_EDGE_DEVICE_ID;
 			}
 			else {
-				SimLogger.printLine("Unknow edge orchestrator policy! Terminating simulation...");
+				SimLogger.printLine("Unknown edge orchestrator policy! Terminating simulation...");
 				System.exit(0);
 			}
 		}
 		else {
-			SimLogger.printLine("Unknow simulation scenario! Terminating simulation...");
+			SimLogger.printLine("Unknown simulation scenario! Terminating simulation...");
 			System.exit(0);
 		}
 		return result;
