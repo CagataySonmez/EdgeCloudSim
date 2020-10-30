@@ -21,6 +21,12 @@ public class Location {
 		yPos = _yPos;
 	}
 	
+	/*
+	 * Default Constructor: Creates an empty Location
+	 */
+	public Location() {
+	}
+	
 	@Override
 	public boolean equals(Object other){
 		boolean result = false;

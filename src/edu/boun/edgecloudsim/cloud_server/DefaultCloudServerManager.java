@@ -58,7 +58,7 @@ public class DefaultCloudServerManager extends CloudServerManager{
 		int vmCounter=SimSettings.getInstance().getNumOfEdgeVMs();
 		
 		//Create VMs for each hosts
-		for (int i = 0; i < SimSettings.getInstance().getNumOfCouldHost(); i++) {
+		for (int i = 0; i < SimSettings.getInstance().getNumOfCloudHost(); i++) {
 			vmList.add(i, new ArrayList<CloudVM>());
 			for(int j = 0; j < SimSettings.getInstance().getNumOfCloudVMsPerHost(); j++){
 				String vmm = "Xen";
@@ -131,7 +131,7 @@ public class DefaultCloudServerManager extends CloudServerManager{
 		// 1. We need to create a list to store one or more Machines
 		List<Host> hostList = new ArrayList<Host>();
 		
-		for (int i = 0; i < SimSettings.getInstance().getNumOfCouldHost(); i++) {
+		for (int i = 0; i < SimSettings.getInstance().getNumOfCloudHost(); i++) {
 			int numOfVMPerHost = SimSettings.getInstance().getNumOfCloudVMsPerHost();
 			int numOfCores = SimSettings.getInstance().getCoreForCloudVM() * numOfVMPerHost;
 			double mips = SimSettings.getInstance().getMipsForCloudVM() * numOfVMPerHost;

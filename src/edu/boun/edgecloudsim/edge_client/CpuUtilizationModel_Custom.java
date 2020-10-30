@@ -56,7 +56,7 @@ public class CpuUtilizationModel_Custom implements UtilizationModel {
 			index = 11;
 		else{
 			SimLogger.printLine("Unknown VM Type! Terminating simulation...");
-			System.exit(0);
+			System.exit(1);
 		}
 		return SimSettings.getInstance().getTaskLookUpTable()[task.getTaskType()][index];
 	}

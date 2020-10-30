@@ -59,7 +59,7 @@ public class IdleActiveLoadGenerator extends LoadGeneratorModel{
 				}
 			}
 			if(randomTaskType == -1){
-				SimLogger.printLine("Impossible is occured! no random task type!");
+				SimLogger.printLine("Impossible is occurred! no random task type!");
 				continue;
 			}
 			

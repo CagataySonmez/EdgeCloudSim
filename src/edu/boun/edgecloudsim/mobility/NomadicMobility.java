@@ -99,7 +99,7 @@ public class NomadicMobility extends MobilityModel {
 				}
 				if(!placeFound){
 					SimLogger.printLine("impossible is occurred! location cannot be assigned to the device!");
-			    	System.exit(0);
+					System.exit(1);
 				}
 			}
 		}
@@ -114,7 +114,7 @@ public class NomadicMobility extends MobilityModel {
 	    
 	    if(e == null){
 	    	SimLogger.printLine("impossible is occurred! no location is found for the device '" + deviceId + "' at " + time);
-	    	System.exit(0);
+	    	System.exit(1);
 	    }
 	    
 		return e.getValue();

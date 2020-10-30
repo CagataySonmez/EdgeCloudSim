@@ -24,17 +24,17 @@ import edu.boun.edgecloudsim.utils.SimLogger;
 import edu.boun.edgecloudsim.utils.SimUtils;
 
 public class MainApp {
-	
+
 	/**
 	 * Creates main() to run this example
 	 */
 	public static void main(String[] args) {
 		//disable console output of cloudsim library
 		Log.disable();
-		
+
 		//enable console output and file output of this application
 		SimLogger.enablePrintLog();
-		
+
 		int iterationNumber = 1;
 		String configFile = "";
 		String outputFolder = "";
@@ -61,12 +61,12 @@ public class MainApp {
 			SimLogger.printLine("cannot initialize simulation settings!");
 			System.exit(0);
 		}
-		
+
 		if(SS.getFileLoggingEnabled()){
 			SimLogger.enableFileLog();
 			SimUtils.cleanOutputFolder(outputFolder);
 		}
-		
+
 		DateFormat df = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 		Date SimulationStartDate = Calendar.getInstance().getTime();
 		String now = df.format(SimulationStartDate);
@@ -88,7 +88,7 @@ public class MainApp {
 					SimLogger.printLine("Scenario: " + simScenario + " - Policy: " + orchestratorPolicy + " - #iteration: " + iterationNumber);
 					SimLogger.printLine("Duration: " + SS.getSimulationTime()/60 + " min (warm up period: "+ SS.getWarmUpPeriod()/60 +" min) - #devices: " + j);
 					SimLogger.getInstance().simStarted(outputFolder,"SIMRESULT_" + simScenario + "_"  + orchestratorPolicy + "_" + j + "DEVICES");
-					
+
 					try
 					{
 						// First step: Initialize the CloudSim package. It should be called
@@ -96,16 +96,16 @@ public class MainApp {
 						int num_user = 2;   // number of grid users
 						Calendar calendar = Calendar.getInstance();
 						boolean trace_flag = false;  // mean trace events
-				
+
 						// Initialize the CloudSim library
 						CloudSim.init(num_user, calendar, trace_flag, 0.01);
-						
+
 						// Generate EdgeCloudsim Scenario Factory
 						ScenarioFactory sampleFactory = new SampleScenarioFactory(j,SS.getSimulationTime(), orchestratorPolicy, simScenario);
-						
+
 						// Generate EdgeCloudSim Simulation Manager
 						SimManager manager = new SimManager(sampleFactory, j, simScenario, orchestratorPolicy);
-						
+
 						// Start simulation
 						manager.startSimulation();
 					}
@@ -115,7 +115,7 @@ public class MainApp {
 						e.printStackTrace();
 						System.exit(0);
 					}
-					
+
 					Date ScenarioEndDate = Calendar.getInstance().getTime();
 					now = df.format(ScenarioEndDate);
 					SimLogger.printLine("Scenario finished at " + now +  ". It took " + SimUtils.getTimeDifference(ScenarioStartDate,ScenarioEndDate));

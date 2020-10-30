@@ -27,7 +27,14 @@ public abstract class EdgeOrchestrator extends SimEntity{
 		policy = _policy;
 		simScenario = _simScenario;
 	}
-	
+
+	/*
+	 * Default Constructor: Creates an empty EdgeOrchestrator
+	 */
+	public EdgeOrchestrator() {
+        	super("EdgeOrchestrator");
+	}
+
 	/*
 	 * initialize edge orchestrator if needed
 	 */

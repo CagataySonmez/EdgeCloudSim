@@ -357,7 +357,7 @@ public class FuzzyExperimentalNetworkModel extends NetworkModel {
 		return getWanDownloadDelay(accessPointLocation, dataSize);
 	}
 	
-	private double calculateMM1(double propogationDelay, double bandwidth /*Kbps*/, double PoissonMean, double avgTaskSize /*KB*/, int deviceCount){
+	private double calculateMM1(double propagationDelay, double bandwidth /*Kbps*/, double PoissonMean, double avgTaskSize /*KB*/, int deviceCount){
 		double mu=0, lamda=0;
 		
 		avgTaskSize = avgTaskSize * 8; //convert from KB to Kb
@@ -369,7 +369,7 @@ public class FuzzyExperimentalNetworkModel extends NetworkModel {
 		if(result < 0)
 			return 0;
 		
-		result += propogationDelay;
+		result += propagationDelay;
 		
 		return (result > 15) ? 0 : result;
 	}

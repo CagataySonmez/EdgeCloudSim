@@ -13,11 +13,13 @@ package edu.boun.edgecloudsim.edge_client;
 
 import org.cloudbus.cloudsim.Cloudlet;
 import org.cloudbus.cloudsim.UtilizationModel;
+import org.cloudbus.cloudsim.core.CloudSim;
 
 import edu.boun.edgecloudsim.utils.Location;
 
 public class Task extends Cloudlet {
 	private Location submittedLocation;
+	private double creationTime;
 	private int type;
 	private int mobileDeviceId;
 	private int hostIndex;
@@ -34,6 +36,7 @@ public class Task extends Cloudlet {
 				utilizationModelBw);
 		
 		mobileDeviceId = _mobileDeviceId;
+		creationTime = CloudSim.clock();
 	}
 
 	
@@ -79,5 +82,9 @@ public class Task extends Cloudlet {
 	
 	public int getTaskType(){
 		return type;
+	}
+	
+	public double getCreationTime() {
+		return creationTime;
 	}
 }

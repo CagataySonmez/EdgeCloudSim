@@ -67,7 +67,7 @@ public class CloudVmAllocationPolicy_Custom extends VmAllocationPolicy {
 
 	@Override
 	public boolean allocateHostForVm(Vm vm, Host host) {
-		if (host.vmCreate(vm)) { // if vm has been succesfully created in the host
+		if (host.vmCreate(vm)) { // if vm has been successfully created in the host
 			getVmTable().put(vm.getUid(), host);
 			createdVmNum++;
 			

@@ -30,6 +30,12 @@ public abstract class LoadGeneratorModel {
 	};
 	
 	/*
+	 * Default Constructor: Creates an empty LoadGeneratorModel
+	 */
+	public LoadGeneratorModel() {
+	}
+
+	/*
 	 * each task has a virtual start time
 	 * it will be used while generating task
 	 */

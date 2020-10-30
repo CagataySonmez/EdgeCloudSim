@@ -24,26 +24,26 @@ public abstract class NetworkModel {
 		numberOfMobileDevices=_numberOfMobileDevices;
 		simScenario = _simScenario;
 	};
-	
+
 	/**
-	* initializes custom network model
-	*/
+	 * initializes custom network model
+	 */
 	public abstract void initialize();
-	
-    /**
-    * calculates the upload delay from source to destination device
-    */
+
+	/**
+	 * calculates the upload delay from source to destination device
+	 */
 	public abstract double getUploadDelay(int sourceDeviceId, int destDeviceId, Task task);
-	
-    /**
-    * calculates the download delay from source to destination device
-    */
+
+	/**
+	 * calculates the download delay from source to destination device
+	 */
 	public abstract double getDownloadDelay(int sourceDeviceId, int destDeviceId, Task task);
-	
-    /**
-    * Mobile device manager should inform network manager about the network operation
-    * This information may be important for some network delay models
-    */
+
+	/**
+	 * Mobile device manager should inform network manager about the network operation
+	 * This information may be important for some network delay models
+	 */
 	public abstract void uploadStarted(Location accessPointLocation, int destDeviceId);
 	public abstract void uploadFinished(Location accessPointLocation, int destDeviceId);
 	public abstract void downloadStarted(Location accessPointLocation, int sourceDeviceId);

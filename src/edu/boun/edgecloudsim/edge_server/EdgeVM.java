@@ -10,6 +10,9 @@
 
 package edu.boun.edgecloudsim.edge_server;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.cloudbus.cloudsim.CloudletScheduler;
 import org.cloudbus.cloudsim.Vm;
 
@@ -27,5 +30,21 @@ public class EdgeVM extends Vm {
 
 	public SimSettings.VM_TYPES getVmType(){
 		return type;
+	}
+
+	/**
+	 *  dynamically reconfigures the mips value of a  VM in CloudSim
+	 * 
+	 * @param mips new mips value for this VM.
+	 */
+	public void reconfigureMips(double mips){
+		super.setMips(mips);
+		super.getHost().getVmScheduler().deallocatePesForVm(this);
+		
+		List<Double> mipsShareAllocated = new ArrayList<Double>();
+		for(int i= 0; i<getNumberOfPes(); i++)
+			mipsShareAllocated.add(mips);
+
+		super.getHost().getVmScheduler().allocatePesForVm(this, mipsShareAllocated);
 	}
 }

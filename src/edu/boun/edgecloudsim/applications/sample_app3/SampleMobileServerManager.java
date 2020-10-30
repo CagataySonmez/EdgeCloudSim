@@ -166,7 +166,7 @@ public class SampleMobileServerManager extends MobileServerManager{
 			//4. Create Hosts with its id and list of PEs and add them to the list of machines
 			MobileHost host = new MobileHost(
 					//Hosts should have unique IDs, so create Mobile Hosts after Edge+Cloud Hosts
-					i+SimSettings.getInstance().getNumOfEdgeHosts()+SimSettings.getInstance().getNumOfCouldHost(),
+					i+SimSettings.getInstance().getNumOfEdgeHosts()+SimSettings.getInstance().getNumOfCloudHost(),
 					new RamProvisionerSimple(ram),
 					new BwProvisionerSimple(bandwidth), //kbps
 					storage,

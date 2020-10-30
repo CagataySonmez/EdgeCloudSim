@@ -25,6 +25,12 @@ public abstract class MobilityModel {
 	};
 	
 	/*
+	 * Default Constructor: Creates an empty MobilityModel
+	 */
+	public MobilityModel() {
+	}
+
+	/*
 	 * calculate location of the devices according to related mobility model
 	 */
 	public abstract void initialize();

@@ -121,7 +121,7 @@ public class DefaultMobileDeviceManager extends MobileDeviceManager {
 	protected void processOtherEvent(SimEvent ev) {
 		if (ev == null) {
 			SimLogger.printLine(getName() + ".processOtherEvent(): " + "Error - an event is null! Terminating simulation...");
-			System.exit(0);
+			System.exit(1);
 			return;
 		}
 		
@@ -162,7 +162,7 @@ public class DefaultMobileDeviceManager extends MobileDeviceManager {
 			}
 			default:
 				SimLogger.printLine(getName() + ".processOtherEvent(): " + "Error - event unknown by this DatacenterBroker. Terminating simulation...");
-				System.exit(0);
+				System.exit(1);
 				break;
 		}
 	}
@@ -180,7 +180,8 @@ public class DefaultMobileDeviceManager extends MobileDeviceManager {
 		task.setSubmittedLocation(currentLocation);
 
 		//add related task to log list
-		SimLogger.getInstance().addLog(task.getCloudletId(),
+		SimLogger.getInstance().addLog(task.getMobileDeviceId(),
+				task.getCloudletId(),
 				task.getTaskType(),
 				(int)task.getCloudletLength(),
 				(int)task.getCloudletFileSize(),
@@ -226,7 +227,7 @@ public class DefaultMobileDeviceManager extends MobileDeviceManager {
 		}
 		else {
 			SimLogger.printLine("Unknown nextHopId! Terminating simulation...");
-			System.exit(0);
+			System.exit(1);
 		}
 	}
 	
