@@ -7,9 +7,9 @@ This application includes the source code which is used in our paper submitted t
 The concept of Internet of Vehicle (IoV), its pioneering applications, and the services for the future smart highways can benefit from the computation offloading concept over a multi-tier architecture consisting of the connected vehicles, road side units (RSUs), and cloud computing elements as shown in Figure 6.1. The vehicles are located in the first tier, which can be considered as the data generation layer. They also have computational resources which are provided by their on board units (OBUs). If required, some of the operations can be executed locally by the OBUs at this tier. The second tier consists of the RSUs that can provide fast access to limited resources. The edge servers are located in this tier. Finally, the third tier includes traditional cloud computing elements.
 
 <p align="center">
-  <img src="/doc/images/sample_app5/vec_architecture.png" width="65%">
+  <img src="/doc/images/sample_app5/vec_architecture.png" width="75%">
   <p align="center">
-    Figure 1: Multi-tier VEC architecture for vehicular networks..
+    Figure 1: Multi-tier VEC architecture for vehicular networks.
   </p>
 </p>
 
@@ -19,7 +19,7 @@ The concept of Internet of Vehicle (IoV), its pioneering applications, and the s
 In this application we introduce a machine learning (ML) based workload orchestrator. the ML-based orchestrator performs a two-stage process as shown in Figure 2. In the first stage, a classifier model predicts whether the results of the offloading options are successful or not for each target device. In the second stage, a regression model estimates the service time of the related options. Finally, the target device which promises the lowest service time is selected.
 
 <p align="center">
-  <img src="/doc/images/sample_app5/ml_stages.png" width="65%">
+  <img src="/doc/images/sample_app5/ml_stages.png" width="100%">
   <p align="center">
     Figure 2: Two stage ML-based vehicular edge orchestrator.
   </p>
@@ -44,7 +44,7 @@ Orchestrating the dynamic and heterogeneous resources in the VEC systems is a ch
 The road and mobility model used in the simulations is implemented on EdgeCloudSim, as shown in Figure 6.9. To simulate the vehicular mobility more realistically, the road is divided into segments, and a dynamic velocity value for the vehicle position is used. Therefore, the speed of the vehicles varies at each segment to differentiate the traffic density on the road. The hotspot locations, which are shown with red color, occur due to the traffic jam. 100 to 1800 vehicles are distributed to random locations when the simulation is started. Then they move in a single direction with a predefined speed with respect to the crossed segment. The road is modeled as a circular route to keep the number of vehicles the same during the simulation.
 
 <p align="center">
-  <img src="/doc/images/sample_app5/road.png" width="50%">
+  <img src="/doc/images/sample_app5/road.png" width="45%">
   <p align="center">
     Figure 4: Vehicular mobility model in the simulation.
   </p>
