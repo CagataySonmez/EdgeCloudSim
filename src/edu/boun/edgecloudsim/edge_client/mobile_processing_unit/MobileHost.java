@@ -8,7 +8,7 @@
  * CloudSim. It is assumed that the mobile devices operate Hosts
  * and VMs like a server. That is why the class names are similar
  * to other Cloud and Edge components (to provide consistency).
- *           
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */

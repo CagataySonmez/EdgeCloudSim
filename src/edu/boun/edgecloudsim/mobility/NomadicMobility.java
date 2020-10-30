@@ -98,8 +98,8 @@ public class NomadicMobility extends MobilityModel {
 					}
 				}
 				if(!placeFound){
-					SimLogger.printLine("impossible is occured! location cannot be assigned to the device!");
-			    	System.exit(0);
+					SimLogger.printLine("impossible is occurred! location cannot be assigned to the device!");
+					System.exit(1);
 				}
 			}
 		}
@@ -113,8 +113,8 @@ public class NomadicMobility extends MobilityModel {
 		Entry<Double, Location> e = treeMap.floorEntry(time);
 	    
 	    if(e == null){
-	    	SimLogger.printLine("impossible is occured! no location is found for the device '" + deviceId + "' at " + time);
-	    	System.exit(0);
+	    	SimLogger.printLine("impossible is occurred! no location is found for the device '" + deviceId + "' at " + time);
+	    	System.exit(1);
 	    }
 	    
 		return e.getValue();

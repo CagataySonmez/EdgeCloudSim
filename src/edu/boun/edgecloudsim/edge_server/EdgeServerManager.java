@@ -62,7 +62,7 @@ public abstract class EdgeServerManager {
 	/*
 	 * Creates VM List
 	 */
-	public abstract void createVmList(int brockerId);
+	public abstract void createVmList(int brokerId);
 	
 	/*
 	 * returns average utilization of all VMs

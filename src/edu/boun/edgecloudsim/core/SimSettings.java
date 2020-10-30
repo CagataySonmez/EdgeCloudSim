@@ -5,7 +5,7 @@
  * SimSettings provides system wide simulation settings. It is a
  * singleton class and provides all necessary information to other modules.
  * If you need to use another simulation setting variable in your
- * config file, add related getter methot in this class.
+ * config file, add related getter method in this class.
  *               
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
@@ -32,15 +32,15 @@ import edu.boun.edgecloudsim.utils.SimLogger;
 public class SimSettings {
 	private static SimSettings instance = null;
 	private Document edgeDevicesDoc = null;
-	
+
 	public static final double CLIENT_ACTIVITY_START_TIME = 10;
-	
+
 	//enumarations for the VM types
 	public static enum VM_TYPES { MOBILE_VM, EDGE_VM, CLOUD_VM }
-	
+
 	//enumarations for the VM types
-	public static enum NETWORK_DELAY_TYPES { WLAN_DELAY, MAN_DELAY, WAN_DELAY }
-	
+	public static enum NETWORK_DELAY_TYPES { WLAN_DELAY, MAN_DELAY, WAN_DELAY, GSM_DELAY }
+
 	//predifined IDs for the components.
 	public static final int CLOUD_DATACENTER_ID = 1000;
 	public static final int MOBILE_DATACENTER_ID = 1001;
@@ -49,76 +49,85 @@ public class SimSettings {
 
 	//delimiter for output file.
 	public static final String DELIMITER = ";";
-	
-    private double SIMULATION_TIME; //minutes unit in properties file
-    private double WARM_UP_PERIOD; //minutes unit in properties file
-    private double INTERVAL_TO_GET_VM_LOAD_LOG; //minutes unit in properties file
-    private double INTERVAL_TO_GET_VM_LOCATION_LOG; //minutes unit in properties file
-    private boolean FILE_LOG_ENABLED; //boolean to check file logging option
-    private boolean DEEP_FILE_LOG_ENABLED; //boolean to check deep file logging option
 
-    private int MIN_NUM_OF_MOBILE_DEVICES;
-    private int MAX_NUM_OF_MOBILE_DEVICES;
-    private int MOBILE_DEVICE_COUNTER_SIZE;
-    
-    private int NUM_OF_EDGE_DATACENTERS;
-    private int NUM_OF_EDGE_HOSTS;
-    private int NUM_OF_EDGE_VMS;
-    private int NUM_OF_PLACE_TYPES;
-    
-    private double WAN_PROPOGATION_DELAY; //seconds unit in properties file
-    private double LAN_INTERNAL_DELAY; //seconds unit in properties file
-    private int BANDWITH_WLAN; //Mbps unit in properties file
-    private int BANDWITH_WAN; //Mbps unit in properties file
-    private int BANDWITH_GSM; //Mbps unit in properties file
+	private double SIMULATION_TIME; //minutes unit in properties file
+	private double WARM_UP_PERIOD; //minutes unit in properties file
+	private double INTERVAL_TO_GET_VM_LOAD_LOG; //minutes unit in properties file
+	private double INTERVAL_TO_GET_LOCATION_LOG; //minutes unit in properties file
+	private double INTERVAL_TO_GET_AP_DELAY_LOG; //minutes unit in properties file
+	private boolean FILE_LOG_ENABLED; //boolean to check file logging option
+	private boolean DEEP_FILE_LOG_ENABLED; //boolean to check deep file logging option
 
-    private int NUM_OF_HOST_ON_CLOUD_DATACENTER;
-    private int NUM_OF_VM_ON_CLOUD_HOST;
-    private int CORE_FOR_CLOUD_VM;
-    private int MIPS_FOR_CLOUD_VM; //MIPS
-    private int RAM_FOR_CLOUD_VM; //MB
+	private int MIN_NUM_OF_MOBILE_DEVICES;
+	private int MAX_NUM_OF_MOBILE_DEVICES;
+	private int MOBILE_DEVICE_COUNTER_SIZE;
+	private int WLAN_RANGE;
+
+	private int NUM_OF_EDGE_DATACENTERS;
+	private int NUM_OF_EDGE_HOSTS;
+	private int NUM_OF_EDGE_VMS;
+	private int NUM_OF_PLACE_TYPES;
+
+	private double WAN_PROPAGATION_DELAY; //seconds unit in properties file
+	private double GSM_PROPAGATION_DELAY; //seconds unit in properties file
+	private double LAN_INTERNAL_DELAY; //seconds unit in properties file
+	private int BANDWITH_WLAN; //Mbps unit in properties file
+	private int BANDWITH_MAN; //Mbps unit in properties file
+	private int BANDWITH_WAN; //Mbps unit in properties file
+	private int BANDWITH_GSM; //Mbps unit in properties file
+
+	private int NUM_OF_HOST_ON_CLOUD_DATACENTER;
+	private int NUM_OF_VM_ON_CLOUD_HOST;
+	private int CORE_FOR_CLOUD_VM;
+	private int MIPS_FOR_CLOUD_VM; //MIPS
+	private int RAM_FOR_CLOUD_VM; //MB
 	private int STORAGE_FOR_CLOUD_VM; //Byte
-    
-    private int CORE_FOR_VM;
-    private int MIPS_FOR_VM; //MIPS
-    private int RAM_FOR_VM; //MB
-    private int STORAGE_FOR_VM; //Byte
-    
-    private String[] SIMULATION_SCENARIOS;
-    private String[] ORCHESTRATOR_POLICIES;
-    
-    // mean waiting time (minute) is stored for each place types
-    private double[] mobilityLookUpTable;
-    
-    // following values are stored for each applications defined in applications.xml
-    // [0] usage percentage (%)
-    // [1] prob. of selecting cloud (%)
-    // [2] poisson mean (sec)
-    // [3] active period (sec)
-    // [4] idle period (sec)
-    // [5] avg data upload (KB)
-    // [6] avg data download (KB)
-    // [7] avg task length (MI)
-    // [8] required # of cores
-    // [9] vm utilization on edge (%)
-    // [10] vm utilization on cloud (%)
-    // [11] vm utilization on mobile (%)
-    // [12] delay sensitivity [0-1]
-    private double[][] taskLookUpTable = null;
-    
-    private String[] taskNames = null;
+
+	private int CORE_FOR_VM;
+	private int MIPS_FOR_VM; //MIPS
+	private int RAM_FOR_VM; //MB
+	private int STORAGE_FOR_VM; //Byte
+
+	private String[] SIMULATION_SCENARIOS;
+	private String[] ORCHESTRATOR_POLICIES;
+
+	private double NORTHERN_BOUND;
+	private double EASTERN_BOUND;
+	private double SOUTHERN_BOUND;
+	private double WESTERN_BOUND;
+
+	// mean waiting time (minute) is stored for each place types
+	private double[] mobilityLookUpTable;
+
+	// following values are stored for each applications defined in applications.xml
+	// [0] usage percentage (%)
+	// [1] prob. of selecting cloud (%)
+	// [2] poisson mean (sec)
+	// [3] active period (sec)
+	// [4] idle period (sec)
+	// [5] avg data upload (KB)
+	// [6] avg data download (KB)
+	// [7] avg task length (MI)
+	// [8] required # of cores
+	// [9] vm utilization on edge (%)
+	// [10] vm utilization on cloud (%)
+	// [11] vm utilization on mobile (%)
+	// [12] delay sensitivity [0-1]
+	private double[][] taskLookUpTable = null;
+
+	private String[] taskNames = null;
 
 	private SimSettings() {
 		NUM_OF_PLACE_TYPES = 0;
 	}
-	
+
 	public static SimSettings getInstance() {
 		if(instance == null) {
 			instance = new SimSettings();
 		}
 		return instance;
 	}
-	
+
 	/**
 	 * Reads configuration file and stores information to local variables
 	 * @param propertiesFile
@@ -137,25 +146,29 @@ public class SimSettings {
 			SIMULATION_TIME = (double)60 * Double.parseDouble(prop.getProperty("simulation_time")); //seconds
 			WARM_UP_PERIOD = (double)60 * Double.parseDouble(prop.getProperty("warm_up_period")); //seconds
 			INTERVAL_TO_GET_VM_LOAD_LOG = (double)60 * Double.parseDouble(prop.getProperty("vm_load_check_interval")); //seconds
-			INTERVAL_TO_GET_VM_LOCATION_LOG = (double)60 * Double.parseDouble(prop.getProperty("vm_location_check_interval")); //seconds
+			INTERVAL_TO_GET_LOCATION_LOG = (double)60 * Double.parseDouble(prop.getProperty("location_check_interval")); //seconds
+			INTERVAL_TO_GET_AP_DELAY_LOG = (double)60 * Double.parseDouble(prop.getProperty("ap_delay_check_interval", "0")); //seconds		
 			FILE_LOG_ENABLED = Boolean.parseBoolean(prop.getProperty("file_log_enabled"));
 			DEEP_FILE_LOG_ENABLED = Boolean.parseBoolean(prop.getProperty("deep_file_log_enabled"));
-			
+
 			MIN_NUM_OF_MOBILE_DEVICES = Integer.parseInt(prop.getProperty("min_number_of_mobile_devices"));
 			MAX_NUM_OF_MOBILE_DEVICES = Integer.parseInt(prop.getProperty("max_number_of_mobile_devices"));
 			MOBILE_DEVICE_COUNTER_SIZE = Integer.parseInt(prop.getProperty("mobile_device_counter_size"));
-			
-			WAN_PROPOGATION_DELAY = Double.parseDouble(prop.getProperty("wan_propogation_delay"));
-			LAN_INTERNAL_DELAY = Double.parseDouble(prop.getProperty("lan_internal_delay"));
-			BANDWITH_WLAN = 1000 * Integer.parseInt(prop.getProperty("wlan_bandwidth"));
-			BANDWITH_WAN = 1000 * Integer.parseInt(prop.getProperty("wan_bandwidth"));
-			BANDWITH_GSM =  1000 * Integer.parseInt(prop.getProperty("gsm_bandwidth"));
+			WLAN_RANGE = Integer.parseInt(prop.getProperty("wlan_range", "0"));
 
-		    NUM_OF_HOST_ON_CLOUD_DATACENTER = Integer.parseInt(prop.getProperty("number_of_host_on_cloud_datacenter"));
-		    NUM_OF_VM_ON_CLOUD_HOST = Integer.parseInt(prop.getProperty("number_of_vm_on_cloud_host"));
-		    CORE_FOR_CLOUD_VM = Integer.parseInt(prop.getProperty("core_for_cloud_vm"));
-		    MIPS_FOR_CLOUD_VM = Integer.parseInt(prop.getProperty("mips_for_cloud_vm"));
-		    RAM_FOR_CLOUD_VM = Integer.parseInt(prop.getProperty("ram_for_cloud_vm"));
+			WAN_PROPAGATION_DELAY = Double.parseDouble(prop.getProperty("wan_propagation_delay", "0"));
+			GSM_PROPAGATION_DELAY = Double.parseDouble(prop.getProperty("gsm_propagation_delay", "0"));
+			LAN_INTERNAL_DELAY = Double.parseDouble(prop.getProperty("lan_internal_delay", "0"));
+			BANDWITH_WLAN = 1000 * Integer.parseInt(prop.getProperty("wlan_bandwidth"));
+			BANDWITH_MAN = 1000 * Integer.parseInt(prop.getProperty("man_bandwidth", "0"));
+			BANDWITH_WAN = 1000 * Integer.parseInt(prop.getProperty("wan_bandwidth", "0"));
+			BANDWITH_GSM =  1000 * Integer.parseInt(prop.getProperty("gsm_bandwidth", "0"));
+
+			NUM_OF_HOST_ON_CLOUD_DATACENTER = Integer.parseInt(prop.getProperty("number_of_host_on_cloud_datacenter"));
+			NUM_OF_VM_ON_CLOUD_HOST = Integer.parseInt(prop.getProperty("number_of_vm_on_cloud_host"));
+			CORE_FOR_CLOUD_VM = Integer.parseInt(prop.getProperty("core_for_cloud_vm"));
+			MIPS_FOR_CLOUD_VM = Integer.parseInt(prop.getProperty("mips_for_cloud_vm"));
+			RAM_FOR_CLOUD_VM = Integer.parseInt(prop.getProperty("ram_for_cloud_vm"));
 			STORAGE_FOR_CLOUD_VM = Integer.parseInt(prop.getProperty("storage_for_cloud_vm"));
 
 			RAM_FOR_VM = Integer.parseInt(prop.getProperty("ram_for_mobile_vm"));
@@ -164,21 +177,26 @@ public class SimSettings {
 			STORAGE_FOR_VM = Integer.parseInt(prop.getProperty("storage_for_mobile_vm"));
 
 			ORCHESTRATOR_POLICIES = prop.getProperty("orchestrator_policies").split(",");
-			
+
 			SIMULATION_SCENARIOS = prop.getProperty("simulation_scenarios").split(",");
-			
+
+			NORTHERN_BOUND = Double.parseDouble(prop.getProperty("northern_bound", "0"));
+			SOUTHERN_BOUND = Double.parseDouble(prop.getProperty("southern_bound", "0"));
+			EASTERN_BOUND = Double.parseDouble(prop.getProperty("eastern_bound", "0"));
+			WESTERN_BOUND = Double.parseDouble(prop.getProperty("western_bound", "0"));
+
 			//avg waiting time in a place (min)
 			double place1_mean_waiting_time = Double.parseDouble(prop.getProperty("attractiveness_L1_mean_waiting_time"));
 			double place2_mean_waiting_time = Double.parseDouble(prop.getProperty("attractiveness_L2_mean_waiting_time"));
 			double place3_mean_waiting_time = Double.parseDouble(prop.getProperty("attractiveness_L3_mean_waiting_time"));
-			
+
 			//mean waiting time (minute)
 			mobilityLookUpTable = new double[]{
-				place1_mean_waiting_time, //ATTRACTIVENESS_L1
-				place2_mean_waiting_time, //ATTRACTIVENESS_L2
-				place3_mean_waiting_time  //ATTRACTIVENESS_L3
-		    };
-			
+					place1_mean_waiting_time, //ATTRACTIVENESS_L1
+					place2_mean_waiting_time, //ATTRACTIVENESS_L2
+					place3_mean_waiting_time  //ATTRACTIVENESS_L3
+			};
+
 
 		} catch (IOException ex) {
 			ex.printStackTrace();
@@ -192,12 +210,12 @@ public class SimSettings {
 				}
 			}
 		}
-		parseApplicatinosXML(applicationsFile);
+		parseApplicationsXML(applicationsFile);
 		parseEdgeDevicesXML(edgeDevicesFile);
-		
+
 		return result;
 	}
-	
+
 	/**
 	 * returns the parsed XML document for edge_devices.xml
 	 */
@@ -233,9 +251,17 @@ public class SimSettings {
 	/**
 	 * returns VM location log collection interval (in seconds unit) from properties file
 	 */
-	public double getVmLocationLogInterval()
+	public double getLocationLogInterval()
 	{
-		return INTERVAL_TO_GET_VM_LOCATION_LOG; 
+		return INTERVAL_TO_GET_LOCATION_LOG; 
+	}
+
+	/**
+	 * returns VM location log collection interval (in seconds unit) from properties file
+	 */
+	public double getApDelayLogInterval()
+	{
+		return INTERVAL_TO_GET_AP_DELAY_LOG; 
 	}
 
 	/**
@@ -243,7 +269,7 @@ public class SimSettings {
 	 */
 	public boolean getDeepFileLoggingEnabled()
 	{
-		return DEEP_FILE_LOG_ENABLED; 
+		return FILE_LOG_ENABLED && DEEP_FILE_LOG_ENABLED; 
 	}
 
 	/**
@@ -253,17 +279,25 @@ public class SimSettings {
 	{
 		return FILE_LOG_ENABLED; 
 	}
-	
+
 	/**
-	 * returns WAN propogation delay (in second unit) from properties file
+	 * returns WAN propagation delay (in second unit) from properties file
 	 */
-	public double getWanPropogationDelay()
+	public double getWanPropagationDelay()
 	{
-		return WAN_PROPOGATION_DELAY;
+		return WAN_PROPAGATION_DELAY;
 	}
 
 	/**
-	 * returns internal LAN propogation delay (in second unit) from properties file
+	 * returns GSM propagation delay (in second unit) from properties file
+	 */
+	public double getGsmPropagationDelay()
+	{
+		return GSM_PROPAGATION_DELAY;
+	}
+
+	/**
+	 * returns internal LAN propagation delay (in second unit) from properties file
 	 */
 	public double getInternalLanDelay()
 	{
@@ -276,6 +310,14 @@ public class SimSettings {
 	public int getWlanBandwidth()
 	{
 		return BANDWITH_WLAN;
+	}
+
+	/**
+	 * returns MAN bandwidth (in Mbps unit) from properties file
+	 */
+	public int getManBandwidth()
+	{
+		return BANDWITH_MAN;
 	}
 
 	/**
@@ -293,7 +335,7 @@ public class SimSettings {
 	{
 		return BANDWITH_GSM;
 	}
-	
+
 	/**
 	 * returns the minimum number of the mobile devices used in the simulation
 	 */
@@ -303,7 +345,7 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns the maximunm number of the mobile devices used in the simulation
+	 * returns the maximum number of the mobile devices used in the simulation
 	 */
 	public int getMaxNumOfMobileDev()
 	{
@@ -317,6 +359,14 @@ public class SimSettings {
 	public int getMobileDevCounterSize()
 	{
 		return MOBILE_DEVICE_COUNTER_SIZE;
+	}
+
+	/**
+	 * returns edge device range in meter
+	 */
+	public int getWlanRange()
+	{
+		return WLAN_RANGE;
 	}
 
 	/**
@@ -342,7 +392,7 @@ public class SimSettings {
 	{
 		return NUM_OF_EDGE_VMS;
 	}
-	
+
 	/**
 	 * returns the number of different place types
 	 */
@@ -354,11 +404,11 @@ public class SimSettings {
 	/**
 	 * returns the number of cloud datacenters
 	 */
-	public int getNumOfCoudHost()
+	public int getNumOfCloudHost()
 	{
 		return NUM_OF_HOST_ON_CLOUD_DATACENTER;
 	}
-	
+
 	/**
 	 * returns the number of cloud VMs per Host
 	 */
@@ -366,7 +416,7 @@ public class SimSettings {
 	{
 		return NUM_OF_VM_ON_CLOUD_HOST;
 	}
-	
+
 	/**
 	 * returns the total number of cloud VMs
 	 */
@@ -374,7 +424,7 @@ public class SimSettings {
 	{
 		return NUM_OF_VM_ON_CLOUD_HOST * NUM_OF_HOST_ON_CLOUD_DATACENTER;
 	}
-	
+
 	/**
 	 * returns the number of cores for cloud VMs
 	 */
@@ -382,7 +432,7 @@ public class SimSettings {
 	{
 		return CORE_FOR_CLOUD_VM;
 	}
-	
+
 	/**
 	 * returns MIPS of the central cloud VMs
 	 */
@@ -390,7 +440,7 @@ public class SimSettings {
 	{
 		return MIPS_FOR_CLOUD_VM;
 	}
-	
+
 	/**
 	 * returns RAM of the central cloud VMs
 	 */
@@ -398,7 +448,7 @@ public class SimSettings {
 	{
 		return RAM_FOR_CLOUD_VM;
 	}
-	
+
 	/**
 	 * returns Storage of the central cloud VMs
 	 */
@@ -406,7 +456,7 @@ public class SimSettings {
 	{
 		return STORAGE_FOR_CLOUD_VM;
 	}
-	
+
 	/**
 	 * returns RAM of the mobile (processing unit) VMs
 	 */
@@ -414,7 +464,7 @@ public class SimSettings {
 	{
 		return RAM_FOR_VM;
 	}
-	
+
 	/**
 	 * returns the number of cores for mobile VMs
 	 */
@@ -422,7 +472,7 @@ public class SimSettings {
 	{
 		return CORE_FOR_VM;
 	}
-	
+
 	/**
 	 * returns MIPS of the mobile (processing unit) VMs
 	 */
@@ -430,7 +480,7 @@ public class SimSettings {
 	{
 		return MIPS_FOR_VM;
 	}
-	
+
 	/**
 	 * returns Storage of the mobile (processing unit) VMs
 	 */
@@ -454,7 +504,24 @@ public class SimSettings {
 	{
 		return ORCHESTRATOR_POLICIES;
 	}
-	
+
+
+	public double getNorthernBound() {
+		return NORTHERN_BOUND;
+	}
+
+	public double getEasternBound() {
+		return EASTERN_BOUND;
+	}
+
+	public double getSouthernBound() {
+		return SOUTHERN_BOUND;
+	}
+
+	public double getWesternBound() {
+		return WESTERN_BOUND;
+	}
+
 	/**
 	 * returns mobility characteristic within an array
 	 * the result includes mean waiting time (minute) or each place type
@@ -480,36 +547,67 @@ public class SimSettings {
 	 * [10] vm utilization on cloud (%)
 	 * [11] vm utilization on mobile (%)
 	 * [12] delay sensitivity [0-1]
+	 * [13] maximum delay requirement (sec)
 	 */ 
 	public double[][] getTaskLookUpTable()
 	{
 		return taskLookUpTable;
 	}
-	
+
+	public double[] getTaskProperties(String taskName) {
+		double[] result = null;
+		int index = -1;
+		for (int i=0;i<taskNames.length;i++) {
+			if (taskNames[i].equals(taskName)) {
+				index = i;
+				break;
+			}
+		}
+
+		if(index >= 0 && index < taskLookUpTable.length)
+			result = taskLookUpTable[index];
+
+		return result;
+	}
+
 	public String getTaskName(int taskType)
 	{
 		return taskNames[taskType];
 	}
-	
-	private void isAttribtuePresent(Element element, String key) {
-        String value = element.getAttribute(key);
-        if (value.isEmpty() || value == null){
-        	throw new IllegalArgumentException("Attribure '" + key + "' is not found in '" + element.getNodeName() +"'");
-        }
+
+	private void isAttributePresent(Element element, String key) {
+		String value = element.getAttribute(key);
+		if (value.isEmpty() || value == null){
+			throw new IllegalArgumentException("Attribute '" + key + "' is not found in '" + element.getNodeName() +"'");
+		}
 	}
 
 	private void isElementPresent(Element element, String key) {
 		try {
 			String value = element.getElementsByTagName(key).item(0).getTextContent();
-	        if (value.isEmpty() || value == null){
-	        	throw new IllegalArgumentException("Element '" + key + "' is not found in '" + element.getNodeName() +"'");
-	        }
+			if (value.isEmpty() || value == null){
+				throw new IllegalArgumentException("Element '" + key + "' is not found in '" + element.getNodeName() +"'");
+			}
 		} catch (Exception e) {
 			throw new IllegalArgumentException("Element '" + key + "' is not found in '" + element.getNodeName() +"'");
 		}
 	}
-	
-	private void parseApplicatinosXML(String filePath)
+
+	private Boolean checkElement(Element element, String key) {
+		Boolean result = true;
+		try {
+			String value = element.getElementsByTagName(key).item(0).getTextContent();
+			if (value.isEmpty() || value == null){
+				result = false;
+			}
+		} catch (Exception e) {
+			result = false;
+		}
+
+		return result;
+	}
+
+	private void parseApplicationsXML(String filePath)
 	{
 		Document doc = null;
 		try {	
@@ -519,64 +617,55 @@ public class SimSettings {
 			doc = dBuilder.parse(devicesFile);
 			doc.getDocumentElement().normalize();
 
+			String mandatoryAttributes[] = {
+					"usage_percentage", //usage percentage [0-100]
+					"prob_cloud_selection", //prob. of selecting cloud [0-100]
+					"poisson_interarrival", //poisson mean (sec)
+					"active_period", //active period (sec)
+					"idle_period", //idle period (sec)
+					"data_upload", //avg data upload (KB)
+					"data_download", //avg data download (KB)
+					"task_length", //avg task length (MI)
+					"required_core", //required # of core
+					"vm_utilization_on_edge", //vm utilization on edge vm [0-100]
+					"vm_utilization_on_cloud", //vm utilization on cloud vm [0-100]
+					"vm_utilization_on_mobile", //vm utilization on mobile vm [0-100]
+			"delay_sensitivity"}; //delay_sensitivity [0-1]
+
+			String optionalAttributes[] = {
+			"max_delay_requirement"}; //maximum delay requirement (sec)
+
 			NodeList appList = doc.getElementsByTagName("application");
-			taskLookUpTable = new double[appList.getLength()][13];
+			taskLookUpTable = new double[appList.getLength()]
+					[mandatoryAttributes.length + optionalAttributes.length];
+
 			taskNames = new String[appList.getLength()];
 			for (int i = 0; i < appList.getLength(); i++) {
 				Node appNode = appList.item(i);
-	
-				Element appElement = (Element) appNode;
-				isAttribtuePresent(appElement, "name");
-				isElementPresent(appElement, "usage_percentage");
-				isElementPresent(appElement, "prob_cloud_selection");
-				isElementPresent(appElement, "poisson_interarrival");
-				isElementPresent(appElement, "active_period");
-				isElementPresent(appElement, "idle_period");
-				isElementPresent(appElement, "data_upload");
-				isElementPresent(appElement, "data_download");
-				isElementPresent(appElement, "task_length");
-				isElementPresent(appElement, "required_core");
-				isElementPresent(appElement, "vm_utilization_on_edge");
-				isElementPresent(appElement, "vm_utilization_on_cloud");
-				isElementPresent(appElement, "vm_utilization_on_mobile");
-				isElementPresent(appElement, "delay_sensitivity");
 
+				Element appElement = (Element) appNode;
+				isAttributePresent(appElement, "name");
 				String taskName = appElement.getAttribute("name");
 				taskNames[i] = taskName;
-				
-				double usage_percentage = Double.parseDouble(appElement.getElementsByTagName("usage_percentage").item(0).getTextContent());
-				double prob_cloud_selection = Double.parseDouble(appElement.getElementsByTagName("prob_cloud_selection").item(0).getTextContent());
-				double poisson_interarrival = Double.parseDouble(appElement.getElementsByTagName("poisson_interarrival").item(0).getTextContent());
-				double active_period = Double.parseDouble(appElement.getElementsByTagName("active_period").item(0).getTextContent());
-				double idle_period = Double.parseDouble(appElement.getElementsByTagName("idle_period").item(0).getTextContent());
-				double data_upload = Double.parseDouble(appElement.getElementsByTagName("data_upload").item(0).getTextContent());
-				double data_download = Double.parseDouble(appElement.getElementsByTagName("data_download").item(0).getTextContent());
-				double task_length = Double.parseDouble(appElement.getElementsByTagName("task_length").item(0).getTextContent());
-				double required_core = Double.parseDouble(appElement.getElementsByTagName("required_core").item(0).getTextContent());
-				double vm_utilization_on_edge = Double.parseDouble(appElement.getElementsByTagName("vm_utilization_on_edge").item(0).getTextContent());
-				double vm_utilization_on_cloud = Double.parseDouble(appElement.getElementsByTagName("vm_utilization_on_cloud").item(0).getTextContent());
-				double vm_utilization_on_mobile = Double.parseDouble(appElement.getElementsByTagName("vm_utilization_on_mobile").item(0).getTextContent());
-				double delay_sensitivity = Double.parseDouble(appElement.getElementsByTagName("delay_sensitivity").item(0).getTextContent());
-				
-			    taskLookUpTable[i][0] = usage_percentage; //usage percentage [0-100]
-			    taskLookUpTable[i][1] = prob_cloud_selection; //prob. of selecting cloud [0-100]
-			    taskLookUpTable[i][2] = poisson_interarrival; //poisson mean (sec)
-			    taskLookUpTable[i][3] = active_period; //active period (sec)
-			    taskLookUpTable[i][4] = idle_period; //idle period (sec)
-			    taskLookUpTable[i][5] = data_upload; //avg data upload (KB)
-			    taskLookUpTable[i][6] = data_download; //avg data download (KB)
-			    taskLookUpTable[i][7] = task_length; //avg task length (MI)
-			    taskLookUpTable[i][8] = required_core; //required # of core
-			    taskLookUpTable[i][9] = vm_utilization_on_edge; //vm utilization on edge vm [0-100]
-			    taskLookUpTable[i][10] = vm_utilization_on_cloud; //vm utilization on cloud vm [0-100]
-			    taskLookUpTable[i][11] = vm_utilization_on_mobile; //vm utilization on mobile vm [0-100]
-			    taskLookUpTable[i][12] = delay_sensitivity; //delay_sensitivity [0-1]
+
+				for(int m=0; m<mandatoryAttributes.length; m++){
+					isElementPresent(appElement, mandatoryAttributes[m]);
+					taskLookUpTable[i][m] = Double.parseDouble(appElement.
+							getElementsByTagName(mandatoryAttributes[m]).item(0).getTextContent());
+				}
+
+				for(int o=0; o<optionalAttributes.length; o++){
+					double value = 0;
+					if(checkElement(appElement, optionalAttributes[o]))
+						value =  Double.parseDouble(appElement.getElementsByTagName(optionalAttributes[o]).item(0).getTextContent());
+
+					taskLookUpTable[i][mandatoryAttributes.length + o] = value;
+				}
 			}
-	
 		} catch (Exception e) {
 			SimLogger.printLine("Edge Devices XML cannot be parsed! Terminating simulation...");
 			e.printStackTrace();
-			System.exit(0);
+			System.exit(1);
 		}
 	}
 
@@ -591,13 +680,13 @@ public class SimSettings {
 
 			NodeList datacenterList = edgeDevicesDoc.getElementsByTagName("datacenter");
 			for (int i = 0; i < datacenterList.getLength(); i++) {
-			    NUM_OF_EDGE_DATACENTERS++;
+				NUM_OF_EDGE_DATACENTERS++;
 				Node datacenterNode = datacenterList.item(i);
-	
+
 				Element datacenterElement = (Element) datacenterNode;
-				isAttribtuePresent(datacenterElement, "arch");
-				isAttribtuePresent(datacenterElement, "os");
-				isAttribtuePresent(datacenterElement, "vmm");
+				isAttributePresent(datacenterElement, "arch");
+				isAttributePresent(datacenterElement, "os");
+				isAttributePresent(datacenterElement, "vmm");
 				isElementPresent(datacenterElement, "costPerBw");
 				isElementPresent(datacenterElement, "costPerSec");
 				isElementPresent(datacenterElement, "costPerMem");
@@ -608,7 +697,7 @@ public class SimSettings {
 				isElementPresent(location, "wlan_id");
 				isElementPresent(location, "x_pos");
 				isElementPresent(location, "y_pos");
-				
+
 				String attractiveness = location.getElementsByTagName("attractiveness").item(0).getTextContent();
 				int placeTypeIndex = Integer.parseInt(attractiveness);
 				if(NUM_OF_PLACE_TYPES < placeTypeIndex+1)
@@ -616,9 +705,9 @@ public class SimSettings {
 
 				NodeList hostList = datacenterElement.getElementsByTagName("host");
 				for (int j = 0; j < hostList.getLength(); j++) {
-				    NUM_OF_EDGE_HOSTS++;
+					NUM_OF_EDGE_HOSTS++;
 					Node hostNode = hostList.item(j);
-					
+
 					Element hostElement = (Element) hostNode;
 					isElementPresent(hostElement, "core");
 					isElementPresent(hostElement, "mips");
@@ -627,11 +716,11 @@ public class SimSettings {
 
 					NodeList vmList = hostElement.getElementsByTagName("VM");
 					for (int k = 0; k < vmList.getLength(); k++) {
-					    NUM_OF_EDGE_VMS++;
+						NUM_OF_EDGE_VMS++;
 						Node vmNode = vmList.item(k);
-						
+
 						Element vmElement = (Element) vmNode;
-						isAttribtuePresent(vmElement, "vmm");
+						isAttributePresent(vmElement, "vmm");
 						isElementPresent(vmElement, "core");
 						isElementPresent(vmElement, "mips");
 						isElementPresent(vmElement, "ram");
@@ -639,11 +728,11 @@ public class SimSettings {
 					}
 				}
 			}
-	
+
 		} catch (Exception e) {
 			SimLogger.printLine("Edge Devices XML cannot be parsed! Terminating simulation...");
 			e.printStackTrace();
-			System.exit(0);
+			System.exit(1);
 		}
 	}
 }

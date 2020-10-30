@@ -65,7 +65,7 @@ public class SampleMobileServerManager extends MobileServerManager{
 	}
 
 	@Override
-	public void createVmList(int brockerId) {
+	public void createVmList(int brokerId) {
 		//VMs should have unique IDs, so create Mobile VMs after Edge+Cloud VMs
 		int vmCounter=SimSettings.getInstance().getNumOfEdgeVMs() + SimSettings.getInstance().getNumOfCloudVMs();
 		
@@ -82,7 +82,7 @@ public class SampleMobileServerManager extends MobileServerManager{
 			long bandwidth = 0;
 			
 			//VM Parameters		
-			MobileVM vm = new MobileVM(vmCounter, brockerId, mips, numOfCores, ram, bandwidth, storage, vmm, new CloudletSchedulerTimeShared());
+			MobileVM vm = new MobileVM(vmCounter, brokerId, mips, numOfCores, ram, bandwidth, storage, vmm, new CloudletSchedulerTimeShared());
 			vmList.get(i).add(vm);
 			vmCounter++;
 		}
@@ -166,7 +166,7 @@ public class SampleMobileServerManager extends MobileServerManager{
 			//4. Create Hosts with its id and list of PEs and add them to the list of machines
 			MobileHost host = new MobileHost(
 					//Hosts should have unique IDs, so create Mobile Hosts after Edge+Cloud Hosts
-					i+SimSettings.getInstance().getNumOfEdgeHosts()+SimSettings.getInstance().getNumOfCoudHost(),
+					i+SimSettings.getInstance().getNumOfEdgeHosts()+SimSettings.getInstance().getNumOfCloudHost(),
 					new RamProvisionerSimple(ram),
 					new BwProvisionerSimple(bandwidth), //kbps
 					storage,

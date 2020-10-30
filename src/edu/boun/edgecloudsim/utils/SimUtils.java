@@ -16,26 +16,28 @@ import java.util.concurrent.TimeUnit;
 
 public class SimUtils {
 
-    public static final Random RNG = new Random(System.currentTimeMillis());
-    
-    public static int getRandomNumber(int start, int end) {
-    	//return pd.sample();
+	public static final Random RNG = new Random(System.currentTimeMillis());
+
+	public static int getRandomNumber(int start, int end) {
+		//return pd.sample();
 		long range = (long)end - (long)start + 1;
 		long fraction = (long)(range * RNG.nextDouble());
-		return (int)(fraction + start); 
-    }
-    public static double getRandomDoubleNumber(double start, double end) {
-    	//return pd.sample();
+		return (int)(fraction + start);
+	}
+
+	public static double getRandomDoubleNumber(double start, double end) {
+		//return pd.sample();
 		double range = end - start;
 		double fraction = (range * RNG.nextDouble());
 		return (fraction + start); 
-    }
-    public static long getRandomLongNumber(int start, int end) {
-    	//return pd.sample();
+	}
+
+	public static long getRandomLongNumber(long start, long end) {
+		//return pd.sample();
 		long range = (long)end - (long)start + 1;
 		long fraction = (long)(range * RNG.nextDouble());
 		return (fraction + start); 
-    }
+	}
 
 	public static void cleanOutputFolder(String outputFolder){
 		//clean the folder where the result files will be saved
@@ -49,16 +51,17 @@ public class SimUtils {
 					if(!f.delete())
 					{
 						SimLogger.printLine("file cannot be cleared: " + f.getAbsolutePath());
-						System.exit(0);
+						System.exit(1);
 					}
 				}
 			}
 		}
 		else {
 			SimLogger.printLine("Output folder is not available: " + outputFolder);
-			System.exit(0);
+			System.exit(1);
 		}
 	}
+
 	public static String getTimeDifference(Date startDate, Date endDate){
 		String result = "";
 		long duration  = endDate.getTime() - startDate.getTime();
@@ -68,7 +71,7 @@ public class SimUtils {
 		long diffInMinutes = TimeUnit.MILLISECONDS.toMinutes(duration);
 		long diffInHours = TimeUnit.MILLISECONDS.toHours(duration);
 		long diffInDays = TimeUnit.MILLISECONDS.toDays(duration);
-		
+
 		if(diffInDays>0)
 			result += diffInDays + ((diffInDays>1 == true) ? " Days " : " Day ");
 		if(diffInHours>0)
@@ -79,7 +82,7 @@ public class SimUtils {
 			result += diffInSeconds % 60 + ((diffInSeconds>1 == true) ? " Seconds" : " Second");
 		if(diffInMilli>0 && result.isEmpty())
 			result += diffInMilli + ((diffInMilli>1 == true) ? " Milli Seconds" : " Milli Second");
-		
+
 		return result;
 	}
 }

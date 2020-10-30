@@ -53,12 +53,12 @@ public class DefaultCloudServerManager extends CloudServerManager{
 		localDatacenter.shutdownEntity();
 	}
 
-	public void createVmList(int brockerId){
+	public void createVmList(int brokerId){
 		//VMs should have unique IDs, so create Cloud VMs after Edge VMs
 		int vmCounter=SimSettings.getInstance().getNumOfEdgeVMs();
 		
 		//Create VMs for each hosts
-		for (int i = 0; i < SimSettings.getInstance().getNumOfCoudHost(); i++) {
+		for (int i = 0; i < SimSettings.getInstance().getNumOfCloudHost(); i++) {
 			vmList.add(i, new ArrayList<CloudVM>());
 			for(int j = 0; j < SimSettings.getInstance().getNumOfCloudVMsPerHost(); j++){
 				String vmm = "Xen";
@@ -69,7 +69,7 @@ public class DefaultCloudServerManager extends CloudServerManager{
 				long bandwidth = 0;
 				
 				//VM Parameters		
-				CloudVM vm = new CloudVM(vmCounter, brockerId, mips, numOfCores, ram, bandwidth, storage, vmm, new CloudletSchedulerTimeShared());
+				CloudVM vm = new CloudVM(vmCounter, brokerId, mips, numOfCores, ram, bandwidth, storage, vmm, new CloudletSchedulerTimeShared());
 				vmList.get(i).add(vm);
 				vmCounter++;
 			}
@@ -131,7 +131,7 @@ public class DefaultCloudServerManager extends CloudServerManager{
 		// 1. We need to create a list to store one or more Machines
 		List<Host> hostList = new ArrayList<Host>();
 		
-		for (int i = 0; i < SimSettings.getInstance().getNumOfCoudHost(); i++) {
+		for (int i = 0; i < SimSettings.getInstance().getNumOfCloudHost(); i++) {
 			int numOfVMPerHost = SimSettings.getInstance().getNumOfCloudVMsPerHost();
 			int numOfCores = SimSettings.getInstance().getCoreForCloudVM() * numOfVMPerHost;
 			double mips = SimSettings.getInstance().getMipsForCloudVM() * numOfVMPerHost;

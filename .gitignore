@@ -15,6 +15,9 @@ Desktop.ini
 # bin folder
 bin
 
+# simulation output folder
+sim_results
+
 # eclipse's files
 .settings
 .classpath

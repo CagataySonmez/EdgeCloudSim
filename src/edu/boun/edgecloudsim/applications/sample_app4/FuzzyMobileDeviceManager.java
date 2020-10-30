@@ -286,7 +286,8 @@ public class FuzzyMobileDeviceManager extends MobileDeviceManager {
 		task.setSubmittedLocation(currentLocation);
 
 		//add related task to log list
-		SimLogger.getInstance().addLog(task.getCloudletId(),
+		SimLogger.getInstance().addLog(task.getMobileDeviceId(),
+				task.getCloudletId(),
 				task.getTaskType(),
 				(int)task.getCloudletLength(),
 				(int)task.getCloudletFileSize(),

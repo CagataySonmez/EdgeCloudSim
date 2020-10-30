@@ -1,8 +1,6 @@
 # Sample Application 4
 
-This application includes the source code which is used in our paper submitted to IEEE Transactions on Network and Service Management [[1]](https://www.comsoc.org/publications/journals/ieee-tnsm).
-
-The digital object identifier of the paper will be provide after it is published!
+This application includes the source code which is used in our paper submitted to IEEE Transactions on Network and Service Management [[1]](https://ieeexplore.ieee.org/abstract/document/8651335/).
 
 ## Fuzzy Logic Based Workload Orchestrator
 
@@ -28,7 +26,7 @@ In this application we introduce a fuzzy logic based workload orchestrator. In o
 A university campus environment is simulated in this application. The students demand services from the edge servers within the campus while moving around the predesignated locations such as the classroom buildings, cafeteria, dormitories, and administrative offices. The individuals are assumed to carry and/or wear the mobile gadgets which continuously run applications that in turn create a traffic due to offloading of the tasks. There exists certain number of edge servers located in the campus such that they provide coverage for edge computing requests. A user is connected to the nearest edge server via WLAN whereas the edge servers are interconnected by MAN. Also, the standard cloud infrastructure can be accessed over WAN. In this setting, it is possible for the user to offload a task to (i) Nearest edge server (we call this the local edge server) (ii) a neighboring edge server within the campus connected by AN (we call this the remote edge server), and (iii) to the global cloud servers. In our work, this decision is handled by the workload orchestrator.
 
 <p align="center">
-  <img src="/doc/images/sample_app4/env.png" width="75%">
+  <img src="/doc/images/sample_app4/env.png" width="55%">
   <p align="center">
     Figure 2: A university campus scenario representing multiple locations.
   </p>
@@ -36,4 +34,4 @@ A university campus environment is simulated in this application. The students d
 
 
 ## References
-**[1]** IEEE Transactions on Network and Service Management, [Online]. Available: https://www.comsoc.org/publications/journals/ieee-tnsm. [Accessed: 21- Jan- 2019].
+**[1]** C. Sonmez, A. Ozgovde and C. Ersoy, "[Fuzzy Workload Orchestration for Edge Computing](https://ieeexplore.ieee.org/abstract/document/8651335/)," in *IEEE Transactions on Network and Service Management*, vol. 16, no. 2, pp. 769-782, June 2019.

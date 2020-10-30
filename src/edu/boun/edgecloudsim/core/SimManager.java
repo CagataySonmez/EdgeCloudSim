@@ -16,7 +16,6 @@ import java.io.IOException;
 import java.util.List;
 
 import org.cloudbus.cloudsim.Host;
-import org.cloudbus.cloudsim.Log;
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.core.SimEntity;
 import org.cloudbus.cloudsim.core.SimEvent;
@@ -185,7 +184,7 @@ public class SimManager extends SimEntity {
 			}
 		}
 		
-		for(int i= 0; i<SimSettings.getInstance().getNumOfCoudHost(); i++) {
+		for(int i = 0; i<SimSettings.getInstance().getNumOfCloudHost(); i++) {
 			mobileDeviceManager.submitVmList(cloudServerManager.getVmList(i));
 		}
 
@@ -217,14 +216,14 @@ public class SimManager extends SimEntity {
 					mobileDeviceManager.submitTask(edgeTask);						
 				} catch (Exception e) {
 					e.printStackTrace();
-					System.exit(0);
+					System.exit(1);
 				}
 				break;
 			case CHECK_ALL_VM:
 				int totalNumOfVm = SimSettings.getInstance().getNumOfEdgeVMs();
 				if(EdgeVmAllocationPolicy_Custom.getCreatedVmNum() != totalNumOfVm){
 					SimLogger.printLine("All VMs cannot be created! Terminating simulation...");
-					System.exit(0);
+					System.exit(1);
 				}
 				break;
 			case GET_LOAD_LOG:
@@ -253,11 +252,11 @@ public class SimManager extends SimEntity {
 					SimLogger.getInstance().simStopped();
 				} catch (IOException e) {
 					e.printStackTrace();
-					System.exit(0);
+					System.exit(1);
 				}
 				break;
 			default:
-				Log.printLine(getName() + ": unknown event type");
+				SimLogger.printLine(getName() + ": unknown event type");
 				break;
 			}
 		}

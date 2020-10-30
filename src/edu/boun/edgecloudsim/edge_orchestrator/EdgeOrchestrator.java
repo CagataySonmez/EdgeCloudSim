@@ -5,7 +5,7 @@
  * EdgeOrchestrator is an abstract class which is used for selecting VM
  * for each client requests. For those who wants to add a custom 
  * Edge Orchestrator to EdgeCloudSim should extend this class and provide
- * a concreate instance via ScenarioFactory
+ * a concrete instance via ScenarioFactory
  *               
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
@@ -27,7 +27,14 @@ public abstract class EdgeOrchestrator extends SimEntity{
 		policy = _policy;
 		simScenario = _simScenario;
 	}
-	
+
+	/*
+	 * Default Constructor: Creates an empty EdgeOrchestrator
+	 */
+	public EdgeOrchestrator() {
+        	super("EdgeOrchestrator");
+	}
+
 	/*
 	 * initialize edge orchestrator if needed
 	 */

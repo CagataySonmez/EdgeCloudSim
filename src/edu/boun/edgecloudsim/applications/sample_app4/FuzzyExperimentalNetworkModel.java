@@ -187,7 +187,7 @@ public class FuzzyExperimentalNetworkModel extends NetworkModel {
 		SimSettings SS = SimSettings.getInstance();
 		for(int taskIndex=0; taskIndex<numOfApp; taskIndex++) {
 			if(SS.getTaskLookUpTable()[taskIndex][0] == 0) {
-				SimLogger.printLine("Usage percantage of task " + taskIndex + " is 0! Terminating simulation...");
+				SimLogger.printLine("Usage percentage of task " + taskIndex + " is 0! Terminating simulation...");
 				System.exit(0);
 			}
 			else{
@@ -275,7 +275,7 @@ public class FuzzyExperimentalNetworkModel extends NetworkModel {
 		else if (destDeviceId == SimSettings.GENERIC_EDGE_DEVICE_ID+1)
 			manClients++;
 		else {
-			SimLogger.printLine("Error - unknoqn device id in FuzzyExperimentalNetworkModel.uploadStarted(. Terminating simulation...");
+			SimLogger.printLine("Error - unknown device id in FuzzyExperimentalNetworkModel.uploadStarted(. Terminating simulation...");
 			System.exit(0);
 		}
 	}
@@ -289,7 +289,7 @@ public class FuzzyExperimentalNetworkModel extends NetworkModel {
 		else if (destDeviceId == SimSettings.GENERIC_EDGE_DEVICE_ID+1)
 			manClients--;
 		else {
-			SimLogger.printLine("Error - unknoqn device id in FuzzyExperimentalNetworkModel.uploadFinished(. Terminating simulation...");
+			SimLogger.printLine("Error - unknown device id in FuzzyExperimentalNetworkModel.uploadFinished(. Terminating simulation...");
 			System.exit(0);
 		}
 	}
@@ -303,7 +303,7 @@ public class FuzzyExperimentalNetworkModel extends NetworkModel {
 		else if(sourceDeviceId == SimSettings.GENERIC_EDGE_DEVICE_ID+1)
 			manClients++;
 		else {
-			SimLogger.printLine("Error - unknoqn device id in FuzzyExperimentalNetworkModel.downloadStarted(. Terminating simulation...");
+			SimLogger.printLine("Error - unknown device id in FuzzyExperimentalNetworkModel.downloadStarted(. Terminating simulation...");
 			System.exit(0);
 		}
 	}
@@ -317,7 +317,7 @@ public class FuzzyExperimentalNetworkModel extends NetworkModel {
 		else if(sourceDeviceId == SimSettings.GENERIC_EDGE_DEVICE_ID+1)
 			manClients--;
 		else {
-			SimLogger.printLine("Error - unknoqn device id in FuzzyExperimentalNetworkModel.downloadFinished(. Terminating simulation...");
+			SimLogger.printLine("Error - unknown device id in FuzzyExperimentalNetworkModel.downloadFinished(. Terminating simulation...");
 			System.exit(0);
 		}
 	}
@@ -357,7 +357,7 @@ public class FuzzyExperimentalNetworkModel extends NetworkModel {
 		return getWanDownloadDelay(accessPointLocation, dataSize);
 	}
 	
-	private double calculateMM1(double propogationDelay, double bandwidth /*Kbps*/, double PoissonMean, double avgTaskSize /*KB*/, int deviceCount){
+	private double calculateMM1(double propagationDelay, double bandwidth /*Kbps*/, double PoissonMean, double avgTaskSize /*KB*/, int deviceCount){
 		double mu=0, lamda=0;
 		
 		avgTaskSize = avgTaskSize * 8; //convert from KB to Kb
@@ -369,7 +369,7 @@ public class FuzzyExperimentalNetworkModel extends NetworkModel {
 		if(result < 0)
 			return 0;
 		
-		result += propogationDelay;
+		result += propagationDelay;
 		
 		return (result > 15) ? 0 : result;
 	}

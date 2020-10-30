@@ -33,7 +33,7 @@ import edu.boun.edgecloudsim.utils.SimLogger;
 public class DefaultMobileDeviceManager extends MobileDeviceManager {
 	private static final int BASE = 100000; //start from base in order not to conflict cloudsim tag!
 	private static final int REQUEST_RECEIVED_BY_CLOUD = BASE + 1;
-	private static final int REQUEST_RECIVED_BY_EDGE_DEVICE = BASE + 2;
+	private static final int REQUEST_RECEIVED_BY_EDGE_DEVICE = BASE + 2;
 	private static final int RESPONSE_RECEIVED_BY_MOBILE_DEVICE = BASE + 3;
 	private int taskIdCounter=0;
 	
@@ -121,7 +121,7 @@ public class DefaultMobileDeviceManager extends MobileDeviceManager {
 	protected void processOtherEvent(SimEvent ev) {
 		if (ev == null) {
 			SimLogger.printLine(getName() + ".processOtherEvent(): " + "Error - an event is null! Terminating simulation...");
-			System.exit(0);
+			System.exit(1);
 			return;
 		}
 		
@@ -138,7 +138,7 @@ public class DefaultMobileDeviceManager extends MobileDeviceManager {
 				
 				break;
 			}
-			case REQUEST_RECIVED_BY_EDGE_DEVICE:
+			case REQUEST_RECEIVED_BY_EDGE_DEVICE:
 			{
 				Task task = (Task) ev.getData();
 				
@@ -162,7 +162,7 @@ public class DefaultMobileDeviceManager extends MobileDeviceManager {
 			}
 			default:
 				SimLogger.printLine(getName() + ".processOtherEvent(): " + "Error - event unknown by this DatacenterBroker. Terminating simulation...");
-				System.exit(0);
+				System.exit(1);
 				break;
 		}
 	}
@@ -180,7 +180,8 @@ public class DefaultMobileDeviceManager extends MobileDeviceManager {
 		task.setSubmittedLocation(currentLocation);
 
 		//add related task to log list
-		SimLogger.getInstance().addLog(task.getCloudletId(),
+		SimLogger.getInstance().addLog(task.getMobileDeviceId(),
+				task.getCloudletId(),
 				task.getTaskType(),
 				(int)task.getCloudletLength(),
 				(int)task.getCloudletFileSize(),
@@ -212,7 +213,7 @@ public class DefaultMobileDeviceManager extends MobileDeviceManager {
 			
 			if(WlanDelay > 0){
 				networkModel.uploadStarted(currentLocation, nextHopId);
-				schedule(getId(), WlanDelay, REQUEST_RECIVED_BY_EDGE_DEVICE, task);
+				schedule(getId(), WlanDelay, REQUEST_RECEIVED_BY_EDGE_DEVICE, task);
 				SimLogger.getInstance().taskStarted(task.getCloudletId(), CloudSim.clock());
 				SimLogger.getInstance().setUploadDelay(task.getCloudletId(), WlanDelay, NETWORK_DELAY_TYPES.WLAN_DELAY);
 			}
@@ -226,7 +227,7 @@ public class DefaultMobileDeviceManager extends MobileDeviceManager {
 		}
 		else {
 			SimLogger.printLine("Unknown nextHopId! Terminating simulation...");
-			System.exit(0);
+			System.exit(1);
 		}
 	}
 	
