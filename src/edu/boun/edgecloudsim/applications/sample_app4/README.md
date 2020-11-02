@@ -2,6 +2,8 @@
 
 This application includes the source code which is used in our paper submitted to IEEE Transactions on Network and Service Management [[1]](https://ieeexplore.ieee.org/abstract/document/8651335/).
 
+You can find the presentation of this work on our YouTube channel. Click [here](https://youtu.be/RFP2M0w4NlY) to watch!
+
 ## Fuzzy Logic Based Workload Orchestrator
 
 In this application we introduce a fuzzy logic based workload orchestrator. In our design, two stage fuzzy logic system is used as shown in Figure 1. In the first stage, the most convenient edge server in the edge layer is found. In the second stage, the candidate edge server and the cloud server are compared. As a result of these operations, the proposed fuzzy logic based workload orchestrator finds a target server which can be the local edge server, remote edge server or the cloud server.

@@ -2,6 +2,8 @@
 
 This application includes the source code which is used in our paper submitted to IEEE Transactions on Intelligent Transportation Systems [[1]](https://ieeexplore.ieee.org/abstract/document/9208723/).
 
+You can find the presentation of this work on our YouTube channel. Click [here](https://youtu.be/mlcLDpDcdw8) to watch!
+
 ## Vehicular Edge Computing
 
 The concept of Internet of Vehicle (IoV), its pioneering applications, and the services for the future smart highways can benefit from the computation offloading concept over a multi-tier architecture consisting of the connected vehicles, road side units (RSUs), and cloud computing elements as shown in Figure 6.1. The vehicles are located in the first tier, which can be considered as the data generation layer. They also have computational resources which are provided by their on board units (OBUs). If required, some of the operations can be executed locally by the OBUs at this tier. The second tier consists of the RSUs that can provide fast access to limited resources. The edge servers are located in this tier. Finally, the third tier includes traditional cloud computing elements.
