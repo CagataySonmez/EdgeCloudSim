@@ -135,18 +135,7 @@ public class MM1Queue extends NetworkModel {
 	}
 
 	private int getDeviceCount(Location deviceLocation, double time){
-		int deviceCount = 0;
-
-		for(int i=0; i<numberOfMobileDevices; i++) {
-			Location location = SimManager.getInstance().getMobilityModel().getLocation(i,time);
-			if(location.equals(deviceLocation))
-				deviceCount++;
-		}
-
-		//record max number of client just for debugging
-		if(maxNumOfClientsInPlace<deviceCount)
-			maxNumOfClientsInPlace = deviceCount;
-
+		int deviceCount = SimManager.getInstance().getMobilityModel().getDeviceCount(deviceLocation.getServingWlanId());
 		return deviceCount;
 	}
 

@@ -42,7 +42,9 @@ import java.util.stream.IntStream;
 import edu.boun.edgecloudsim.core.SimManager;
 import edu.boun.edgecloudsim.core.SimSettings;
 import edu.boun.edgecloudsim.core.SimSettings.NETWORK_DELAY_TYPES;
+import edu.boun.edgecloudsim.mobility.MobilityModel;
 import edu.boun.edgecloudsim.utils.SimLogger.NETWORK_ERRORS;
+import org.cloudbus.cloudsim.core.CloudSim;
 
 public class SimLogger {
 	public static enum TASK_STATUS {
@@ -338,6 +340,25 @@ public class SimLogger {
 		if(SimSettings.getInstance().getApDelayLogInterval() != 0)
 			apDelayList.add(new ApDelayLogItem(time, apUploadDelays, apDownloadDelays));
 	}
+
+	public void logLocation(){
+		try {
+			File locationFile = new File(outputFolder, filePrefix + "_LOCATION.log");
+			FileWriter locationFW = new FileWriter(locationFile, true);
+			BufferedWriter locationBW = new BufferedWriter(locationFW);
+
+			int numEdge = SimSettings.getInstance().getNumOfEdgeDatacenters();
+			MobilityModel mobilityModel = SimManager.getInstance().getMobilityModel();
+
+			locationBW.write(CloudSim.clock() + "");
+			for (int i = 0; i < numEdge; i++) {
+				locationBW.write(SimSettings.DELIMITER + mobilityModel.getDeviceCount(i));
+			}
+			locationBW.close();
+		} catch (IOException e){
+			e.printStackTrace();
+		}
+	}
 	
 	public void simStopped() throws IOException {
 		endTime = System.currentTimeMillis();
@@ -472,29 +493,6 @@ public class SimLogger {
 		}
 
 		if (fileLogEnabled) {
-			// write location info to file for each location
-			// assuming each location has only one access point
-			double locationLogInterval = SimSettings.getInstance().getLocationLogInterval();
-			if(locationLogInterval != 0) {
-				for (int t = 1; t < (SimSettings.getInstance().getSimulationTime() / locationLogInterval); t++) {
-					int[] locationInfo = new int[SimSettings.getInstance().getNumOfEdgeDatacenters()];
-					Double time = t * SimSettings.getInstance().getLocationLogInterval();
-					
-					if (time < SimSettings.CLIENT_ACTIVITY_START_TIME)
-						continue;
-
-					for (int i = 0; i < SimManager.getInstance().getNumOfMobileDevice(); i++) {
-						Location loc = SimManager.getInstance().getMobilityModel().getLocation(i, time);
-						locationInfo[loc.getServingWlanId()]++;
-					}
-
-					locationBW.write(time.toString());
-					for (int i = 0; i < locationInfo.length; i++)
-						locationBW.write(SimSettings.DELIMITER + locationInfo[i]);
-
-					locationBW.newLine();
-				}
-			}
 			
 			// write delay info to file for each access point
 			if(SimSettings.getInstance().getApDelayLogInterval() != 0) {

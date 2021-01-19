@@ -39,4 +39,14 @@ public abstract class MobilityModel {
 	 * returns location of a device at a certain time
 	 */
 	public abstract Location getLocation(int deviceId, double time);
+
+	/*
+	 * returns count of devices in given datacenters location
+	 */
+	public abstract int getDeviceCount(int datacenterId);
+
+	/*
+	 * calculates and sets next locaton of given mobile device
+	 */
+	public abstract void move(int deviceId);
 }

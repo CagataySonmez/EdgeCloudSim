@@ -38,6 +38,8 @@ public class SimManager extends SimEntity {
 	private static final int GET_LOAD_LOG = 2;
 	private static final int PRINT_PROGRESS = 3;
 	private static final int STOP_SIMULATION = 4;
+	private static final int MOVE_DEVICE = 5;
+	private static final int LOG_LOCATION = 6;
 	
 	private String simScenario;
 	private String orchestratorPolicy;
@@ -65,11 +67,6 @@ public class SimManager extends SimEntity {
 		loadGeneratorModel = scenarioFactory.getLoadGeneratorModel();
 		loadGeneratorModel.initializeModel();
 		SimLogger.printLine("Done, ");
-		
-		SimLogger.print("Creating device locations...");
-		mobilityModel = scenarioFactory.getMobilityModel();
-		mobilityModel.initialize();
-		SimLogger.printLine("Done.");
 
 		//Generate network model
 		networkModel = scenarioFactory.getNetworkModel();
@@ -120,6 +117,9 @@ public class SimManager extends SimEntity {
 		//Start Mobile Datacenters & Generate VMs
 		mobileServerManager.startDatacenters();
 		mobileServerManager.createVmList(mobileDeviceManager.getId());
+
+		mobilityModel = scenarioFactory.getMobilityModel();
+		mobilityModel.initialize();
 		
 		CloudSim.startSimulation();
 	}
@@ -196,6 +196,11 @@ public class SimManager extends SimEntity {
 		//Creation of tasks are scheduled here!
 		for(int i=0; i< loadGeneratorModel.getTaskList().size(); i++)
 			schedule(getId(), loadGeneratorModel.getTaskList().get(i).getStartTime(), CREATE_TASK, loadGeneratorModel.getTaskList().get(i));
+
+		//Schedule logging of locations, if enabled
+		if(SimSettings.getInstance().getFileLoggingEnabled()){
+			schedule(getId(),SimSettings.getInstance().getLocationLogInterval(), LOG_LOCATION);
+		}
 		
 		//Periodic event loops starts from here!
 		schedule(getId(), 5, CHECK_ALL_VM);
@@ -255,6 +260,13 @@ public class SimManager extends SimEntity {
 					System.exit(1);
 				}
 				break;
+			case MOVE_DEVICE:
+				mobilityModel.move((int) ev.getData());
+				break;
+			case LOG_LOCATION:
+				SimLogger.getInstance().logLocation();
+				schedule(getId(),SimSettings.getInstance().getLocationLogInterval(), LOG_LOCATION);
+				break;
 			default:
 				SimLogger.printLine(getName() + ": unknown event type");
 				break;
@@ -267,5 +279,9 @@ public class SimManager extends SimEntity {
 		edgeServerManager.terminateDatacenters();
 		cloudServerManager.terminateDatacenters();
 		mobileServerManager.terminateDatacenters();
+	}
+
+	public static int getMoveDevice() {
+		return MOVE_DEVICE;
 	}
 }
