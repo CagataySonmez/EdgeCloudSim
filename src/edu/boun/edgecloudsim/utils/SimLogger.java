@@ -615,28 +615,28 @@ public class SimLogger {
 				appendToFile(genericBWs[i], genericResult5);
 				
 				//append performance related values only to ALL_ALLPS file
-				if(i == numOfAppTypes) {
-					appendToFile(genericBWs[i], genericResult6);
-				}
-				else {
-					printLine(SimSettings.getInstance().getTaskName(i));
-					printLine("# of tasks (Edge/Cloud): "
-							+ (failedTask[i] + completedTask[i]) + "("
-							+ (failedTaskOnEdge[i] + completedTaskOnEdge[i]) + "/" 
-							+ (failedTaskOnCloud[i]+ completedTaskOnCloud[i]) + ")" );
-					
-					printLine("# of failed tasks (Edge/Cloud): "
-							+ failedTask[i] + "("
-							+ failedTaskOnEdge[i] + "/"
-							+ failedTaskOnCloud[i] + ")");
-					
-					printLine("# of completed tasks (Edge/Cloud): "
-							+ completedTask[i] + "("
-							+ completedTaskOnEdge[i] + "/"
-							+ completedTaskOnCloud[i] + ")");
-					
-					printLine("---------------------------------------");
-				}
+//				if(i == numOfAppTypes) {
+//					appendToFile(genericBWs[i], genericResult6);
+//				}
+//				else {
+//					printLine(SimSettings.getInstance().getTaskName(i));
+//					printLine("# of tasks (Edge/Cloud): "
+//							+ (failedTask[i] + completedTask[i]) + "("
+//							+ (failedTaskOnEdge[i] + completedTaskOnEdge[i]) + "/"
+//							+ (failedTaskOnCloud[i]+ completedTaskOnCloud[i]) + ")" );
+//
+//					printLine("# of failed tasks (Edge/Cloud): "
+//							+ failedTask[i] + "("
+//							+ failedTaskOnEdge[i] + "/"
+//							+ failedTaskOnCloud[i] + ")");
+//
+//					printLine("# of completed tasks (Edge/Cloud): "
+//							+ completedTask[i] + "("
+//							+ completedTaskOnEdge[i] + "/"
+//							+ completedTaskOnCloud[i] + ")");
+//
+//					printLine("---------------------------------------");
+//				}
 			}
 
 			// close open files

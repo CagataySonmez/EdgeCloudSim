@@ -63,10 +63,10 @@ public class SimManager extends SimEntity {
 		numOfMobileDevice = _numOfMobileDevice;
 		orchestratorPolicy = _orchestratorPolicy;
 
-		SimLogger.print("Creating tasks...");
+		//SimLogger.print("Creating tasks...");
 		loadGeneratorModel = scenarioFactory.getLoadGeneratorModel();
 		loadGeneratorModel.initializeModel();
-		SimLogger.printLine("Done, ");
+		//SimLogger.printLine("Done, ");
 
 		//Generate network model
 		networkModel = scenarioFactory.getNetworkModel();
@@ -104,7 +104,7 @@ public class SimManager extends SimEntity {
 	 */
 	public void startSimulation() throws Exception{
 		//Starts the simulation
-		SimLogger.print(super.getName()+" is starting...");
+		//SimLogger.print(super.getName()+" is starting...");
 		
 		//Start Edge Datacenters & Generate VMs
 		edgeServerManager.startDatacenters();
@@ -208,7 +208,7 @@ public class SimManager extends SimEntity {
 		schedule(getId(), SimSettings.getInstance().getVmLoadLogInterval(), GET_LOAD_LOG);
 		schedule(getId(), SimSettings.getInstance().getSimulationTime(), STOP_SIMULATION);
 		
-		SimLogger.printLine("Done.");
+		//SimLogger.printLine("Done.");
 	}
 
 	@Override
@@ -227,7 +227,7 @@ public class SimManager extends SimEntity {
 			case CHECK_ALL_VM:
 				int totalNumOfVm = SimSettings.getInstance().getNumOfEdgeVMs();
 				if(EdgeVmAllocationPolicy_Custom.getCreatedVmNum() != totalNumOfVm){
-					SimLogger.printLine("All VMs cannot be created! Terminating simulation...");
+					//SimLogger.printLine("All VMs cannot be created! Terminating simulation...");
 					System.exit(1);
 				}
 				break;
@@ -242,16 +242,16 @@ public class SimManager extends SimEntity {
 				break;
 			case PRINT_PROGRESS:
 				int progress = (int)((CloudSim.clock()*100)/SimSettings.getInstance().getSimulationTime());
-				if(progress % 10 == 0)
-					SimLogger.print(Integer.toString(progress));
-				else
-					SimLogger.print(".");
-				if(CloudSim.clock() < SimSettings.getInstance().getSimulationTime())
-					schedule(getId(), SimSettings.getInstance().getSimulationTime()/100, PRINT_PROGRESS);
+				//if(progress % 10 == 0)
+					//SimLogger.print(Integer.toString(progress));
+				//else
+					//SimLogger.print(".");
+				//if(CloudSim.clock() < SimSettings.getInstance().getSimulationTime())
+					//schedule(getId(), SimSettings.getInstance().getSimulationTime()/100, PRINT_PROGRESS);
 
 				break;
 			case STOP_SIMULATION:
-				SimLogger.printLine("100");
+				//SimLogger.printLine("100");
 				CloudSim.terminateSimulation();
 				try {
 					SimLogger.getInstance().simStopped();
@@ -268,7 +268,7 @@ public class SimManager extends SimEntity {
 				schedule(getId(),SimSettings.getInstance().getLocationLogInterval(), LOG_LOCATION);
 				break;
 			default:
-				SimLogger.printLine(getName() + ": unknown event type");
+				//SimLogger.printLine(getName() + ": unknown event type");
 				break;
 			}
 		}
