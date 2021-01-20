@@ -354,6 +354,7 @@ public class SimLogger {
 			for (int i = 0; i < numEdge; i++) {
 				locationBW.write(SimSettings.DELIMITER + mobilityModel.getDeviceCount(i));
 			}
+			locationBW.newLine();
 			locationBW.close();
 		} catch (IOException e){
 			e.printStackTrace();
