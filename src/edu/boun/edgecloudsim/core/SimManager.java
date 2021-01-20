@@ -116,8 +116,7 @@ public class SimManager extends SimEntity {
 		mobileServerManager.startDatacenters();
 		mobileServerManager.createVmList(mobileDeviceManager.getId());
 
-		mobilityModel = scenarioFactory.getMobilityModel();
-		mobilityModel.initialize();
+
 
 
 
@@ -192,6 +191,9 @@ public class SimManager extends SimEntity {
 			if(mobileServerManager.getVmList(i) != null)
 				mobileDeviceManager.submitVmList(mobileServerManager.getVmList(i));
 		}
+
+		mobilityModel = scenarioFactory.getMobilityModel();
+		mobilityModel.initialize();
 
 		//SimLogger.print("Creating tasks...");
 		loadGeneratorModel = scenarioFactory.getLoadGeneratorModel();
