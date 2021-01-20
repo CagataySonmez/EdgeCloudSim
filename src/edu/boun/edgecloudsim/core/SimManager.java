@@ -40,6 +40,7 @@ public class SimManager extends SimEntity {
 	private static final int STOP_SIMULATION = 4;
 	private static final int MOVE_DEVICE = 5;
 	private static final int LOG_LOCATION = 6;
+	private static final int GEN_TASKS = 7;
 	
 	private String simScenario;
 	private String orchestratorPolicy;
@@ -63,10 +64,7 @@ public class SimManager extends SimEntity {
 		numOfMobileDevice = _numOfMobileDevice;
 		orchestratorPolicy = _orchestratorPolicy;
 
-		//SimLogger.print("Creating tasks...");
-		loadGeneratorModel = scenarioFactory.getLoadGeneratorModel();
-		loadGeneratorModel.initializeModel();
-		//SimLogger.printLine("Done, ");
+
 
 		//Generate network model
 		networkModel = scenarioFactory.getNetworkModel();
@@ -120,7 +118,9 @@ public class SimManager extends SimEntity {
 
 		mobilityModel = scenarioFactory.getMobilityModel();
 		mobilityModel.initialize();
-		
+
+
+
 		CloudSim.startSimulation();
 	}
 
@@ -192,10 +192,11 @@ public class SimManager extends SimEntity {
 			if(mobileServerManager.getVmList(i) != null)
 				mobileDeviceManager.submitVmList(mobileServerManager.getVmList(i));
 		}
-		
-		//Creation of tasks are scheduled here!
-		for(int i=0; i< loadGeneratorModel.getTaskList().size(); i++)
-			schedule(getId(), loadGeneratorModel.getTaskList().get(i).getStartTime(), CREATE_TASK, loadGeneratorModel.getTaskList().get(i));
+
+		//SimLogger.print("Creating tasks...");
+		loadGeneratorModel = scenarioFactory.getLoadGeneratorModel();
+		loadGeneratorModel.initializeModel();
+		//SimLogger.printLine("Done, ");
 
 		//Schedule logging of locations, if enabled
 		if(SimSettings.getInstance().getFileLoggingEnabled()){
@@ -267,6 +268,10 @@ public class SimManager extends SimEntity {
 				SimLogger.getInstance().logLocation();
 				schedule(getId(),SimSettings.getInstance().getLocationLogInterval(), LOG_LOCATION);
 				break;
+			case GEN_TASKS:
+				int deviceId = (int) ev.getData();
+				loadGeneratorModel.createTask(deviceId);
+				break;
 			default:
 				//SimLogger.printLine(getName() + ": unknown event type");
 				break;
@@ -284,4 +289,8 @@ public class SimManager extends SimEntity {
 	public static int getMoveDevice() {
 		return MOVE_DEVICE;
 	}
+
+	public static int getGenTasks(){ return GEN_TASKS;}
+
+	public static int getCreateTask(){return CREATE_TASK;}
 }
