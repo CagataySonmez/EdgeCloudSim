@@ -84,13 +84,12 @@ public class IdleActiveLoadGenerator extends LoadGeneratorModel{
 		double activePeriod = SimSettings.getInstance().getTaskLookUpTable()[taskTypeOfDevices[deviceId]][3];
 		double idlePeriod = SimSettings.getInstance().getTaskLookUpTable()[taskTypeOfDevices[deviceId]][4];
 		double activePeriodStartTime = SimUtils.getRandomDoubleNumber(
-				CloudSim.clock(),
-				CloudSim.clock() + activePeriod);
-		double delay = taskRng[deviceId].sample();
-		double virtualTime = activePeriodStartTime + delay;
+				0,
+				activePeriod);
+		double virtualTime = activePeriodStartTime + taskRng[deviceId].sample();
 
-		while(virtualTime < activePeriodStartTime + activePeriod) {
-			sm.schedule(sm.getId(), delay, sm.getCreateTask(), new TaskProperty(deviceId,taskTypeOfDevices[deviceId], virtualTime, expRngList));
+		while(virtualTime < activePeriod) {
+			sm.schedule(sm.getId(), virtualTime, sm.getCreateTask(), new TaskProperty(deviceId,taskTypeOfDevices[deviceId], 0, expRngList));
 
 			double interval = taskRng[deviceId].sample();
 			if(interval <= 0){
@@ -98,7 +97,6 @@ public class IdleActiveLoadGenerator extends LoadGeneratorModel{
 				continue;
 			}
 			//SimLogger.printLine(virtualTime + " -> " + interval + " for device " + i + " time ");
-			delay += interval;
 			virtualTime += interval;
 		}
 		sm.schedule(sm.getId(), activePeriod + idlePeriod, sm.getGenTasks(), deviceId);
