@@ -28,6 +28,8 @@ public class IdleActiveLoadGenerator extends LoadGeneratorModel{
 	int taskTypeOfDevices[];
 	ExponentialDistribution[][] expRngList;
 	ExponentialDistribution[] taskRng;
+	double[] activePeriods;
+	double[] idlePeriods;
 
 	public IdleActiveLoadGenerator(int _numberOfMobileDevices, double _simulationTime, String _simScenario) {
 		super(_numberOfMobileDevices, _simulationTime, _simScenario);
@@ -35,7 +37,6 @@ public class IdleActiveLoadGenerator extends LoadGeneratorModel{
 
 	@Override
 	public void initializeModel() {
-		taskList = new ArrayList<TaskProperty>();
 		taskRng = new ExponentialDistribution[numberOfMobileDevices];
 
 		//exponential number generator for file input size, file output size and task length
@@ -53,6 +54,9 @@ public class IdleActiveLoadGenerator extends LoadGeneratorModel{
 
 		//Each mobile device utilizes an app type (task type)
 		taskTypeOfDevices = new int[numberOfMobileDevices];
+		activePeriods = new double[numberOfMobileDevices];
+		idlePeriods = new double[numberOfMobileDevices];
+
 		for (int i = 0; i < numberOfMobileDevices; i++) {
 			int randomTaskType = -1;
 			double taskTypeSelector = SimUtils.getRandomDoubleNumber(0, 100);
@@ -68,12 +72,17 @@ public class IdleActiveLoadGenerator extends LoadGeneratorModel{
 				SimLogger.printLine("Impossible is occured! no random task type!");
 				continue;
 			}
+			activePeriods[i] = SimSettings.getInstance().getTaskLookUpTable()[taskTypeOfDevices[i]][3];
+			idlePeriods[i] = SimSettings.getInstance().getTaskLookUpTable()[taskTypeOfDevices[i]][4];
 
 			taskTypeOfDevices[i] = randomTaskType;
 			double poissonMean = SimSettings.getInstance().getTaskLookUpTable()[randomTaskType][2];
 			taskRng[i] = new ExponentialDistribution(poissonMean);
 			SimManager sm = SimManager.getInstance();
-			sm.schedule(sm.getId(), SimSettings.CLIENT_ACTIVITY_START_TIME, sm.getGenTasks(), i);
+			double activePeriodStartTime = SimUtils.getRandomDoubleNumber(
+					0,
+					activePeriods[i]);
+			sm.schedule(sm.getId(), SimSettings.CLIENT_ACTIVITY_START_TIME + activePeriodStartTime, sm.getGenTasks(), i);
 		}
 	}
 
@@ -81,14 +90,11 @@ public class IdleActiveLoadGenerator extends LoadGeneratorModel{
 	@Override
 	public void createTask(int deviceId){
 		SimManager sm = SimManager.getInstance();
-		double activePeriod = SimSettings.getInstance().getTaskLookUpTable()[taskTypeOfDevices[deviceId]][3];
-		double idlePeriod = SimSettings.getInstance().getTaskLookUpTable()[taskTypeOfDevices[deviceId]][4];
-		double activePeriodStartTime = SimUtils.getRandomDoubleNumber(
-				0,
-				activePeriod);
-		double virtualTime = activePeriodStartTime + taskRng[deviceId].sample();
 
-		while(virtualTime < activePeriodStartTime + activePeriod) {
+
+		double virtualTime = taskRng[deviceId].sample();
+
+		while(virtualTime < activePeriods[deviceId]) {
 			sm.schedule(sm.getId(), virtualTime, sm.getCreateTask(), new TaskProperty(deviceId,taskTypeOfDevices[deviceId], 0, expRngList));
 
 			double interval = taskRng[deviceId].sample();
@@ -99,7 +105,7 @@ public class IdleActiveLoadGenerator extends LoadGeneratorModel{
 			//SimLogger.printLine(virtualTime + " -> " + interval + " for device " + i + " time ");
 			virtualTime += interval;
 		}
-		sm.schedule(sm.getId(), activePeriod + idlePeriod, sm.getGenTasks(), deviceId);
+		sm.schedule(sm.getId(), activePeriods[deviceId] + idlePeriods[deviceId], sm.getGenTasks(), deviceId);
 
 	}
 
