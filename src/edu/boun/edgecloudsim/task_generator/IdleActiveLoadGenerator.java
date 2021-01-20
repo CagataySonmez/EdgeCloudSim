@@ -72,13 +72,14 @@ public class IdleActiveLoadGenerator extends LoadGeneratorModel{
 				SimLogger.printLine("Impossible is occured! no random task type!");
 				continue;
 			}
-			activePeriods[i] = SimSettings.getInstance().getTaskLookUpTable()[taskTypeOfDevices[i]][3];
-			idlePeriods[i] = SimSettings.getInstance().getTaskLookUpTable()[taskTypeOfDevices[i]][4];
+
 
 			taskTypeOfDevices[i] = randomTaskType;
 			double poissonMean = SimSettings.getInstance().getTaskLookUpTable()[randomTaskType][2];
 			taskRng[i] = new ExponentialDistribution(poissonMean);
 			SimManager sm = SimManager.getInstance();
+			activePeriods[i] = SimSettings.getInstance().getTaskLookUpTable()[taskTypeOfDevices[i]][3];
+			idlePeriods[i] = SimSettings.getInstance().getTaskLookUpTable()[taskTypeOfDevices[i]][4];
 			double activePeriodStartTime = SimUtils.getRandomDoubleNumber(
 					0,
 					activePeriods[i]);
