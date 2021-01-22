@@ -47,13 +47,10 @@ public class NomadicMobility extends MobilityModel {
 		for (int i=0; i<datacenterDeviceCount.length;i++){
 			datacenterDeviceCount[i] = 0;
 		}
-
 		expRngList = new ExponentialDistribution[SimSettings.getInstance().getNumOfEdgeDatacenters()];
-
 		for (int i = 0; i < datacenters.length; i++) {
 			expRngList[i] = new ExponentialDistribution(SimSettings.getInstance().getMobilityLookUpTable()[datacenters[i].getPlaceTypeIndex()]);
 		}
-
 		//initialize locations of each device and start scheduling of movement events
 		for(int i=0; i<numberOfMobileDevices; i++) {
 			int randDatacenterId = SimUtils.getRandomNumber(0, SimSettings.getInstance().getNumOfEdgeDatacenters()-1);
@@ -62,11 +59,7 @@ public class NomadicMobility extends MobilityModel {
 			deviceLocations[i] = datacenters[randDatacenterId];
 			SimManager x = SimManager.getInstance();
 			x.schedule(x.getId(),SimSettings.CLIENT_ACTIVITY_START_TIME,SimManager.getMoveDevice(), i);
-
 		}
-
-
-
 	}
 
 	/**
