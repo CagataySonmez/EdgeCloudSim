@@ -35,6 +35,10 @@ public class NomadicMobility extends MobilityModel {
 		// TODO Auto-generated constructor stub
 	}
 
+	/**
+	 * initializes the model by setting necessary attributes and starting the movement for each device
+	 */
+
 	@Override
 	public void initialize() {
 		readDatacenters();
@@ -46,35 +50,16 @@ public class NomadicMobility extends MobilityModel {
 
 		expRngList = new ExponentialDistribution[SimSettings.getInstance().getNumOfEdgeDatacenters()];
 
-		//create random number generator for each place
-//		Document doc = SimSettings.getInstance().getEdgeDevicesDocument();
-//		NodeList datacenterList = doc.getElementsByTagName("datacenter");
-
 		for (int i = 0; i < datacenters.length; i++) {
-//			Node datacenterNode = datacenterList.item(i);
-//			Element datacenterElement = (Element) datacenterNode;
-//			Element location = (Element)datacenterElement.getElementsByTagName("location").item(0);
-//			String attractiveness = location.getElementsByTagName("attractiveness").item(0).getTextContent();
-//			int placeTypeIndex = Integer.parseInt(attractiveness);
-
 			expRngList[i] = new ExponentialDistribution(SimSettings.getInstance().getMobilityLookUpTable()[datacenters[i].getPlaceTypeIndex()]);
 		}
 
 		//initialize locations of each device and start scheduling of movement events
 		for(int i=0; i<numberOfMobileDevices; i++) {
 			int randDatacenterId = SimUtils.getRandomNumber(0, SimSettings.getInstance().getNumOfEdgeDatacenters()-1);
-//			Node datacenterNode = datacenterList.item(randDatacenterId);
-//			Element datacenterElement = (Element) datacenterNode;
-//			Element location = (Element)datacenterElement.getElementsByTagName("location").item(0);
-//			String attractiveness = location.getElementsByTagName("attractiveness").item(0).getTextContent();
-//			int placeTypeIndex = Integer.parseInt(attractiveness);
-//			int wlan_id = Integer.parseInt(location.getElementsByTagName("wlan_id").item(0).getTextContent());
-//			int x_pos = Integer.parseInt(location.getElementsByTagName("x_pos").item(0).getTextContent());
-//			int y_pos = Integer.parseInt(location.getElementsByTagName("y_pos").item(0).getTextContent());
 
 			++datacenterDeviceCount[randDatacenterId];
 			deviceLocations[i] = datacenters[randDatacenterId];
-			//double waitingTime = expRngList[deviceLocations[i].getServingWlanId()].sample();
 			SimManager x = SimManager.getInstance();
 			x.schedule(x.getId(),SimSettings.CLIENT_ACTIVITY_START_TIME,SimManager.getMoveDevice(), i);
 
@@ -84,27 +69,21 @@ public class NomadicMobility extends MobilityModel {
 
 	}
 
+	/**
+	 * move calculates the new location of the given device, alters the device count array of the data centers
+	 * accordingly and schedules the next movement of the device
+	 * @param deviceId the id of the device to be moved
+	 */
+
 	@Override
 	public void move(int deviceId){
 		boolean placeFound = false;
 		int currentLocationId = deviceLocations[deviceId].getServingWlanId();
-//		Document doc = SimSettings.getInstance().getEdgeDevicesDocument();
-//		NodeList datacenterList = doc.getElementsByTagName("datacenter");
 
 		while(placeFound == false){
 			int newDatacenterId = SimUtils.getRandomNumber(0,SimSettings.getInstance().getNumOfEdgeDatacenters()-1);
 			if(newDatacenterId != currentLocationId){
 				placeFound = true;
-//				Node datacenterNode = datacenterList.item(newDatacenterId);
-//				Element datacenterElement = (Element) datacenterNode;
-//				Element location = (Element)datacenterElement.getElementsByTagName("location").item(0);
-//				String attractiveness = location.getElementsByTagName("attractiveness").item(0).getTextContent();
-//				int placeTypeIndex = Integer.parseInt(attractiveness);
-//				int wlan_id = Integer.parseInt(location.getElementsByTagName("wlan_id").item(0).getTextContent());
-//				int x_pos = Integer.parseInt(location.getElementsByTagName("x_pos").item(0).getTextContent());
-//				int y_pos = Integer.parseInt(location.getElementsByTagName("y_pos").item(0).getTextContent());
-
-
 				--datacenterDeviceCount[currentLocationId];
 				++datacenterDeviceCount[newDatacenterId];
 				deviceLocations[deviceId] = datacenters[newDatacenterId];
@@ -115,6 +94,9 @@ public class NomadicMobility extends MobilityModel {
 		}
 	}
 
+	/**
+	 * reads location data for scenario's data centers and stores them as attribute for faster access
+	 */
 	public void readDatacenters(){
 		Document doc = SimSettings.getInstance().getEdgeDevicesDocument();
 		NodeList datacenterList = doc.getElementsByTagName("datacenter");
@@ -133,11 +115,22 @@ public class NomadicMobility extends MobilityModel {
 		}
 	}
 
+	/**
+	 * returns the current location of given device
+	 * @param deviceId id of device
+	 * @param time left over for compatibility, no purpose
+	 * @return location of given device
+	 */
 	@Override
 	public Location getLocation(int deviceId, double time) {
 		return deviceLocations[deviceId];
 	}
 
+	/**
+	 * returns the count of devices, located at the given data center
+	 * @param datacenterId id of a data center
+	 * @return count of devices located in given data center
+	 */
 	@Override
 	public int getDeviceCount(int datacenterId) {
 		return datacenterDeviceCount[datacenterId];

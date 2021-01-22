@@ -35,6 +35,10 @@ public class IdleActiveLoadGenerator extends LoadGeneratorModel{
 		super(_numberOfMobileDevices, _simulationTime, _simScenario);
 	}
 
+	/**
+	 * initializeModel sets the necessary attributes and starts the task creation process
+	 */
+
 	@Override
 	public void initializeModel() {
 		taskRng = new ExponentialDistribution[numberOfMobileDevices];
@@ -88,11 +92,13 @@ public class IdleActiveLoadGenerator extends LoadGeneratorModel{
 	}
 
 
+	/**
+	 * createTasks schedules the creation of tasks for the given device for a single active-idle period
+	 * @param deviceId the id of the device, for which tasks shall be created
+	 */
 	@Override
 	public void createTask(int deviceId){
 		SimManager sm = SimManager.getInstance();
-
-
 		double virtualTime = taskRng[deviceId].sample();
 
 		while(virtualTime < activePeriods[deviceId]) {

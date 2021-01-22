@@ -134,6 +134,12 @@ public class MM1Queue extends NetworkModel {
 		return maxNumOfClientsInPlace;
 	}
 
+	/**
+	 * getDeviceCount retrieves the number of devices, that are in the same location, as the given location
+	 * @param deviceLocation the location of which the device count is to be counted
+	 * @param time irrelevant parameter left for compatibility reasons
+	 * @return the amount of devices in the given location
+	 */
 	private int getDeviceCount(Location deviceLocation, double time){
 		int deviceCount = SimManager.getInstance().getMobilityModel().getDeviceCount(deviceLocation.getServingWlanId());
 		return deviceCount;
