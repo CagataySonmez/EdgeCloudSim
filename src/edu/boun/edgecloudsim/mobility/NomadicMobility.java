@@ -8,6 +8,7 @@
  *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
+ * modified 2021, Raphael Freymann
  */
 
 package edu.boun.edgecloudsim.mobility;
@@ -51,7 +52,7 @@ public class NomadicMobility extends MobilityModel {
 		for (int i = 0; i < datacenters.length; i++) {
 			expRngList[i] = new ExponentialDistribution(SimSettings.getInstance().getMobilityLookUpTable()[datacenters[i].getPlaceTypeIndex()]);
 		}
-		//initialize locations of each device and start scheduling of movement events
+
 		for(int i=0; i<numberOfMobileDevices; i++) {
 			int randDatacenterId = SimUtils.getRandomNumber(0, SimSettings.getInstance().getNumOfEdgeDatacenters()-1);
 

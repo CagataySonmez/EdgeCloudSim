@@ -9,6 +9,7 @@
  *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
+ * modified 2021, Raphael Freymann
  */
 
 package edu.boun.edgecloudsim.task_generator;
@@ -100,20 +101,14 @@ public class IdleActiveLoadGenerator extends LoadGeneratorModel{
 	public void createTask(int deviceId){
 		SimManager sm = SimManager.getInstance();
 		double virtualTime = taskRng[deviceId].sample();
+		double clock = CloudSim.clock();
 
 		while(virtualTime < activePeriods[deviceId]) {
-			sm.schedule(sm.getId(), virtualTime, sm.getCreateTask(), new TaskProperty(deviceId,taskTypeOfDevices[deviceId], 0, expRngList));
-
+			sm.schedule(sm.getId(), virtualTime, sm.getCreateTask(), new TaskProperty(deviceId,taskTypeOfDevices[deviceId], clock + virtualTime, expRngList));
 			double interval = taskRng[deviceId].sample();
-			if(interval <= 0){
-				SimLogger.printLine("Impossible is occured! interval is " + interval + " for device " + deviceId + " time " + virtualTime);
-				continue;
-			}
-			//SimLogger.printLine(virtualTime + " -> " + interval + " for device " + i + " time ");
 			virtualTime += interval;
 		}
 		sm.schedule(sm.getId(), activePeriods[deviceId] + idlePeriods[deviceId], sm.getGenTasks(), deviceId);
-
 	}
 
 	@Override

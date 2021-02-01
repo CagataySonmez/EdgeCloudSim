@@ -17,6 +17,7 @@
  * 
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
+ * modified 2021, Raphael Freymann
  */
 
 package edu.boun.edgecloudsim.applications.sample_app3;
