@@ -115,6 +115,7 @@ public class SampleMobileDeviceManager extends MobileDeviceManager {
 		}
 		else if(task.getAssociatedDatacenterId() == SimSettings.MOBILE_DATACENTER_ID) {
 			SimLogger.getInstance().taskEnded(task.getCloudletId(), CloudSim.clock());
+			getCloudletList().remove(task);
 			
 			/*
 			 * TODO: In this scenario device to device (D2D) communication is ignored.
