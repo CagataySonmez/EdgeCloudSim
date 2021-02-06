@@ -663,35 +663,35 @@ public class SimLogger {
 		}
 
 		// printout important results
-		print(";"+(failedTask[numOfAppTypes] + completedTask[numOfAppTypes]));
-
-		print(";"
-				+ failedTask[numOfAppTypes]);
-
-		print(";"
-				+ completedTask[numOfAppTypes]);
-
-		print(";"
-				+ uncompletedTask[numOfAppTypes]);
-
-		print(";"
-				+ failedTaskDueToVmCapacity[numOfAppTypes]);
-
-		print(";"
-				+ failedTaskDuetoMobility[numOfAppTypes]
-				+ ";" + failedTaskDuetoBw[numOfAppTypes]);
-
-		print(";"
-				+ String.format("%.6f", ((double) failedTask[numOfAppTypes] * (double) 100)
-				/ (double) (completedTask[numOfAppTypes] + failedTask[numOfAppTypes])));
-
-		print(";"
-				+ String.format("%.6f", serviceTime[numOfAppTypes] / (double) completedTask[numOfAppTypes]));
-
-		print(";"
-				+ String.format("%.6f", totalVmLoadOnEdge / (double) vmLoadList.size()) + ";"
-				+ String.format("%.6f", totalVmLoadOnCloud / (double) vmLoadList.size()) + ";"
-				+ String.format("%.6f", totalVmLoadOnMobile / (double) vmLoadList.size()));
+//		print(";"+(failedTask[numOfAppTypes] + completedTask[numOfAppTypes]));
+//
+//		print(";"
+//				+ failedTask[numOfAppTypes]);
+//
+//		print(";"
+//				+ completedTask[numOfAppTypes]);
+//
+//		print(";"
+//				+ uncompletedTask[numOfAppTypes]);
+//
+//		print(";"
+//				+ failedTaskDueToVmCapacity[numOfAppTypes]);
+//
+//		print(";"
+//				+ failedTaskDuetoMobility[numOfAppTypes]
+//				+ ";" + failedTaskDuetoBw[numOfAppTypes]);
+//
+//		print(";"
+//				+ String.format("%.6f", ((double) failedTask[numOfAppTypes] * (double) 100)
+//				/ (double) (completedTask[numOfAppTypes] + failedTask[numOfAppTypes])));
+//
+//		print(";"
+//				+ String.format("%.6f", serviceTime[numOfAppTypes] / (double) completedTask[numOfAppTypes]));
+//
+//		print(";"
+//				+ String.format("%.6f", totalVmLoadOnEdge / (double) vmLoadList.size()) + ";"
+//				+ String.format("%.6f", totalVmLoadOnCloud / (double) vmLoadList.size()) + ";"
+//				+ String.format("%.6f", totalVmLoadOnMobile / (double) vmLoadList.size()));
 
 		// clear related collections (map list etc.)
 		taskMap.clear();

@@ -88,7 +88,7 @@ public class MainApp {
 					//SimLogger.printLine("Scenario: " + simScenario + " - Policy: " + orchestratorPolicy + " - #iteration: " + iterationNumber);
 					//SimLogger.printLine("Duration: " + SS.getSimulationTime()/60 + " min (warm up period: "+ SS.getWarmUpPeriod()/60 +" min) - #devices: " + j);
 					SimLogger.getInstance().simStarted(outputFolder,"SIMRESULT_" + simScenario + "_"  + orchestratorPolicy + "_" + j + "DEVICES");
-					SimLogger.print(iterationNumber+";"+simScenario+";"+orchestratorPolicy+";"+j);
+					//SimLogger.print(iterationNumber+";"+simScenario+";"+orchestratorPolicy+";"+j);
 
 					try
 					{
@@ -120,7 +120,8 @@ public class MainApp {
 					Date ScenarioEndDate = Calendar.getInstance().getTime();
 					now = df.format(ScenarioEndDate);
 					//SimLogger.printLine("Scenario finished at " + now +  ". It took " + SimUtils.getTimeDifference(ScenarioStartDate,ScenarioEndDate));
-					SimLogger.printLine("");
+					//SimLogger.printLine("");
+					SimLogger.printLine(SimUtils.getTimeDifference(ScenarioStartDate,ScenarioEndDate));
 				}//End of orchestrators loop
 			}//End of scenarios loop
 		}//End of mobile devices loop
