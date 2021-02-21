@@ -65,24 +65,23 @@ public class SimUtils {
 	public static String getTimeDifference(Date startDate, Date endDate){
 		String result = "";
 		long duration  = endDate.getTime() - startDate.getTime();
-		return "" + TimeUnit.MILLISECONDS.toSeconds(duration);
-//		long diffInMilli = TimeUnit.MILLISECONDS.toMillis(duration);
-//		long diffInSeconds = TimeUnit.MILLISECONDS.toSeconds(duration);
-//		long diffInMinutes = TimeUnit.MILLISECONDS.toMinutes(duration);
-//		long diffInHours = TimeUnit.MILLISECONDS.toHours(duration);
-//		long diffInDays = TimeUnit.MILLISECONDS.toDays(duration);
-//
-//		if(diffInDays>0)
-//			result += diffInDays + ((diffInDays>1 == true) ? " Days " : " Day ");
-//		if(diffInHours>0)
-//			result += diffInHours % 24 + ((diffInHours>1 == true) ? " Hours " : " Hour ");
-//		if(diffInMinutes>0)
-//			result += diffInMinutes % 60 + ((diffInMinutes>1 == true) ? " Minutes " : " Minute ");
-//		if(diffInSeconds>0)
-//			result += diffInSeconds % 60 + ((diffInSeconds>1 == true) ? " Seconds" : " Second");
-//		if(diffInMilli>0 && result.isEmpty())
-//			result += diffInMilli + ((diffInMilli>1 == true) ? " Milli Seconds" : " Milli Second");
-//
-//		return result;
+		long diffInMilli = TimeUnit.MILLISECONDS.toMillis(duration);
+		long diffInSeconds = TimeUnit.MILLISECONDS.toSeconds(duration);
+		long diffInMinutes = TimeUnit.MILLISECONDS.toMinutes(duration);
+		long diffInHours = TimeUnit.MILLISECONDS.toHours(duration);
+		long diffInDays = TimeUnit.MILLISECONDS.toDays(duration);
+
+		if(diffInDays>0)
+			result += diffInDays + ((diffInDays>1 == true) ? " Days " : " Day ");
+		if(diffInHours>0)
+			result += diffInHours % 24 + ((diffInHours>1 == true) ? " Hours " : " Hour ");
+		if(diffInMinutes>0)
+			result += diffInMinutes % 60 + ((diffInMinutes>1 == true) ? " Minutes " : " Minute ");
+		if(diffInSeconds>0)
+			result += diffInSeconds % 60 + ((diffInSeconds>1 == true) ? " Seconds" : " Second");
+		if(diffInMilli>0 && result.isEmpty())
+			result += diffInMilli + ((diffInMilli>1 == true) ? " Milli Seconds" : " Milli Second");
+
+		return result;
 	}
 }
