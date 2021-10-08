@@ -115,11 +115,32 @@ public class MM1Queue extends NetworkModel {
 		else{
 			delay = getWlanDownloadDelay(accessPointLocation, CloudSim.clock());
 
-			EdgeHost host = (EdgeHost)(SimManager.
+			EdgeHost host = null;
+			
+			/* using a running total of hosts (hostCounter), sequentially search for the datacenter (datacenterIndex) where 
+			the host (sourceDeviceId) is located, then use that datacenter index to retrieve the host */
+			
+			int hostCounter = 0;
+			for(int datacenterIndex=0; 
+					datacenterIndex<SimSettings.getInstance().getNumOfEdgeDatacenters(); 
+					datacenterIndex++) {
+				
+			hostCounter += SimManager.getInstance().
+					getEdgeServerManager().
+					getDatacenterList().get(datacenterIndex).
+					getHostList().size();
+				
+			if(hostCounter  >= sourceDeviceId) {
+			
+			host = (EdgeHost)(SimManager.
 					getInstance().
 					getEdgeServerManager().
-					getDatacenterList().get(sourceDeviceId).
+					getDatacenterList().get(datacenterIndex).
 					getHostList().get(0));
+			
+			break;
+			}
+			}
 
 			//if source device id is the edge server which is located in another location, add internal lan delay
 			//in our scenario, serving wlan ID is equal to the host id, because there is only one host in one place
