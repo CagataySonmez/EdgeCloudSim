@@ -9,6 +9,7 @@
  *               
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
+ * modified 2021, Raphael Freymann
  */
 
 package edu.boun.edgecloudsim.mobility;
@@ -39,4 +40,14 @@ public abstract class MobilityModel {
 	 * returns location of a device at a certain time
 	 */
 	public abstract Location getLocation(int deviceId, double time);
+
+	/*
+	 * returns count of devices in given datacenters location
+	 */
+	public abstract int getDeviceCount(int datacenterId);
+
+	/*
+	 * calculates and sets next locaton of given mobile device
+	 */
+	public abstract void move(int deviceId);
 }

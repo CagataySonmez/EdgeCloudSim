@@ -25,6 +25,7 @@
  * 
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
+ * modified 2021, Raphael Freymann
  */
 
 package edu.boun.edgecloudsim.utils;
@@ -42,7 +43,9 @@ import java.util.stream.IntStream;
 import edu.boun.edgecloudsim.core.SimManager;
 import edu.boun.edgecloudsim.core.SimSettings;
 import edu.boun.edgecloudsim.core.SimSettings.NETWORK_DELAY_TYPES;
+import edu.boun.edgecloudsim.mobility.MobilityModel;
 import edu.boun.edgecloudsim.utils.SimLogger.NETWORK_ERRORS;
+import org.cloudbus.cloudsim.core.CloudSim;
 
 public class SimLogger {
 	public static enum TASK_STATUS {
@@ -338,6 +341,26 @@ public class SimLogger {
 		if(SimSettings.getInstance().getApDelayLogInterval() != 0)
 			apDelayList.add(new ApDelayLogItem(time, apUploadDelays, apDownloadDelays));
 	}
+
+	public void logLocation(){
+		try {
+			File locationFile = new File(outputFolder, filePrefix + "_LOCATION.log");
+			FileWriter locationFW = new FileWriter(locationFile, true);
+			BufferedWriter locationBW = new BufferedWriter(locationFW);
+
+			int numEdge = SimSettings.getInstance().getNumOfEdgeDatacenters();
+			MobilityModel mobilityModel = SimManager.getInstance().getMobilityModel();
+
+			locationBW.write(CloudSim.clock() + "");
+			for (int i = 0; i < numEdge; i++) {
+				locationBW.write(SimSettings.DELIMITER + mobilityModel.getDeviceCount(i));
+			}
+			locationBW.newLine();
+			locationBW.close();
+		} catch (IOException e){
+			e.printStackTrace();
+		}
+	}
 	
 	public void simStopped() throws IOException {
 		endTime = System.currentTimeMillis();
@@ -472,29 +495,6 @@ public class SimLogger {
 		}
 
 		if (fileLogEnabled) {
-			// write location info to file for each location
-			// assuming each location has only one access point
-			double locationLogInterval = SimSettings.getInstance().getLocationLogInterval();
-			if(locationLogInterval != 0) {
-				for (int t = 1; t < (SimSettings.getInstance().getSimulationTime() / locationLogInterval); t++) {
-					int[] locationInfo = new int[SimSettings.getInstance().getNumOfEdgeDatacenters()];
-					Double time = t * SimSettings.getInstance().getLocationLogInterval();
-					
-					if (time < SimSettings.CLIENT_ACTIVITY_START_TIME)
-						continue;
-
-					for (int i = 0; i < SimManager.getInstance().getNumOfMobileDevice(); i++) {
-						Location loc = SimManager.getInstance().getMobilityModel().getLocation(i, time);
-						locationInfo[loc.getServingWlanId()]++;
-					}
-
-					locationBW.write(time.toString());
-					for (int i = 0; i < locationInfo.length; i++)
-						locationBW.write(SimSettings.DELIMITER + locationInfo[i]);
-
-					locationBW.newLine();
-				}
-			}
 			
 			// write delay info to file for each access point
 			if(SimSettings.getInstance().getApDelayLogInterval() != 0) {
@@ -617,28 +617,28 @@ public class SimLogger {
 				appendToFile(genericBWs[i], genericResult5);
 				
 				//append performance related values only to ALL_ALLPS file
-				if(i == numOfAppTypes) {
-					appendToFile(genericBWs[i], genericResult6);
-				}
-				else {
-					printLine(SimSettings.getInstance().getTaskName(i));
-					printLine("# of tasks (Edge/Cloud): "
-							+ (failedTask[i] + completedTask[i]) + "("
-							+ (failedTaskOnEdge[i] + completedTaskOnEdge[i]) + "/" 
-							+ (failedTaskOnCloud[i]+ completedTaskOnCloud[i]) + ")" );
-					
-					printLine("# of failed tasks (Edge/Cloud): "
-							+ failedTask[i] + "("
-							+ failedTaskOnEdge[i] + "/"
-							+ failedTaskOnCloud[i] + ")");
-					
-					printLine("# of completed tasks (Edge/Cloud): "
-							+ completedTask[i] + "("
-							+ completedTaskOnEdge[i] + "/"
-							+ completedTaskOnCloud[i] + ")");
-					
-					printLine("---------------------------------------");
-				}
+//				if(i == numOfAppTypes) {
+//					appendToFile(genericBWs[i], genericResult6);
+//				}
+//				else {
+//					printLine(SimSettings.getInstance().getTaskName(i));
+//					printLine("# of tasks (Edge/Cloud): "
+//							+ (failedTask[i] + completedTask[i]) + "("
+//							+ (failedTaskOnEdge[i] + completedTaskOnEdge[i]) + "/"
+//							+ (failedTaskOnCloud[i]+ completedTaskOnCloud[i]) + ")" );
+//
+//					printLine("# of failed tasks (Edge/Cloud): "
+//							+ failedTask[i] + "("
+//							+ failedTaskOnEdge[i] + "/"
+//							+ failedTaskOnCloud[i] + ")");
+//
+//					printLine("# of completed tasks (Edge/Cloud): "
+//							+ completedTask[i] + "("
+//							+ completedTaskOnEdge[i] + "/"
+//							+ completedTaskOnCloud[i] + ")");
+//
+//					printLine("---------------------------------------");
+//				}
 			}
 
 			// close open files
@@ -665,22 +665,22 @@ public class SimLogger {
 		// printout important results
 		printLine("# of tasks (Edge/Cloud/Mobile): "
 				+ (failedTask[numOfAppTypes] + completedTask[numOfAppTypes]) + "("
-				+ (failedTaskOnEdge[numOfAppTypes] + completedTaskOnEdge[numOfAppTypes]) + "/" 
-				+ (failedTaskOnCloud[numOfAppTypes]+ completedTaskOnCloud[numOfAppTypes]) + "/" 
+				+ (failedTaskOnEdge[numOfAppTypes] + completedTaskOnEdge[numOfAppTypes]) + "/"
+				+ (failedTaskOnCloud[numOfAppTypes]+ completedTaskOnCloud[numOfAppTypes]) + "/"
 				+ (failedTaskOnMobile[numOfAppTypes]+ completedTaskOnMobile[numOfAppTypes]) + ")");
-		
+
 		printLine("# of failed tasks (Edge/Cloud/Mobile): "
 				+ failedTask[numOfAppTypes] + "("
 				+ failedTaskOnEdge[numOfAppTypes] + "/"
 				+ failedTaskOnCloud[numOfAppTypes] + "/"
 				+ failedTaskOnMobile[numOfAppTypes] + ")");
-		
+
 		printLine("# of completed tasks (Edge/Cloud/Mobile): "
 				+ completedTask[numOfAppTypes] + "("
 				+ completedTaskOnEdge[numOfAppTypes] + "/"
 				+ completedTaskOnCloud[numOfAppTypes] + "/"
 				+ completedTaskOnMobile[numOfAppTypes] + ")");
-		
+
 		printLine("# of uncompleted tasks (Edge/Cloud/Mobile): "
 				+ uncompletedTask[numOfAppTypes] + "("
 				+ uncompletedTaskOnEdge[numOfAppTypes] + "/"
@@ -692,19 +692,19 @@ public class SimLogger {
 				+ failedTaskDueToVmCapacityOnEdge[numOfAppTypes] + "/"
 				+ failedTaskDueToVmCapacityOnCloud[numOfAppTypes] + "/"
 				+ failedTaskDueToVmCapacityOnMobile[numOfAppTypes] + ")");
-		
+
 		printLine("# of failed tasks due to Mobility/WLAN Range/Network(WLAN/MAN/WAN/GSM): "
 				+ failedTaskDuetoMobility[numOfAppTypes]
 				+ "/" + refectedTaskDuetoWlanRange[numOfAppTypes]
-				+ "/" + failedTaskDuetoBw[numOfAppTypes] 
-				+ "(" + failedTaskDuetoLanBw[numOfAppTypes] 
-				+ "/" + failedTaskDuetoManBw[numOfAppTypes] 
-				+ "/" + failedTaskDuetoWanBw[numOfAppTypes] 
+				+ "/" + failedTaskDuetoBw[numOfAppTypes]
+				+ "(" + failedTaskDuetoLanBw[numOfAppTypes]
+				+ "/" + failedTaskDuetoManBw[numOfAppTypes]
+				+ "/" + failedTaskDuetoWanBw[numOfAppTypes]
 				+ "/" + failedTaskDuetoGsmBw[numOfAppTypes] + ")");
-		
+
 		printLine("percentage of failed tasks: "
 				+ String.format("%.6f", ((double) failedTask[numOfAppTypes] * (double) 100)
-						/ (double) (completedTask[numOfAppTypes] + failedTask[numOfAppTypes]))
+				/ (double) (completedTask[numOfAppTypes] + failedTask[numOfAppTypes]))
 				+ "%");
 
 		printLine("average service time: "
@@ -721,9 +721,9 @@ public class SimLogger {
 				+ String.format("%.6f", processingTime[numOfAppTypes] / (double) completedTask[numOfAppTypes])
 				+ " seconds. (" + "on Edge: "
 				+ String.format("%.6f", processingTimeOnEdge[numOfAppTypes] / (double) completedTaskOnEdge[numOfAppTypes])
-				+ ", " + "on Cloud: " 
+				+ ", " + "on Cloud: "
 				+ String.format("%.6f", processingTimeOnCloud[numOfAppTypes] / (double) completedTaskOnCloud[numOfAppTypes])
-				+ ", " + "on Mobile: " 
+				+ ", " + "on Mobile: "
 				+ String.format("%.6f", processingTimeOnMobile[numOfAppTypes] / (double) completedTaskOnMobile[numOfAppTypes])
 				+ ")");
 
@@ -738,7 +738,7 @@ public class SimLogger {
 				+ ", " + "GSM delay: "
 				+ String.format("%.6f", gsmDelay[numOfAppTypes] / (double) gsmUsage[numOfAppTypes]) + ")");
 
-		printLine("average server utilization Edge/Cloud/Mobile: " 
+		printLine("average server utilization Edge/Cloud/Mobile: "
 				+ String.format("%.6f", totalVmLoadOnEdge / (double) vmLoadList.size()) + "/"
 				+ String.format("%.6f", totalVmLoadOnCloud / (double) vmLoadList.size()) + "/"
 				+ String.format("%.6f", totalVmLoadOnMobile / (double) vmLoadList.size()));

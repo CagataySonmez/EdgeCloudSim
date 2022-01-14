@@ -65,7 +65,6 @@ public class SimUtils {
 	public static String getTimeDifference(Date startDate, Date endDate){
 		String result = "";
 		long duration  = endDate.getTime() - startDate.getTime();
-
 		long diffInMilli = TimeUnit.MILLISECONDS.toMillis(duration);
 		long diffInSeconds = TimeUnit.MILLISECONDS.toSeconds(duration);
 		long diffInMinutes = TimeUnit.MILLISECONDS.toMinutes(duration);

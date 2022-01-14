@@ -1,8 +1,8 @@
 /*
  * Title:        EdgeCloudSim - Sample Application
- * 
+ *
  * Description:  Sample application for EdgeCloudSim
- *               
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -24,17 +24,17 @@ import edu.boun.edgecloudsim.utils.SimLogger;
 import edu.boun.edgecloudsim.utils.SimUtils;
 
 public class FuzzyMainApp {
-	
+
 	/**
 	 * Creates main() to run this example
 	 */
 	public static void main(String[] args) {
 		//disable console output of cloudsim library
 		Log.disable();
-		
-		//enable console output and file output of this application
+
+		//enable console ourput and file output of this application
 		SimLogger.enablePrintLog();
-		
+
 		int iterationNumber = 1;
 		String configFile = "";
 		String outputFolder = "";
@@ -61,17 +61,17 @@ public class FuzzyMainApp {
 			SimLogger.printLine("cannot initialize simulation settings!");
 			System.exit(0);
 		}
-		
+
 		if(SS.getFileLoggingEnabled()){
 			SimLogger.enableFileLog();
 			SimUtils.cleanOutputFolder(outputFolder);
 		}
-		
+
 		DateFormat df = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 		Date SimulationStartDate = Calendar.getInstance().getTime();
 		String now = df.format(SimulationStartDate);
-		SimLogger.printLine("Simulation started at " + now);
-		SimLogger.printLine("----------------------------------------------------------------------");
+		//SimLogger.printLine("Simulation started at " + now);
+		//SimLogger.printLine("----------------------------------------------------------------------");
 
 		for(int j=SS.getMinNumOfMobileDev(); j<=SS.getMaxNumOfMobileDev(); j+=SS.getMobileDevCounterSize())
 		{
@@ -84,11 +84,12 @@ public class FuzzyMainApp {
 					Date ScenarioStartDate = Calendar.getInstance().getTime();
 					now = df.format(ScenarioStartDate);
 
-					SimLogger.printLine("Scenario started at " + now);
-					SimLogger.printLine("Scenario: " + simScenario + " - Policy: " + orchestratorPolicy + " - #iteration: " + iterationNumber);
-					SimLogger.printLine("Duration: " + SS.getSimulationTime()/60 + " min (warm up period: "+ SS.getWarmUpPeriod()/60 +" min) - #devices: " + j);
+					//SimLogger.printLine("Scenario started at " + now);
+					//SimLogger.printLine("Scenario: " + simScenario + " - Policy: " + orchestratorPolicy + " - #iteration: " + iterationNumber);
+					//SimLogger.printLine("Duration: " + SS.getSimulationTime()/60 + " min (warm up period: "+ SS.getWarmUpPeriod()/60 +" min) - #devices: " + j);
 					SimLogger.getInstance().simStarted(outputFolder,"SIMRESULT_" + simScenario + "_"  + orchestratorPolicy + "_" + j + "DEVICES");
-					
+					SimLogger.print(iterationNumber+";"+simScenario+";"+orchestratorPolicy+";"+j);
+
 					try
 					{
 						// First step: Initialize the CloudSim package. It should be called
@@ -96,16 +97,16 @@ public class FuzzyMainApp {
 						int num_user = 2;   // number of grid users
 						Calendar calendar = Calendar.getInstance();
 						boolean trace_flag = false;  // mean trace events
-				
+
 						// Initialize the CloudSim library
 						CloudSim.init(num_user, calendar, trace_flag, 0.01);
-						
+
 						// Generate EdgeCloudsim Scenario Factory
 						ScenarioFactory sampleFactory = new FuzzyScenarioFactory(j,SS.getSimulationTime(), orchestratorPolicy, simScenario);
-						
+
 						// Generate EdgeCloudSim Simulation Manager
 						SimManager manager = new SimManager(sampleFactory, j, simScenario, orchestratorPolicy);
-						
+
 						// Start simulation
 						manager.startSimulation();
 					}
@@ -115,17 +116,17 @@ public class FuzzyMainApp {
 						e.printStackTrace();
 						System.exit(0);
 					}
-					
+
 					Date ScenarioEndDate = Calendar.getInstance().getTime();
 					now = df.format(ScenarioEndDate);
-					SimLogger.printLine("Scenario finished at " + now +  ". It took " + SimUtils.getTimeDifference(ScenarioStartDate,ScenarioEndDate));
-					SimLogger.printLine("----------------------------------------------------------------------");
+					//SimLogger.printLine("Scenario finished at " + now +  ". It took " + SimUtils.getTimeDifference(ScenarioStartDate,ScenarioEndDate));
+					SimLogger.printLine("");
 				}//End of orchestrators loop
 			}//End of scenarios loop
 		}//End of mobile devices loop
 
 		Date SimulationEndDate = Calendar.getInstance().getTime();
 		now = df.format(SimulationEndDate);
-		SimLogger.printLine("Simulation finished at " + now +  ". It took " + SimUtils.getTimeDifference(SimulationStartDate,SimulationEndDate));
+		//SimLogger.printLine("Simulation finished at " + now +  ". It took " + SimUtils.getTimeDifference(SimulationStartDate,SimulationEndDate));
 	}
 }

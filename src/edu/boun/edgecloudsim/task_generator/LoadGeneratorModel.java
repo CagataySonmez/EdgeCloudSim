@@ -9,6 +9,7 @@
  *               
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
+ * modified 2021, Raphael Freymann
  */
 
 package edu.boun.edgecloudsim.task_generator;
@@ -52,4 +53,6 @@ public abstract class LoadGeneratorModel {
 	 * returns the task type (index) that the mobile device uses
 	 */
 	public abstract int getTaskTypeOfDevice(int deviceId);
+
+	public abstract void createTask(int deviceId);
 }

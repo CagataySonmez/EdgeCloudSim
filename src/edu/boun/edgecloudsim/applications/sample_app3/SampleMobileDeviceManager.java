@@ -17,6 +17,7 @@
  * 
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
+ * modified 2021, Raphael Freymann
  */
 
 package edu.boun.edgecloudsim.applications.sample_app3;
@@ -114,6 +115,7 @@ public class SampleMobileDeviceManager extends MobileDeviceManager {
 		}
 		else if(task.getAssociatedDatacenterId() == SimSettings.MOBILE_DATACENTER_ID) {
 			SimLogger.getInstance().taskEnded(task.getCloudletId(), CloudSim.clock());
+			getCloudletList().remove(task);
 			
 			/*
 			 * TODO: In this scenario device to device (D2D) communication is ignored.
@@ -163,6 +165,7 @@ public class SampleMobileDeviceManager extends MobileDeviceManager {
 				networkModel.downloadFinished(task.getSubmittedLocation(), SimSettings.GENERIC_EDGE_DEVICE_ID);
 				
 				SimLogger.getInstance().taskEnded(task.getCloudletId(), CloudSim.clock());
+				getCloudletList().remove(task);
 				break;
 			}
 			default:

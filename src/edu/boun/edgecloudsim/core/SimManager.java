@@ -8,6 +8,7 @@
  * 
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
+ * modified 2021, Raphael Freymann
  */
 
 package edu.boun.edgecloudsim.core;
@@ -38,6 +39,9 @@ public class SimManager extends SimEntity {
 	private static final int GET_LOAD_LOG = 2;
 	private static final int PRINT_PROGRESS = 3;
 	private static final int STOP_SIMULATION = 4;
+	private static final int MOVE_DEVICE = 5;
+	private static final int LOG_LOCATION = 6;
+	private static final int GEN_TASKS = 7;
 	
 	private String simScenario;
 	private String orchestratorPolicy;
@@ -61,15 +65,7 @@ public class SimManager extends SimEntity {
 		numOfMobileDevice = _numOfMobileDevice;
 		orchestratorPolicy = _orchestratorPolicy;
 
-		SimLogger.print("Creating tasks...");
-		loadGeneratorModel = scenarioFactory.getLoadGeneratorModel();
-		loadGeneratorModel.initializeModel();
-		SimLogger.printLine("Done, ");
-		
-		SimLogger.print("Creating device locations...");
-		mobilityModel = scenarioFactory.getMobilityModel();
-		mobilityModel.initialize();
-		SimLogger.printLine("Done.");
+
 
 		//Generate network model
 		networkModel = scenarioFactory.getNetworkModel();
@@ -107,7 +103,7 @@ public class SimManager extends SimEntity {
 	 */
 	public void startSimulation() throws Exception{
 		//Starts the simulation
-		SimLogger.print(super.getName()+" is starting...");
+		//SimLogger.print(super.getName()+" is starting...");
 		
 		//Start Edge Datacenters & Generate VMs
 		edgeServerManager.startDatacenters();
@@ -120,7 +116,11 @@ public class SimManager extends SimEntity {
 		//Start Mobile Datacenters & Generate VMs
 		mobileServerManager.startDatacenters();
 		mobileServerManager.createVmList(mobileDeviceManager.getId());
-		
+
+
+
+
+
 		CloudSim.startSimulation();
 	}
 
@@ -192,10 +192,19 @@ public class SimManager extends SimEntity {
 			if(mobileServerManager.getVmList(i) != null)
 				mobileDeviceManager.submitVmList(mobileServerManager.getVmList(i));
 		}
-		
-		//Creation of tasks are scheduled here!
-		for(int i=0; i< loadGeneratorModel.getTaskList().size(); i++)
-			schedule(getId(), loadGeneratorModel.getTaskList().get(i).getStartTime(), CREATE_TASK, loadGeneratorModel.getTaskList().get(i));
+
+		mobilityModel = scenarioFactory.getMobilityModel();
+		mobilityModel.initialize();
+
+		//SimLogger.print("Creating tasks...");
+		loadGeneratorModel = scenarioFactory.getLoadGeneratorModel();
+		loadGeneratorModel.initializeModel();
+		//SimLogger.printLine("Done, ");
+
+		//Schedule logging of locations, if enabled
+		if(SimSettings.getInstance().getFileLoggingEnabled()){
+			schedule(getId(),SimSettings.getInstance().getLocationLogInterval(), LOG_LOCATION);
+		}
 		
 		//Periodic event loops starts from here!
 		schedule(getId(), 5, CHECK_ALL_VM);
@@ -203,7 +212,7 @@ public class SimManager extends SimEntity {
 		schedule(getId(), SimSettings.getInstance().getVmLoadLogInterval(), GET_LOAD_LOG);
 		schedule(getId(), SimSettings.getInstance().getSimulationTime(), STOP_SIMULATION);
 		
-		SimLogger.printLine("Done.");
+		//SimLogger.printLine("Done.");
 	}
 
 	@Override
@@ -222,7 +231,7 @@ public class SimManager extends SimEntity {
 			case CHECK_ALL_VM:
 				int totalNumOfVm = SimSettings.getInstance().getNumOfEdgeVMs();
 				if(EdgeVmAllocationPolicy_Custom.getCreatedVmNum() != totalNumOfVm){
-					SimLogger.printLine("All VMs cannot be created! Terminating simulation...");
+					//SimLogger.printLine("All VMs cannot be created! Terminating simulation...");
 					System.exit(1);
 				}
 				break;
@@ -237,16 +246,16 @@ public class SimManager extends SimEntity {
 				break;
 			case PRINT_PROGRESS:
 				int progress = (int)((CloudSim.clock()*100)/SimSettings.getInstance().getSimulationTime());
-				if(progress % 10 == 0)
-					SimLogger.print(Integer.toString(progress));
-				else
-					SimLogger.print(".");
-				if(CloudSim.clock() < SimSettings.getInstance().getSimulationTime())
-					schedule(getId(), SimSettings.getInstance().getSimulationTime()/100, PRINT_PROGRESS);
+				//if(progress % 10 == 0)
+					//SimLogger.print(Integer.toString(progress));
+				//else
+					//SimLogger.print(".");
+				//if(CloudSim.clock() < SimSettings.getInstance().getSimulationTime())
+					//schedule(getId(), SimSettings.getInstance().getSimulationTime()/100, PRINT_PROGRESS);
 
 				break;
 			case STOP_SIMULATION:
-				SimLogger.printLine("100");
+				//SimLogger.printLine("100");
 				CloudSim.terminateSimulation();
 				try {
 					SimLogger.getInstance().simStopped();
@@ -255,8 +264,19 @@ public class SimManager extends SimEntity {
 					System.exit(1);
 				}
 				break;
+			case MOVE_DEVICE:
+				mobilityModel.move((int) ev.getData());
+				break;
+			case LOG_LOCATION:
+				SimLogger.getInstance().logLocation();
+				schedule(getId(),SimSettings.getInstance().getLocationLogInterval(), LOG_LOCATION);
+				break;
+			case GEN_TASKS:
+				int deviceId = (int) ev.getData();
+				loadGeneratorModel.createTask(deviceId);
+				break;
 			default:
-				SimLogger.printLine(getName() + ": unknown event type");
+				//SimLogger.printLine(getName() + ": unknown event type");
 				break;
 			}
 		}
@@ -268,4 +288,12 @@ public class SimManager extends SimEntity {
 		cloudServerManager.terminateDatacenters();
 		mobileServerManager.terminateDatacenters();
 	}
+
+	public static int getMoveDevice() {
+		return MOVE_DEVICE;
+	}
+
+	public static int getGenTasks(){ return GEN_TASKS;}
+
+	public static int getCreateTask(){return CREATE_TASK;}
 }

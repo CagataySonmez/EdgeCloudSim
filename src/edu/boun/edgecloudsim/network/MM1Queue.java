@@ -6,6 +6,7 @@
  * 
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
+ * modified 2021, Raphael Freymann
  */
 
 package edu.boun.edgecloudsim.network;
@@ -134,19 +135,14 @@ public class MM1Queue extends NetworkModel {
 		return maxNumOfClientsInPlace;
 	}
 
+	/**
+	 * getDeviceCount retrieves the number of devices, that are in the same location, as the given location
+	 * @param deviceLocation the location of which the device count is to be counted
+	 * @param time irrelevant parameter left for compatibility reasons
+	 * @return the amount of devices in the given location
+	 */
 	private int getDeviceCount(Location deviceLocation, double time){
-		int deviceCount = 0;
-
-		for(int i=0; i<numberOfMobileDevices; i++) {
-			Location location = SimManager.getInstance().getMobilityModel().getLocation(i,time);
-			if(location.equals(deviceLocation))
-				deviceCount++;
-		}
-
-		//record max number of client just for debugging
-		if(maxNumOfClientsInPlace<deviceCount)
-			maxNumOfClientsInPlace = deviceCount;
-
+		int deviceCount = SimManager.getInstance().getMobilityModel().getDeviceCount(deviceLocation.getServingWlanId());
 		return deviceCount;
 	}
 
