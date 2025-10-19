@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<applications>
+	<application name="TRAFFIC_MANAGEMENT">
+		<usage_percentage>50</usage_percentage>
+		<prob_cloud_selection>0</prob_cloud_selection>
+		<delay_sensitivity>0.5</delay_sensitivity>
+		<max_delay_requirement>0.5</max_delay_requirement>
+		<poisson_interarrival>3</poisson_interarrival>
+		<active_period>3600</active_period>
+		<idle_period>1</idle_period>
+		<data_upload>350</data_upload>
+		<data_download>350</data_download>
+		<task_length>600</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>0</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>0</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>0</vm_utilization_on_mobile>
+	</application>
+	<application name="DANGER_ASSESSMENT">
+		<usage_percentage>25</usage_percentage>
+		<prob_cloud_selection>0</prob_cloud_selection>
+		<delay_sensitivity>0.8</delay_sensitivity>
+		<max_delay_requirement>1</max_delay_requirement>
+		<poisson_interarrival>5</poisson_interarrival>
+		<active_period>3600</active_period>
+		<idle_period>1</idle_period>
+		<data_upload>500</data_upload>
+		<data_download>350</data_download>
+		<task_length>1000</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>0</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>0</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>0</vm_utilization_on_mobile>
+	</application>
+	<application name="INFOTAINMENT">
+		<usage_percentage>25</usage_percentage>
+		<prob_cloud_selection>0</prob_cloud_selection>
+		<delay_sensitivity>0.25</delay_sensitivity>
+		<max_delay_requirement>1.5</max_delay_requirement>
+		<poisson_interarrival>15</poisson_interarrival>
+		<active_period>3600</active_period>
+		<idle_period>1</idle_period>
+		<data_upload>350</data_upload>
+		<data_download>500</data_download>
+		<task_length>1600</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>0</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>0</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>0</vm_utilization_on_mobile>
+	</application>
+</applications>

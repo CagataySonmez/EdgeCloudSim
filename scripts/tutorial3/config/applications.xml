@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<applications>
+	<application name="AUGMENTED_REALITY">
+		<usage_percentage>30</usage_percentage>
+		<prob_cloud_selection>20</prob_cloud_selection>
+		<poisson_interarrival>2</poisson_interarrival>
+		<delay_sensitivity>0</delay_sensitivity>
+		<active_period>40</active_period>
+		<idle_period>20</idle_period>
+		<data_upload>1500</data_upload>
+		<data_download>50</data_download>
+		<task_length>15000</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>6</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>0.6</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>0</vm_utilization_on_mobile>
+	</application>
+	<application name="HEALTH_APP">
+		<usage_percentage>20</usage_percentage>
+		<prob_cloud_selection>20</prob_cloud_selection>
+		<poisson_interarrival>3</poisson_interarrival>
+		<delay_sensitivity>0</delay_sensitivity>
+		<active_period>45</active_period>
+		<idle_period>90</idle_period>
+		<data_upload>50</data_upload>
+		<data_download>1250</data_download>
+		<task_length>3000</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>2</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>0.2</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>0</vm_utilization_on_mobile>
+	</application>
+	<application name="INFOTAINMENT_APP">
+		<usage_percentage>50</usage_percentage>
+		<prob_cloud_selection>10</prob_cloud_selection>
+		<poisson_interarrival>7</poisson_interarrival>
+		<delay_sensitivity>0</delay_sensitivity>
+		<active_period>30</active_period>
+		<idle_period>45</idle_period>
+		<data_upload>250</data_upload>
+		<data_download>1000</data_download>
+		<task_length>9000</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>3.6</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>0.36</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>0</vm_utilization_on_mobile>
+	</application>
+</applications>
