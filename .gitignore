@@ -1,4 +1,7 @@
-# OS X
+# ----------------------------
+# OS & System Files
+# ----------------------------
+# macOS
 .DS_Store*
 Icon?
 ._*
@@ -12,19 +15,60 @@ Desktop.ini
 .directory
 *~
 
-# bin folder
+# ----------------------------
+# Build / Output folders
+# ----------------------------
 bin
-
-# simulation output folder
 sim_results
 
-# eclipse's files
+# ----------------------------
+# IDE / Editor Settings
+# ----------------------------
+# Eclipse
 .settings
 .classpath
 .project
 
-# IntelliJ project files
+# IntelliJ IDEA
 .idea
 *.iml
 out
 gen
+
+# VS Code
+.vscode/
+
+# ----------------------------
+# Python Specific
+# ----------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Distribution / Packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Unit test / coverage reports
+.pytest_cache/
+.coverage
+htmlcov/
+nosetests.xml
+coverage.xml
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Logs / temp files
+*.log
+*.tmp
+*.bak

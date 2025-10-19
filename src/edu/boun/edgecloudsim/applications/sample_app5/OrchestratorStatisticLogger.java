@@ -4,27 +4,46 @@ import edu.boun.edgecloudsim.edge_client.Task;
 import edu.boun.edgecloudsim.utils.SimLogger;
 
 public class OrchestratorStatisticLogger {
+	// Number of historical time windows to maintain for performance prediction
 	public static final int NUMBER_OF_HISTORY_WINDOW = 4;
-	public static final double PREDICTION_WINDOW_UPDATE_INTERVAL = 0.125; //seconds
+	
+	// Time interval (in seconds) for updating prediction windows
+	public static final double PREDICTION_WINDOW_UPDATE_INTERVAL = 0.125;
 
+	// Array storing statistics from previous time windows for trend analysis
 	private StatisticWrapper statForPreviousWindow[];
+	
+	// Current time window statistics being collected
 	private StatisticWrapper statForCurrentWindow;
 
+	/**
+	 * Inner class to store performance statistics for a single datacenter type.
+	 */
 	class StatItem {
-		long numOfCompletedTasks;
-		long numOfFailedTasks;
-		double totalServiceTime;
+		long numOfCompletedTasks;     // Count of successfully completed tasks
+		long numOfFailedTasks;        // Count of failed tasks
+		double totalServiceTime;      // Cumulative service time for completed tasks
 
+		/**
+		 * Calculates the failure rate as a percentage.
+		 * 
+		 * @return failure rate percentage (0-100), or 0.1 as default if no failures
+		 */
 		double getFailureRate() {
-			double failureRate = 0.1;
+			double failureRate = 0.1; // Default minimal failure rate
 			if(numOfFailedTasks != 0)
 				failureRate = ((double)100 * numOfFailedTasks) / (numOfCompletedTasks + numOfFailedTasks);
 
 			return failureRate; 
 		}
 
+		/**
+		 * Calculates the average service time per completed task.
+		 * 
+		 * @return average service time in seconds, or 0.01 as default if no completed tasks
+		 */
 		double getAvgServiceTime() {
-			double serviceTime = 0.01;
+			double serviceTime = 0.01; // Default minimal service time
 			if(numOfCompletedTasks != 0)
 				serviceTime = totalServiceTime/numOfCompletedTasks;
 
@@ -32,11 +51,20 @@ public class OrchestratorStatisticLogger {
 		}
 	}
 
+	/**
+	 * Wrapper class that holds statistics for all three datacenter types.
+	 */
 	class StatisticWrapper {
-		StatItem edgeStat;
-		StatItem cloudViaRsuStat;
-		StatItem cloudViaGsmStat;
+		StatItem edgeStat;           // Statistics for edge datacenter
+		StatItem cloudViaRsuStat;    // Statistics for cloud via RSU
+		StatItem cloudViaGsmStat;    // Statistics for cloud via GSM
 
+		/**
+		 * Gets the failure rate for a specific datacenter type.
+		 * 
+		 * @param targetDatacenter datacenter type identifier
+		 * @return failure rate percentage for the specified datacenter
+		 */
 		double getFailureRate(int targetDatacenter) {
 			double failureRate = 0;
 
@@ -51,7 +79,7 @@ public class OrchestratorStatisticLogger {
 				failureRate = cloudViaGsmStat.getFailureRate();
 				break;
 			default:
-				SimLogger.printLine("Unknow target datacenter in predictive orchestration policy! Terminating simulation...");
+				SimLogger.printLine("Unknown target datacenter in predictive orchestration policy! Terminating simulation...");
 				System.exit(1);
 				break;
 			}
@@ -59,8 +87,14 @@ public class OrchestratorStatisticLogger {
 			return failureRate; 
 		}
 
+		/**
+		 * Gets the average service time for a specific datacenter type.
+		 * 
+		 * @param targetDatacenter datacenter type identifier
+		 * @return average service time in seconds for the specified datacenter
+		 */
 		double getAvgServiceTime(int targetDatacenter) {
-			double serviceTime = 0.01;
+			double serviceTime = 0.01; // Default minimal service time
 
 			switch (targetDatacenter) {
 			case VehicularEdgeOrchestrator.EDGE_DATACENTER:
@@ -73,7 +107,7 @@ public class OrchestratorStatisticLogger {
 				serviceTime = cloudViaGsmStat.getAvgServiceTime();
 				break;
 			default:
-				SimLogger.printLine("Unknow target datacenter in predictive orchestration policy! Terminating simulation...");
+				SimLogger.printLine("Unknown target datacenter in predictive orchestration policy! Terminating simulation...");
 				System.exit(1);
 				break;
 			}
@@ -82,12 +116,18 @@ public class OrchestratorStatisticLogger {
 		}
 	}
 
+	/**
+	 * Constructor initializes the statistics logger with empty statistics windows.
+	 * Creates current window and historical windows for trend analysis.
+	 */
 	public OrchestratorStatisticLogger() {
+		// Initialize current statistics window
 		statForCurrentWindow = new StatisticWrapper();		
 		statForCurrentWindow.cloudViaRsuStat = new StatItem();
 		statForCurrentWindow.cloudViaGsmStat = new StatItem();
 		statForCurrentWindow.edgeStat = new StatItem();
 
+		// Initialize array of previous statistics windows for historical analysis
 		statForPreviousWindow = new StatisticWrapper[NUMBER_OF_HISTORY_WINDOW];
 		for(int i = 0; i< NUMBER_OF_HISTORY_WINDOW; i++){
 			statForPreviousWindow[i] = new StatisticWrapper();
@@ -98,10 +138,21 @@ public class OrchestratorStatisticLogger {
 		}
 	}
 
+	/**
+	 * Records a successful task completion for statistical analysis.
+	 * 
+	 * @param task completed task
+	 * @param serviceTime observed service time in seconds
+	 */
 	public synchronized void addSuccessStat(Task task, double serviceTime) {
 		addStat(true, serviceTime, task.getAssociatedDatacenterId());
 	}
 
+	/**
+	 * Records a failed task for statistical analysis.
+	 * 
+	 * @param task failed task
+	 */
 	public synchronized void addFailStat(Task task) {
 		addStat(false, 0, task.getAssociatedDatacenterId());
 	}

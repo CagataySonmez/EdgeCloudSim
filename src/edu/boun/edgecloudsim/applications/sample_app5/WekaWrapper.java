@@ -15,68 +15,89 @@ import weka.core.Instance;
 import weka.core.Instances;
 
 public class WekaWrapper {
-	public static final double MAX_WLAN_DELAY = 9; //sec
-	public static final double MAX_WAN_DELAY = 7; //sec
-	public static final double MAX_GSM_DELAY = 8; //sec
+	// Maximum expected network delays for different connection types (seconds)
+	public static final double MAX_WLAN_DELAY = 9;
+	public static final double MAX_WAN_DELAY = 7;
+	public static final double MAX_GSM_DELAY = 8;
 
+	// Edge datacenter regression model attributes and normalization parameters
 	private static final String[] EDGE_REGRESSION_ATTRIBUTES = {"TaskLength","AvgEdgeUtilization","ServiceTime"};
 	private static final double[] EDGE_REGRESSION_MEAN_VALS = {5756, 18};
 	private static final double[] EDGE_REGRESSION_STD_VALS = {4737, 7};
 
+	// Edge datacenter classification model attributes and normalization parameters
 	private static final String[] EDGE_CLASSIFIER_ATTRIBUTES = {"NumOffloadedTask","TaskLength","WLANUploadDelay","WLANDownloadDelay","AvgEdgeUtilization"};
 	private static final double[] EDGE_CLASSIFIER_MEAN_VALS = {130, 5756, 0.024192, 0.022952, 18};
 	private static final double[] EDGE_CLASSIFIER_STD_VALS = {47, 4737, 0.025628, 0.010798, 7};
 
 
+	// Cloud via RSU regression model attributes and normalization parameters
 	private static final String[] CLOUD_RSU_REGRESSION_ATTRIBUTES = {"TaskLength","WANUploadDelay","WANDownloadDelay","ServiceTime"};
 	private static final double[] CLOUD_RSU_REGRESSION_MEAN_VALS = {9718, 0.171074, 0.164998};
 	private static final double[] CLOUD_RSU_REGRESSION_STD_VALS = {5873, 0.096208, 0.068551};
 
+	// Cloud via RSU classification model attributes and normalization parameters
 	private static final String[] CLOUD_RSU_CLASSIFIER_ATTRIBUTES = {"NumOffloadedTask","WANUploadDelay","WANDownloadDelay"};
 	private static final double[] CLOUD_RSU_CLASSIFIER_MEAN_VALS = {111, 0.171074, 0.164998};
 	private static final double[] CLOUD_RSU_CLASSIFIER_STD_VALS = {40, 0.096208, 0.068551};
 
-
+	// Cloud via GSM regression model attributes and normalization parameters
 	private static final String[] CLOUD_GSM_REGRESSION_ATTRIBUTES = {"TaskLength","GSMUploadDelay","GSMDownloadDelay","ServiceTime"};
 	private static final double[] CLOUD_GSM_REGRESSION_MEAN_VALS = {9718, 0.205794, 0.197476};
 	private static final double[] CLOUD_GSM_REGRESSION_STD_VALS = {5873, 0.179551, 0.148067};
 
+	// Cloud via GSM classification model attributes and normalization parameters
 	private static final String[] CLOUD_GSM_CLASSIFIER_ATTRIBUTES = {"NumOffloadedTask","GSMUploadDelay","GSMDownloadDelay"};
 	private static final double[] CLOUD_GSM_CLASSIFIER_MEAN_VALS = {50, 0.205794, 0.197476};
 	private static final double[] CLOUD_GSM_CLASSIFIER_STD_VALS = {18, 0.179551, 0.148067};
 
+	// Classification output classes
 	private static final String[] CLASSIFIER_CLASSES = {"fail","success"};
 
+	// Classification models for predicting task success/failure
 	private AbstractClassifier classifier_edge, classifier_cloud_rsu, classifier_cloud_gsm;
+	
+	// Regression models for predicting service times
 	private AbstractClassifier regression_edge, regression_cloud_rsu, regression_cloud_gsm;
 
+	// Singleton instance for global access
 	private static WekaWrapper singleton = new WekaWrapper();
 
-	/*
-	 * A private Constructor prevents any other class from instantiating.
+	/**
+	 * Private constructor to implement singleton pattern.
 	 */
 	private WekaWrapper() {
 
 	}
 
-	/* Static 'instance' method */
+	/**
+	 * Returns the singleton instance of WekaWrapper.
+	 * 
+	 * @return singleton WekaWrapper instance
+	 */
 	public static WekaWrapper getInstance() {
 		return singleton;
 	}
 
-	/*
-	 * Possible Values for ClassifierType:
-	 * - NaiveBayes
-	 * - SMO
-	 * - LibSVM
-	 * - MultilayerPerceptron
+	/**
+	 * Initializes the machine learning models from pre-trained model files.
 	 * 
-	 * Possible Values for RegressionType:
-	 * - LinearRegression
-	 * - SMOreg
+	 * Supported ClassifierType values:
+	 * - NaiveBayes: Probabilistic classifier based on Bayes' theorem
+	 * - SMO: Support Vector Machine with Sequential Minimal Optimization
+	 * - MultilayerPerceptron: Neural network classifier
+	 * 
+	 * Supported RegressionType values:
+	 * - LinearRegression: Linear regression for continuous value prediction
+	 * - SMOreg: Support Vector Machine for regression
+	 * 
+	 * @param ClassifierType type of classification algorithm to load
+	 * @param RegressionType type of regression algorithm to load
+	 * @param ModelFolder directory containing pre-trained model files
 	 */
 	public void initialize(String ClassifierType, String RegressionType, String ModelFolder) {
 		try {
+			// Load classification models based on specified type
 			if(ClassifierType.equals("NaiveBayes")) {
 				classifier_edge = (NaiveBayes) weka.core.SerializationHelper.read(ModelFolder + "nb_edge.model");
 				classifier_cloud_rsu = (NaiveBayes) weka.core.SerializationHelper.read(ModelFolder + "nb_cloud_rsu.model");
@@ -93,6 +114,7 @@ public class WekaWrapper {
 				classifier_cloud_gsm = (MultilayerPerceptron) weka.core.SerializationHelper.read(ModelFolder + "mlp_cloud_gsm.model");
 			}
 
+			// Load regression models based on specified type
 			if(RegressionType.equals("LinearRegression")){
 				regression_edge = (LinearRegression) weka.core.SerializationHelper.read(ModelFolder + "lr_edge.model");
 				regression_cloud_rsu = (LinearRegression) weka.core.SerializationHelper.read(ModelFolder + "lr_cloud_rsu.model");
@@ -110,6 +132,14 @@ public class WekaWrapper {
 		}
 	}
 
+	/**
+	 * Performs regression prediction to estimate service time for a given datacenter.
+	 * Uses pre-trained regression models to predict continuous values (e.g., delay, response time).
+	 * 
+	 * @param targetDatacenter datacenter type identifier
+	 * @param values input feature values for prediction
+	 * @return predicted service time or performance metric
+	 */
 	public double handleRegression(int targetDatacenter, double[] values) {
 		double result = 0;
 
@@ -144,6 +174,14 @@ public class WekaWrapper {
 		return result;
 	}
 
+	/**
+	 * Performs binary classification to predict task success/failure for a given datacenter.
+	 * Uses pre-trained classification models to predict discrete outcomes.
+	 * 
+	 * @param targetDatacenter datacenter type identifier
+	 * @param values input feature values for prediction
+	 * @return true if task is predicted to succeed, false if predicted to fail
+	 */
 	public boolean handleClassification(int targetDatacenter, double[] values) {
 		boolean result = false;
 
@@ -153,6 +191,7 @@ public class WekaWrapper {
 						EDGE_CLASSIFIER_ATTRIBUTES,
 						EDGE_CLASSIFIER_MEAN_VALS,
 						EDGE_CLASSIFIER_STD_VALS);
+				// Class 1 represents "success", Class 0 represents "fail"
 				result = (classifier_edge.classifyInstance(data) == 1) ? true : false;
 			}
 			else if(targetDatacenter == VehicularEdgeOrchestrator.CLOUD_DATACENTER_VIA_RSU) {
@@ -178,6 +217,17 @@ public class WekaWrapper {
 		return result;
 	}
 
+	/**
+	 * Creates a WEKA Instance for regression prediction with normalized feature values.
+	 * Applies z-score normalization: (value - mean) / std_deviation
+	 * 
+	 * @param relation name for the dataset relation
+	 * @param values raw feature values
+	 * @param attributes feature attribute names
+	 * @param meanVals mean values for normalization
+	 * @param stdVals standard deviation values for normalization
+	 * @return normalized WEKA Instance ready for regression prediction
+	 */
 	private Instance getRegressionData(String relation, double[] values, String[] attributes, double[] meanVals, double[] stdVals) {
 		ArrayList<Attribute> atts = new ArrayList<Attribute>();
 		for(int i=0; i<attributes.length; i++)
@@ -185,6 +235,8 @@ public class WekaWrapper {
 
 		Instances dataRaw = new Instances(relation,atts,0);
 		double[] instanceValue1 = new double[dataRaw.numAttributes()];
+		
+		// Apply z-score normalization to each feature
 		for(int i=0; i<values.length; i++)
 			instanceValue1[i] = (values[i] - meanVals[i]) / stdVals[i];
 
@@ -194,20 +246,37 @@ public class WekaWrapper {
 		return dataRaw.get(0);
 	}
 
+	/**
+	 * Creates a WEKA Instance for classification prediction with normalized feature values.
+	 * Includes class attribute for binary classification (fail/success).
+	 * 
+	 * @param relation name for the dataset relation
+	 * @param values raw feature values
+	 * @param attributes feature attribute names
+	 * @param meanVals mean values for normalization
+	 * @param stdVals standard deviation values for normalization
+	 * @return normalized WEKA Instance ready for classification prediction
+	 */
 	public Instance getClassificationData(String relation, double[] values, String[] attributes, double[] meanVals, double[] stdVals) {		
 		ArrayList<Attribute> atts = new ArrayList<Attribute>();
 		ArrayList<String> classVal = new ArrayList<String>();
+		
+		// Add class values (fail, success)
 		for(int i=0; i<CLASSIFIER_CLASSES.length; i++)
 			classVal.add(CLASSIFIER_CLASSES[i]);
 
+		// Add feature attributes
 		for(int i=0; i<attributes.length; i++)
 			atts.add(new Attribute(attributes[i]));
 
+		// Add class attribute
 		atts.add(new Attribute("class",classVal));
 
 		Instances dataRaw = new Instances(relation,atts,0);
 
 		double[] instanceValue1 = new double[dataRaw.numAttributes()];
+		
+		// Apply z-score normalization to each feature
 		for(int i=0; i<values.length; i++)
 			instanceValue1[i] = (values[i] - meanVals[i]) / stdVals[i];
 

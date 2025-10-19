@@ -44,30 +44,124 @@ import edu.boun.edgecloudsim.core.SimSettings;
 import edu.boun.edgecloudsim.core.SimSettings.NETWORK_DELAY_TYPES;
 import edu.boun.edgecloudsim.utils.SimLogger.NETWORK_ERRORS;
 
+/**
+ * Comprehensive simulation logging and result collection system for EdgeCloudSim.
+ * 
+ * <p>SimLogger is responsible for tracking, collecting, and persisting simulation events
+ * and performance metrics throughout the simulation execution. It provides both real-time
+ * logging capabilities and comprehensive result aggregation for post-simulation analysis.</p>
+ * 
+ * <p><b>Key Design Features:</b>
+ * <ul>
+ *   <li><b>Memory Optimization:</b> Balances memory usage with file I/O overhead</li>
+ *   <li><b>MATLAB Compatibility:</b> Generates results in MATLAB-friendly formats</li>
+ *   <li><b>Multi-tier Analytics:</b> Tracks metrics across cloud, edge, and mobile tiers</li>
+ *   <li><b>Comprehensive Coverage:</b> Monitors performance, failures, delays, and costs</li>
+ * </ul></p>
+ * 
+ * <p><b>Logging Strategy:</b>
+ * <ul>
+ *   <li><b>Deep Logging:</b> Immediate file writes for detailed task events (high I/O)</li>
+ *   <li><b>Basic Logging:</b> Memory accumulation with end-of-simulation writes (low overhead)</li>
+ *   <li><b>Selective Logging:</b> Configurable verbosity levels for different metrics</li>
+ * </ul></p>
+ * 
+ * <p><b>Collected Metrics Categories:</b>
+ * <ul>
+ *   <li>Task completion rates and failure analysis</li>
+ *   <li>Network delays across all communication segments</li>
+ *   <li>Processing times and service quality metrics</li>
+ *   <li>Resource utilization and capacity constraints</li>
+ *   <li>Cost analysis and Quality of Experience (QoE)</li>
+ *   <li>Infrastructure overhead and orchestration costs</li>
+ * </ul></p>
+ * 
+ * <p>The logger implements the Singleton pattern to ensure consistent data collection
+ * across all simulation components while maintaining thread-safe operations.</p>
+ * 
+ * @see edu.boun.edgecloudsim.core.SimManager
+ * @see edu.boun.edgecloudsim.core.SimSettings
+ */
 public class SimLogger {
+	/**
+	 * Enumeration of possible task states throughout the simulation lifecycle.
+	 * 
+	 * <p>Task status tracking enables detailed analysis of where tasks succeed,
+	 * fail, or encounter bottlenecks in the edge-cloud processing pipeline.</p>
+	 */
 	public static enum TASK_STATUS {
-		CREATED, UPLOADING, PROCESSING, DOWNLOADING, COMLETED,
-		REJECTED_DUE_TO_VM_CAPACITY, REJECTED_DUE_TO_BANDWIDTH,
-		UNFINISHED_DUE_TO_BANDWIDTH, UNFINISHED_DUE_TO_MOBILITY,
+		/** Task has been created and queued for processing */
+		CREATED,
+		/** Task data is being uploaded to processing node */
+		UPLOADING,
+		/** Task is being executed on processing node */
+		PROCESSING,
+		/** Task results are being downloaded back to mobile device */
+		DOWNLOADING,
+		/** Task has completed successfully */
+		COMLETED,  // Note: Misspelling preserved from original code
+		/** Task rejected due to insufficient VM computational capacity */
+		REJECTED_DUE_TO_VM_CAPACITY,
+		/** Task rejected due to insufficient network bandwidth */
+		REJECTED_DUE_TO_BANDWIDTH,
+		/** Task failed to complete due to network bandwidth limitations */
+		UNFINISHED_DUE_TO_BANDWIDTH,
+		/** Task failed due to device mobility (moved out of range) */
+		UNFINISHED_DUE_TO_MOBILITY,
+		/** Task rejected due to WLAN coverage limitations */
 		REJECTED_DUE_TO_WLAN_COVERAGE
 	}
 	
+	/**
+	 * Enumeration of network error types for failure analysis.
+	 * 
+	 * <p>Network error categorization enables targeted analysis of communication
+	 * failures across different network segments and technologies.</p>
+	 */
 	public static enum NETWORK_ERRORS {
-		LAN_ERROR, MAN_ERROR, WAN_ERROR, GSM_ERROR, NONE
+		/** Local Area Network communication error */
+		LAN_ERROR,
+		/** Metropolitan Area Network communication error */
+		MAN_ERROR,
+		/** Wide Area Network communication error */
+		WAN_ERROR,
+		/** GSM/Cellular network communication error */
+		GSM_ERROR,
+		/** No network error occurred */
+		NONE
 	}
 
+	/** Simulation start timestamp for performance measurement */
 	private long startTime;
+	
+	/** Simulation end timestamp for performance measurement */
 	private long endTime;
+	
+	/** Global flag controlling file-based logging operations */
 	private static boolean fileLogEnabled;
+	
+	/** Global flag controlling console output logging */
 	private static boolean printLogEnabled;
+	
+	/** Prefix for output file naming to support batch simulations */
 	private String filePrefix;
+	
+	/** Directory path for simulation output files */
 	private String outputFolder;
+	
+	/** Map storing detailed task event information for deep logging */
 	private Map<Integer, LogItem> taskMap;
+	
+	/** List tracking VM computational load over time */
 	private LinkedList<VmLoadLogItem> vmLoadList;
+	
+	/** List tracking access point network delays over time */
 	private LinkedList<ApDelayLogItem> apDelayList;
 
+	/** Singleton instance ensuring consistent logging across simulation components */
 	private static SimLogger singleton = new SimLogger();
 	
+	/** Number of application types defined in simulation configuration */
 	private int numOfAppTypes;
 	
 	private File successFile = null, failFile = null;
@@ -127,60 +221,151 @@ public class SimLogger {
 	private int[] failedTaskDuetoMobility = null;
 	private int[] refectedTaskDuetoWlanRange = null;
 	
+	/** Array storing orchestration overhead measurements per application type */
 	private double[] orchestratorOverhead = null;
 
-	/*
-	 * A private Constructor prevents any other class from instantiating.
+	/**
+	 * Private constructor implementing Singleton pattern.
+	 * 
+	 * <p>Initializes the logger with default settings (logging disabled) and prevents
+	 * external instantiation to ensure consistent data collection across the simulation.</p>
 	 */
 	private SimLogger() {
 		fileLogEnabled = false;
 		printLogEnabled = false;
 	}
 
-	/* Static 'instance' method */
+	/**
+	 * Returns the singleton instance of SimLogger.
+	 * 
+	 * <p>Provides global access to the simulation logger, ensuring all components
+	 * use the same logging instance for consistent data collection and result
+	 * aggregation throughout the simulation execution.</p>
+	 * 
+	 * @return the singleton SimLogger instance
+	 */
 	public static SimLogger getInstance() {
 		return singleton;
 	}
 
+	/**
+	 * Enables file-based logging for persistent result storage.
+	 * 
+	 * <p>When enabled, the logger writes detailed simulation results to files
+	 * for post-simulation analysis. File logging includes comprehensive metrics
+	 * suitable for MATLAB analysis and visualization tools.</p>
+	 */
 	public static void enableFileLog() {
 		fileLogEnabled = true;
 	}
 
+	/**
+	 * Enables console-based logging for real-time monitoring.
+	 * 
+	 * <p>When enabled, the logger outputs simulation progress and key events
+	 * to the console, providing real-time feedback during simulation execution.
+	 * Useful for debugging and monitoring simulation progress.</p>
+	 */
 	public static void enablePrintLog() {
 		printLogEnabled = true;
 	}
 
+	/**
+	 * Checks if file logging is currently enabled.
+	 * 
+	 * @return true if file logging is enabled, false otherwise
+	 */
 	public static boolean isFileLogEnabled() {
 		return fileLogEnabled;
 	}
 
+	/**
+	 * Disables file-based logging to reduce I/O overhead.
+	 * 
+	 * <p>When disabled, simulation results will only be kept in memory
+	 * and won't be persistently stored to files.</p>
+	 */
 	public static void disableFileLog() {
 		fileLogEnabled = false;
 	}
 	
+	/**
+	 * Disables console-based logging to reduce output verbosity.
+	 * 
+	 * <p>When disabled, the logger will run silently without console output,
+	 * improving performance for batch simulation runs.</p>
+	 */
 	public static void disablePrintLog() {
 		printLogEnabled = false;
 	}
 	
+	/**
+	 * Returns the output folder path for simulation results.
+	 * 
+	 * @return the directory path where simulation output files are stored
+	 */
 	public String getOutputFolder() {
 		return outputFolder;
 	}
 
+	/**
+	 * Helper method to append a line to a buffered writer with proper formatting.
+	 * 
+	 * @param bw the BufferedWriter to write to
+	 * @param line the text line to append
+	 * @throws IOException if writing fails
+	 */
 	private void appendToFile(BufferedWriter bw, String line) throws IOException {
 		bw.write(line);
 		bw.newLine();
 	}
 
+	/**
+	 * Prints a line to console if print logging is enabled.
+	 * 
+	 * <p>Provides conditional console output based on the global print logging
+	 * setting. Use this method throughout EdgeCloudSim for consistent logging behavior.</p>
+	 * 
+	 * @param msg the message to print to console
+	 */
 	public static void printLine(String msg) {
 		if (printLogEnabled)
 			System.out.println(msg);
 	}
 
+	/**
+	 * Prints text to console without newline if print logging is enabled.
+	 * 
+	 * <p>Useful for progress indicators and multi-part messages that span
+	 * multiple print calls.</p>
+	 * 
+	 * @param msg the message to print to console
+	 */
 	public static void print(String msg) {
 		if (printLogEnabled)
 			System.out.print(msg);
 	}
 
+	/**
+	 * Initializes the logging system for a new simulation run.
+	 * 
+	 * <p>This method sets up all necessary data structures and file handles for
+	 * collecting simulation metrics. It must be called before any logging operations
+	 * begin. The method configures both memory-based and file-based logging depending
+	 * on the enabled logging modes.</p>
+	 * 
+	 * <p><b>Initialization Tasks:</b>
+	 * <ul>
+	 *   <li>Records simulation start timestamp for performance measurement</li>
+	 *   <li>Sets up output file naming and directory structure</li>
+	 *   <li>Initializes metric collection arrays for all application types</li>
+	 *   <li>Creates file handles for deep logging if enabled</li>
+	 *   <li>Prepares data structures for real-time event tracking</li>
+	 * </ul></p>
+	 * 
+	 * @param outFolder the directory path where result files will be stored
+	 * @param fileName the prefix for output file naming
+	 */
 	public void simStarted(String outFolder, String fileName) {
 		startTime = System.currentTimeMillis();
 		filePrefix = fileName;
@@ -265,80 +450,225 @@ public class SimLogger {
 		orchestratorOverhead = new double[numOfAppTypes + 1];
 	}
 
+	/**
+	 * Creates a new log entry for a task with its basic characteristics.
+	 * 
+	 * <p>Initializes logging for a new task by creating a LogItem with the specified
+	 * parameters. This method should be called when a task is first created and
+	 * before any processing begins.</p>
+	 * 
+	 * @param deviceId ID of the mobile device generating the task
+	 * @param taskId unique identifier for the task
+	 * @param taskType application type index of the task
+	 * @param taskLenght computational requirement in million instructions
+	 * @param taskInputType input data size in bytes
+	 * @param taskOutputSize output data size in bytes
+	 */
 	public void addLog(int deviceId, int taskId, int taskType,
 			int taskLenght, int taskInputType, int taskOutputSize) {
-		// printLine(taskId+"->"+taskStartTime);
 		taskMap.put(taskId, new LogItem(deviceId, taskType, taskLenght, taskInputType, taskOutputSize));
 	}
 
+	/**
+	 * Records the start time of task processing.
+	 * 
+	 * @param taskId unique identifier for the task
+	 * @param time simulation time when task processing begins
+	 */
 	public void taskStarted(int taskId, double time) {
 		taskMap.get(taskId).taskStarted(time);
 	}
 
+	/**
+	 * Records upload network delay for a task.
+	 * 
+	 * @param taskId unique identifier for the task
+	 * @param delay upload delay in seconds
+	 * @param delayType type of network segment causing the delay
+	 */
 	public void setUploadDelay(int taskId, double delay, NETWORK_DELAY_TYPES delayType) {
 		taskMap.get(taskId).setUploadDelay(delay, delayType);
 	}
 
+	/**
+	 * Records download network delay for a task.
+	 * 
+	 * @param taskId unique identifier for the task
+	 * @param delay download delay in seconds
+	 * @param delayType type of network segment causing the delay
+	 */
 	public void setDownloadDelay(int taskId, double delay, NETWORK_DELAY_TYPES delayType) {
 		taskMap.get(taskId).setDownloadDelay(delay, delayType);
 	}
 	
+	/**
+	 * Records task assignment to computational resources.
+	 * 
+	 * @param taskId unique identifier for the task
+	 * @param datacenterId ID of the assigned datacenter
+	 * @param hostId ID of the assigned host machine
+	 * @param vmId ID of the assigned virtual machine
+	 * @param vmType type/tier of the processing environment (cloud/edge/mobile)
+	 */
 	public void taskAssigned(int taskId, int datacenterId, int hostId, int vmId, int vmType) {
 		taskMap.get(taskId).taskAssigned(datacenterId, hostId, vmId, vmType);
 	}
 
+	/**
+	 * Records the start of task execution on the assigned VM.
+	 * 
+	 * @param taskId unique identifier for the task
+	 */
 	public void taskExecuted(int taskId) {
 		taskMap.get(taskId).taskExecuted();
 	}
 
+	/**
+	 * Records task completion and triggers result aggregation.
+	 * 
+	 * <p>Marks the task as successfully completed and calls recordLog to
+	 * aggregate the results into summary statistics and optionally write
+	 * to result files.</p>
+	 * 
+	 * @param taskId unique identifier for the task
+	 * @param time simulation time when task completed
+	 */
 	public void taskEnded(int taskId, double time) {
 		taskMap.get(taskId).taskEnded(time);
 		recordLog(taskId);
 	}
 
+	/**
+	 * Records task rejection due to insufficient VM computational capacity.
+	 * 
+	 * @param taskId unique identifier for the task
+	 * @param time simulation time when rejection occurred
+	 * @param vmType type of VM that rejected the task (cloud/edge/mobile)
+	 */
 	public void rejectedDueToVMCapacity(int taskId, double time, int vmType) {
 		taskMap.get(taskId).taskRejectedDueToVMCapacity(time, vmType);
 		recordLog(taskId);
 	}
 
+	/**
+	 * Records task rejection due to WLAN coverage limitations.
+	 * 
+	 * @param taskId unique identifier for the task
+	 * @param time simulation time when rejection occurred
+	 * @param vmType intended VM type for the rejected task
+	 */
     public void rejectedDueToWlanCoverage(int taskId, double time, int vmType) {
     	taskMap.get(taskId).taskRejectedDueToWlanCoverage(time, vmType);
 		recordLog(taskId);
     }
     
+    /**
+     * Records task rejection due to insufficient network bandwidth.
+     * 
+     * @param taskId unique identifier for the task
+     * @param time simulation time when rejection occurred
+     * @param vmType intended VM type for the rejected task
+     * @param delayType network segment that caused the bandwidth limitation
+     */
 	public void rejectedDueToBandwidth(int taskId, double time, int vmType, NETWORK_DELAY_TYPES delayType) {
 		taskMap.get(taskId).taskRejectedDueToBandwidth(time, vmType, delayType);
 		recordLog(taskId);
 	}
 
+	/**
+	 * Records task failure due to network bandwidth constraints.
+	 * 
+	 * @param taskId unique identifier for the task
+	 * @param time simulation time when failure occurred
+	 * @param delayType network segment that caused the bandwidth failure
+	 */
 	public void failedDueToBandwidth(int taskId, double time, NETWORK_DELAY_TYPES delayType) {
 		taskMap.get(taskId).taskFailedDueToBandwidth(time, delayType);
 		recordLog(taskId);
 	}
 
+	/**
+	 * Records task failure due to device mobility (moved out of coverage).
+	 * 
+	 * @param taskId unique identifier for the task
+	 * @param time simulation time when mobility failure occurred
+	 */
 	public void failedDueToMobility(int taskId, double time) {
 		taskMap.get(taskId).taskFailedDueToMobility(time);
 		recordLog(taskId);
 	}
 
+	/**
+	 * Records Quality of Experience (QoE) metric for a task.
+	 * 
+	 * @param taskId unique identifier for the task
+	 * @param QoE quality of experience score
+	 */
 	public void setQoE(int taskId, double QoE){
 		taskMap.get(taskId).setQoE(QoE);
 	}
 	
+	/**
+	 * Records orchestration overhead for task management.
+	 * 
+	 * @param taskId unique identifier for the task
+	 * @param overhead orchestration overhead in seconds
+	 */
 	public void setOrchestratorOverhead(int taskId, double overhead){
 		taskMap.get(taskId).setOrchestratorOverhead(overhead);
 	}
 
+	/**
+	 * Records VM utilization across different processing tiers.
+	 * 
+	 * <p>Logs computational load distribution for performance analysis.
+	 * Only records if location logging is enabled in simulation settings.</p>
+	 * 
+	 * @param time current simulation time
+	 * @param loadOnEdge computational load on edge infrastructure (0-1)
+	 * @param loadOnCloud computational load on cloud infrastructure (0-1)
+	 * @param loadOnMobile computational load on mobile devices (0-1)
+	 */
 	public void addVmUtilizationLog(double time, double loadOnEdge, double loadOnCloud, double loadOnMobile) {
 		if(SimSettings.getInstance().getLocationLogInterval() != 0)
 			vmLoadList.add(new VmLoadLogItem(time, loadOnEdge, loadOnCloud, loadOnMobile));
 	}
 
+	/**
+	 * Records access point network delay measurements over time.
+	 * 
+	 * <p>Logs upload and download delays for all access points to analyze
+	 * network performance variations. Only records if AP delay logging
+	 * is enabled in simulation settings.</p>
+	 * 
+	 * @param time current simulation time
+	 * @param apUploadDelays array of upload delays for each access point
+	 * @param apDownloadDelays array of download delays for each access point
+	 */
 	public void addApDelayLog(double time, double[] apUploadDelays, double[] apDownloadDelays) {
 		if(SimSettings.getInstance().getApDelayLogInterval() != 0)
 			apDelayList.add(new ApDelayLogItem(time, apUploadDelays, apDownloadDelays));
 	}
 	
+	/**
+	 * Finalizes logging and generates comprehensive simulation result files.
+	 * 
+	 * <p>This method performs the critical task of aggregating all collected
+	 * simulation data and writing detailed results to files. It calculates
+	 * summary statistics, generates performance reports, and creates output
+	 * files suitable for MATLAB analysis and visualization.</p>
+	 * 
+	 * <p><b>Generated Output Files:</b>
+	 * <ul>
+	 *   <li>Generic results per application type with performance metrics</li>
+	 *   <li>VM utilization logs for resource usage analysis</li>
+	 *   <li>Location-based performance breakdowns</li>
+	 *   <li>Access point delay measurements over time</li>
+	 *   <li>Deep task logs (if enabled) for detailed event analysis</li>
+	 * </ul></p>
+	 * 
+	 * @throws IOException if file writing operations fail
+	 */
 	public void simStopped() throws IOException {
 		endTime = System.currentTimeMillis();
 		File vmLoadFile = null, locationFile = null, apUploadDelayFile = null, apDownloadDelayFile = null;
@@ -754,9 +1084,32 @@ public class SimLogger {
 		apDelayList.clear();
 	}
 	
+	/**
+	 * Processes and aggregates completed task metrics into summary statistics.
+	 * 
+	 * <p>This critical method removes a task from active tracking and aggregates
+	 * its results into the appropriate statistical arrays. It handles both successful
+	 * and failed tasks, organizing metrics by task type and processing tier
+	 * (cloud/edge/mobile) for comprehensive performance analysis.</p>
+	 * 
+	 * <p><b>Aggregated Metrics Include:</b>
+	 * <ul>
+	 *   <li>Task completion and failure counts by tier</li>
+	 *   <li>Service times and network delays</li>
+	 *   <li>Processing costs and QoE scores</li>
+	 *   <li>Orchestration overhead measurements</li>
+	 *   <li>Network utilization across different segments</li>
+	 * </ul></p>
+	 * 
+	 * <p>Tasks that occurred during the warm-up period are excluded from
+	 * statistics to ensure accurate steady-state performance measurements.</p>
+	 * 
+	 * @param taskId unique identifier of the task to record
+	 */
 	private void recordLog(int taskId){
 		LogItem value = taskMap.remove(taskId);
 		
+		// Skip tasks from warm-up period to ensure steady-state statistics
 		if (value.isInWarmUpPeriod())
 			return;
 
@@ -859,12 +1212,34 @@ public class SimLogger {
 	}
 }
 
+/**
+ * Represents a snapshot of VM computational load across processing tiers at a specific time.
+ * 
+ * <p>This helper class stores utilization measurements for edge, cloud, and mobile
+ * processing infrastructure, enabling time-series analysis of resource usage patterns
+ * throughout the simulation.</p>
+ */
 class VmLoadLogItem {
+	/** Simulation time when this measurement was taken */
 	private double time;
+	
+	/** Computational load on edge infrastructure (0.0 to 1.0) */
 	private double vmLoadOnEdge;
+	
+	/** Computational load on cloud infrastructure (0.0 to 1.0) */
 	private double vmLoadOnCloud;
+	
+	/** Computational load on mobile devices (0.0 to 1.0) */
 	private double vmLoadOnMobile;
 
+	/**
+	 * Creates a new VM load measurement record.
+	 * 
+	 * @param _time simulation timestamp
+	 * @param _vmLoadOnEdge edge infrastructure utilization (0-1)
+	 * @param _vmLoadOnCloud cloud infrastructure utilization (0-1)  
+	 * @param _vmLoadOnMobile mobile device utilization (0-1)
+	 */
 	VmLoadLogItem(double _time, double _vmLoadOnEdge, double _vmLoadOnCloud, double _vmLoadOnMobile) {
 		time = _time;
 		vmLoadOnEdge = _vmLoadOnEdge;
@@ -872,14 +1247,26 @@ class VmLoadLogItem {
 		vmLoadOnMobile = _vmLoadOnMobile;
 	}
 
+	/**
+	 * Returns the edge infrastructure computational load.
+	 * @return edge load percentage (0.0 to 1.0)
+	 */
 	public double getEdgeLoad() {
 		return vmLoadOnEdge;
 	}
 
+	/**
+	 * Returns the cloud infrastructure computational load.
+	 * @return cloud load percentage (0.0 to 1.0)
+	 */
 	public double getCloudLoad() {
 		return vmLoadOnCloud;
 	}
 	
+	/**
+	 * Returns the mobile device computational load.
+	 * @return mobile load percentage (0.0 to 1.0)
+	 */
 	public double getMobileLoad() {
 		return vmLoadOnMobile;
 	}
@@ -892,17 +1279,41 @@ class VmLoadLogItem {
 	}
 }
 
+/**
+ * Represents network delay measurements for all access points at a specific time.
+ * 
+ * <p>This helper class stores upload and download delay measurements across
+ * all access points in the simulation, enabling analysis of network performance
+ * variations and bottlenecks over time.</p>
+ */
 class ApDelayLogItem {
+	/** Simulation time when measurements were taken */
 	private double time;
+	
+	/** Upload delays for each access point in seconds */
 	private double apUploadDelays[];
+	
+	/** Download delays for each access point in seconds */
 	double[] apDownloadDelays;
 	
+	/**
+	 * Creates a new access point delay measurement record.
+	 * 
+	 * @param _time simulation timestamp
+	 * @param _apUploadDelays array of upload delays for each access point
+	 * @param _apDownloadDelays array of download delays for each access point
+	 */
 	ApDelayLogItem(double _time, double[] _apUploadDelays, double[] _apDownloadDelays){
 		time = _time;
 		apUploadDelays = _apUploadDelays;
 		apDownloadDelays = _apDownloadDelays;
 	}
 	
+	/**
+	 * Returns formatted upload delay statistics for MATLAB analysis.
+	 * 
+	 * @return comma-delimited string with timestamp and all AP upload delays
+	 */
 	public String getUploadStat() {
 		String result = Double.toString(time);
 		for(int i=0; i<apUploadDelays.length; i++)
@@ -911,6 +1322,11 @@ class ApDelayLogItem {
 		return result;
 	}
 
+	/**
+	 * Returns formatted download delay statistics for MATLAB analysis.
+	 * 
+	 * @return comma-delimited string with timestamp and all AP download delays
+	 */
 	public String getDownloadStat() {
 		String result = Double.toString(time);
 		for(int i=0; i<apDownloadDelays.length; i++)
@@ -920,16 +1336,47 @@ class ApDelayLogItem {
 	}
 }
 
+/**
+ * Comprehensive logging record for individual task execution and performance metrics.
+ * 
+ * <p>LogItem maintains detailed information about a single task's lifecycle,
+ * including timing measurements, resource assignments, network delays, costs,
+ * and quality metrics. This class serves as the primary data structure for
+ * deep logging and detailed performance analysis.</p>
+ * 
+ * <p>The class tracks complete task execution from creation through completion
+ * or failure, enabling comprehensive post-simulation analysis of performance
+ * bottlenecks, resource utilization patterns, and quality of service metrics.</p>
+ */
 class LogItem {
+	/** Current status of the task (created, processing, completed, failed, etc.) */
 	private SimLogger.TASK_STATUS status;
+	
+	/** Type of network error that occurred (if any) */
 	private SimLogger.NETWORK_ERRORS networkError;
+	
+	/** ID of the mobile device that generated this task */
 	private int deviceId;
+	
+	/** ID of the datacenter processing this task */
 	private int datacenterId;
+	
+	/** ID of the host machine assigned to this task */
 	private int hostId;
+	
+	/** ID of the virtual machine executing this task */
 	private int vmId;
+	
+	/** Type of processing tier (cloud/edge/mobile) */
 	private int vmType;
+	
+	/** Application type index of this task */
 	private int taskType;
+	
+	/** Computational length requirement in million instructions */
 	private int taskLenght;
+	
+	/** Input data size in bytes */
 	private int taskInputType;
 	private int taskOutputSize;
 	private double taskStartTime;

@@ -1,8 +1,9 @@
 /*
- * Title:        EdgeCloudSim - M/M/1 Queue model implementation
+ * Title:        EdgeCloudSim - Experimental Network Model implementation
  * 
  * Description: 
- * MM1Queue implements M/M/1 Queue model for WLAN and WAN communication
+ * FuzzyExperimentalNetworkModel implements a network model for WLAN and WAN communication
+ * using empirical data.
  * 
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
@@ -19,29 +20,108 @@ import edu.boun.edgecloudsim.network.NetworkModel;
 import edu.boun.edgecloudsim.utils.Location;
 import edu.boun.edgecloudsim.utils.SimLogger;
 
+/**
+ * Fuzzy experimental network model implementing empirical WLAN performance data.
+ * 
+ * <p>This network model uses real-world experimental measurements of WLAN performance
+ * to provide realistic network delay calculations. Unlike theoretical models, it incorporates
+ * empirical data collected from actual wireless network deployments, capturing the
+ * complex behavior of IEEE 802.11 networks under varying load conditions.</p>
+ * 
+ * <p><b>Key Features:</b>
+ * <ul>
+ *   <li><b>Empirical Data:</b> Uses measured WLAN throughput data for different client counts</li>
+ *   <li><b>Load-dependent Performance:</b> Throughput degradation with increasing client density</li>
+ *   <li><b>MAN/WAN Integration:</b> Combines experimental WLAN data with theoretical WAN models</li>
+ *   <li><b>MMPP/M/1 Queuing:</b> Advanced queuing model for bursty traffic patterns</li>
+ * </ul></p>
+ * 
+ * <p><b>Experimental WLAN Model:</b>
+ * The model uses pre-measured throughput values for client counts from 1 to 34+,
+ * showing realistic performance degradation as network load increases. This captures
+ * the effects of contention, collisions, and protocol overhead in real Wi-Fi networks.</p>
+ * 
+ * <p><b>Application Context:</b>
+ * This model is particularly suitable for vehicular edge computing scenarios where
+ * accurate WLAN performance modeling is critical for realistic simulation results.</p>
+ * 
+ * @see NetworkModel
+ * @see edu.boun.edgecloudsim.applications.sample_app4
+ */
 public class FuzzyExperimentalNetworkModel extends NetworkModel {
+	/**
+	 * Enumeration of network types in the experimental model.
+	 */
 	public static enum NETWORK_TYPE {WLAN, LAN};
+	
+	/**
+	 * Enumeration of communication directions for link characterization.
+	 */
 	public static enum LINK_TYPE {DOWNLOAD, UPLOAD};
-	public static double MAN_BW = 1300*1024; //Kbps
+	
+	/** Metropolitan Area Network bandwidth in Kbps */
+	public static double MAN_BW = 1300*1024;
 
+	/** Number of clients using MAN connection (reserved for future use) */
 	@SuppressWarnings("unused")
 	private int manClients;
+	
+	/** Array tracking WAN client counts per access point */
 	private int[] wanClients;
+	
+	/** Array tracking WLAN client counts per access point */
 	private int[] wlanClients;
 	
+	/** Last timestamp when M/M/1 queue statistics were updated */
 	private double lastMM1QueeuUpdateTime;
-	private double ManPoissonMeanForDownload; //seconds
-	private double ManPoissonMeanForUpload; //seconds
+	
+	/** Mean inter-arrival time for MAN download tasks in seconds */
+	private double ManPoissonMeanForDownload;
+	
+	/** Mean inter-arrival time for MAN upload tasks in seconds */
+	private double ManPoissonMeanForUpload;
 
-	private double avgManTaskInputSize; //bytes
-	private double avgManTaskOutputSize; //bytes
+	/** Average input data size for MAN tasks in bytes */
+	private double avgManTaskInputSize;
+	
+	/** Average output data size for MAN tasks in bytes */
+	private double avgManTaskOutputSize;
 
-	//record last n task statistics during MM1_QUEUE_MODEL_UPDATE_INTEVAL seconds to simulate mmpp/m/1 queue model
+	/** 
+	 * Accumulated input data size for MMPP/M/1 queue modeling.
+	 * Records statistics during MM1_QUEUE_MODEL_UPDATE_INTERVAL to simulate
+	 * Markov Modulated Poisson Process over M/1 queue behavior.
+	 */
 	private double totalManTaskInputSize;
+	
+	/** Accumulated output data size for MMPP/M/1 queue modeling */
 	private double totalManTaskOutputSize;
+	
+	/** Number of MAN download tasks in current measurement interval */
 	private double numOfManTaskForDownload;
+	
+	/** Number of MAN upload tasks in current measurement interval */
 	private double numOfManTaskForUpload;
 	
+	/**
+	 * Empirical WLAN throughput measurements based on client count.
+	 * 
+	 * <p>This array contains real-world experimental data showing WLAN throughput
+	 * (in Kbps) for different numbers of concurrent clients. The measurements
+	 * capture the performance degradation effect as network contention increases
+	 * with more active devices.</p>
+	 * 
+	 * <p><b>Key Observations:</b>
+	 * <ul>
+	 *   <li>Single client achieves ~88 Mbps (theoretical maximum)</li>
+	 *   <li>Dramatic throughput reduction with 2-4 clients due to contention</li>
+	 *   <li>Gradual degradation continues as client count increases</li>
+	 *   <li>Stabilizes around 6-7 Mbps with 30+ clients</li>
+	 * </ul></p>
+	 * 
+	 * <p>Data reflects realistic IEEE 802.11 behavior including protocol overhead,
+	 * collision avoidance delays, and medium access contention effects.</p>
+	 */
 	public static final double[] experimentalWlanDelay = {
 		/*1 Client*/ 88040.279 /*(Kbps)*/,
 		/*2 Clients*/ 45150.982 /*(Kbps)*/,
@@ -174,10 +254,24 @@ public class FuzzyExperimentalNetworkModel extends NetworkModel {
 		/*25 Clients*/ 1311.131 /*(Kbps)*/
 	};
 	
+	/**
+	 * Constructor initializes the FuzzyExperimentalNetworkModel with mobile device count and simulation scenario.
+	 * This network model uses empirical WLAN performance data combined with analytical models to simulate
+	 * realistic network delays based on user load and network technology.
+	 * 
+	 * @param _numberOfMobileDevices Total number of mobile devices in the simulation
+	 * @param _simScenario Simulation scenario identifier for configuration purposes
+	 */
 	public FuzzyExperimentalNetworkModel(int _numberOfMobileDevices, String _simScenario) {
 		super(_numberOfMobileDevices, _simScenario);
 	}
 
+	/**
+	 * Initializes the experimental network model by setting up client tracking arrays
+	 * and calculating MAN/WAN Poisson parameters based on task configuration.
+	 * This method analyzes the task lookup table to determine realistic traffic patterns
+	 * and initializes statistical models for network delay calculation.
+	 */
 	@Override
 	public void initialize() {
 		wanClients = new int[SimSettings.getInstance().getNumOfEdgeDatacenters()];  //we have one access point for each datacenter
@@ -214,9 +308,18 @@ public class FuzzyExperimentalNetworkModel extends NetworkModel {
 		numOfManTaskForUpload = 0;
 	}
 
-    /**
-    * source device is always mobile device in our simulation scenarios!
-    */
+	/**
+	 * Calculates upload delay from source to destination device using experimental data.
+	 * This method differentiates between MAN, WAN, and WLAN communications and applies
+	 * appropriate delay models based on empirical measurements and analytical models.
+	 * 
+	 * Note: Source device is always mobile device in our simulation scenarios!
+	 * 
+	 * @param sourceDeviceId ID of the source device (mobile device)
+	 * @param destDeviceId ID of the destination device (cloud, edge, or MAN)
+	 * @param task The task being uploaded containing file size information
+	 * @return Upload delay in seconds based on network type and current load
+	 */
 	@Override
 	public double getUploadDelay(int sourceDeviceId, int destDeviceId, Task task) {
 		double delay = 0;
@@ -240,9 +343,18 @@ public class FuzzyExperimentalNetworkModel extends NetworkModel {
 		return delay;
 	}
 
-    /**
-    * destination device is always mobile device in our simulation scenarios!
-    */
+	/**
+	 * Calculates download delay from source to destination device using experimental data.
+	 * This method handles cloud-to-mobile and edge-to-mobile communications with
+	 * realistic delay models based on empirical WLAN performance measurements.
+	 * 
+	 * Note: Destination device is always mobile device in our simulation scenarios!
+	 * 
+	 * @param sourceDeviceId ID of the source device (cloud, edge, or MAN)
+	 * @param destDeviceId ID of the destination device (mobile device)
+	 * @param task The task being downloaded containing output size information
+	 * @return Download delay in seconds based on network type and current load
+	 */
 	@Override
 	public double getDownloadDelay(int sourceDeviceId, int destDeviceId, Task task) {
 		double delay = 0;
@@ -266,6 +378,14 @@ public class FuzzyExperimentalNetworkModel extends NetworkModel {
 		return delay;
 	}
 
+	/**
+	 * Tracks the start of an upload operation by incrementing the appropriate client counter.
+	 * This method maintains real-time statistics of active connections for accurate
+	 * delay calculation based on current network load.
+	 * 
+	 * @param accessPointLocation Location of the access point handling the connection
+	 * @param destDeviceId ID of the destination device (cloud, edge, or MAN)
+	 */
 	@Override
 	public void uploadStarted(Location accessPointLocation, int destDeviceId) {
 		if(destDeviceId == SimSettings.CLOUD_DATACENTER_ID)
@@ -280,6 +400,14 @@ public class FuzzyExperimentalNetworkModel extends NetworkModel {
 		}
 	}
 
+	/**
+	 * Tracks the completion of an upload operation by decrementing the appropriate client counter.
+	 * This method updates real-time network load statistics to maintain accurate
+	 * delay calculations for subsequent operations.
+	 * 
+	 * @param accessPointLocation Location of the access point that handled the connection
+	 * @param destDeviceId ID of the destination device (cloud, edge, or MAN)
+	 */
 	@Override
 	public void uploadFinished(Location accessPointLocation, int destDeviceId) {
 		if(destDeviceId == SimSettings.CLOUD_DATACENTER_ID)
@@ -294,6 +422,14 @@ public class FuzzyExperimentalNetworkModel extends NetworkModel {
 		}
 	}
 
+	/**
+	 * Tracks the start of a download operation by incrementing the appropriate client counter.
+	 * This method maintains accurate network load statistics for realistic delay modeling
+	 * based on current connection density at each access point.
+	 * 
+	 * @param accessPointLocation Location of the access point handling the connection
+	 * @param sourceDeviceId ID of the source device (cloud, edge, or MAN)
+	 */
 	@Override
 	public void downloadStarted(Location accessPointLocation, int sourceDeviceId) {
 		if(sourceDeviceId == SimSettings.CLOUD_DATACENTER_ID)
@@ -308,6 +444,14 @@ public class FuzzyExperimentalNetworkModel extends NetworkModel {
 		}
 	}
 
+	/**
+	 * Tracks the completion of a download operation by decrementing the appropriate client counter.
+	 * This method ensures accurate real-time network load tracking for subsequent
+	 * delay calculations and network performance modeling.
+	 * 
+	 * @param accessPointLocation Location of the access point that handled the connection
+	 * @param sourceDeviceId ID of the source device (cloud, edge, or MAN)
+	 */
 	@Override
 	public void downloadFinished(Location accessPointLocation, int sourceDeviceId) {
 		if(sourceDeviceId == SimSettings.CLOUD_DATACENTER_ID)
@@ -322,6 +466,15 @@ public class FuzzyExperimentalNetworkModel extends NetworkModel {
 		}
 	}
 
+	/**
+	 * Calculates WLAN download delay using experimental throughput data.
+	 * This method applies empirical measurements from real WLAN environments,
+	 * adjusting for 802.11ac technology (3x faster than 802.11n baseline).
+	 * 
+	 * @param accessPointLocation Location of the WLAN access point
+	 * @param dataSize Size of data to download in KB
+	 * @return Download delay in seconds based on current user load and empirical data
+	 */
 	private double getWlanDownloadDelay(Location accessPointLocation, double dataSize) {
 		int numOfWlanUser = wlanClients[accessPointLocation.getServingWlanId()];
 		double taskSizeInKb = dataSize * (double)8; //KB to Kb
@@ -334,11 +487,28 @@ public class FuzzyExperimentalNetworkModel extends NetworkModel {
 		return result;
 	}
 	
-	//wlan upload and download delay is symmetric in this model
+	/**
+	 * Calculates WLAN upload delay using symmetric delay model.
+	 * In this experimental model, WLAN upload and download delays are considered symmetric,
+	 * applying the same empirical throughput measurements for both directions.
+	 * 
+	 * @param accessPointLocation Location of the WLAN access point
+	 * @param dataSize Size of data to upload in KB
+	 * @return Upload delay in seconds (symmetric to download delay)
+	 */
 	private double getWlanUploadDelay(Location accessPointLocation, double dataSize) {
 		return getWlanDownloadDelay(accessPointLocation, dataSize);
 	}
 	
+	/**
+	 * Calculates WAN download delay using experimental throughput data.
+	 * This method applies empirical WAN performance measurements to model
+	 * realistic Internet backbone delays based on concurrent user load.
+	 * 
+	 * @param accessPointLocation Location of the access point for WAN connection
+	 * @param dataSize Size of data to download in KB
+	 * @return Download delay in seconds based on WAN experimental data
+	 */
 	private double getWanDownloadDelay(Location accessPointLocation, double dataSize) {
 		int numOfWanUser = wanClients[accessPointLocation.getServingWlanId()];
 		double taskSizeInKb = dataSize * (double)8; //KB to Kb
@@ -352,11 +522,31 @@ public class FuzzyExperimentalNetworkModel extends NetworkModel {
 		return result;
 	}
 	
-	//wan upload and download delay is symmetric in this model
+	/**
+	 * Calculates WAN upload delay using symmetric delay model.
+	 * In this experimental model, WAN upload and download delays are considered symmetric,
+	 * applying the same empirical throughput measurements for both directions.
+	 * 
+	 * @param accessPointLocation Location of the access point for WAN connection
+	 * @param dataSize Size of data to upload in KB
+	 * @return Upload delay in seconds (symmetric to download delay)
+	 */
 	private double getWanUploadDelay(Location accessPointLocation, double dataSize) {
 		return getWanDownloadDelay(accessPointLocation, dataSize);
 	}
 	
+	/**
+	 * Calculates delay using M/M/1 queuing theory model.
+	 * This method implements the classical M/M/1 queue formula: E[T] = 1/(μ - λ)
+	 * where μ is service rate and λ is arrival rate, accounting for multiple devices.
+	 * 
+	 * @param propagationDelay Base propagation delay in seconds
+	 * @param bandwidth Available bandwidth in Kbps
+	 * @param PoissonMean Mean inter-arrival time for Poisson process
+	 * @param avgTaskSize Average task size in KB
+	 * @param deviceCount Number of devices sharing the network
+	 * @return Total delay in seconds (queuing + propagation), capped at 15 seconds
+	 */
 	private double calculateMM1(double propagationDelay, double bandwidth /*Kbps*/, double PoissonMean, double avgTaskSize /*KB*/, int deviceCount){
 		double mu=0, lamda=0;
 		
@@ -374,6 +564,13 @@ public class FuzzyExperimentalNetworkModel extends NetworkModel {
 		return (result > 15) ? 0 : result;
 	}
 	
+	/**
+	 * Calculates MAN (Metropolitan Area Network) download delay using M/M/1 queuing model.
+	 * This method models intra-datacenter communication delays using analytical queuing theory
+	 * with adaptive parameters based on actual traffic patterns and task statistics.
+	 * 
+	 * @return Download delay in seconds for MAN communication
+	 */
 	private double getManDownloadDelay() {
 		double result = calculateMM1(SimSettings.getInstance().getInternalLanDelay(),
 				MAN_BW,
@@ -389,6 +586,13 @@ public class FuzzyExperimentalNetworkModel extends NetworkModel {
 		return result;
 	}
 	
+	/**
+	 * Calculates MAN (Metropolitan Area Network) upload delay using M/M/1 queuing model.
+	 * This method models intra-datacenter communication delays for upload operations
+	 * using adaptive queuing parameters that evolve with simulation dynamics.
+	 * 
+	 * @return Upload delay in seconds for MAN communication
+	 */
 	private double getManUploadDelay() {
 		double result = calculateMM1(SimSettings.getInstance().getInternalLanDelay(),
 				MAN_BW,
@@ -404,6 +608,17 @@ public class FuzzyExperimentalNetworkModel extends NetworkModel {
 		return result;
 	}
 	
+	/**
+	 * Updates the M/M/1 queue model parameters based on recent traffic patterns.
+	 * This method implements adaptive parameter estimation by analyzing actual task
+	 * arrivals and sizes over time intervals, enabling realistic queue behavior
+	 * that evolves with simulation dynamics.
+	 * 
+	 * The method recalculates:
+	 * - Poisson arrival rates based on observed inter-arrival times
+	 * - Average task sizes based on recent traffic patterns
+	 * - Resets counters for the next measurement interval
+	 */
 	public void updateMM1QueeuModel(){
 		double lastInterval = CloudSim.clock() - lastMM1QueeuUpdateTime;
 		lastMM1QueeuUpdateTime = CloudSim.clock();

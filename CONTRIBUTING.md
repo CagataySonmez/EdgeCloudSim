@@ -1,113 +1,217 @@
-# Our Philosophy
+# Contributing to EdgeCloudSim
 
-EdgeCloudSim is an open source project, so every contributor is welcome!
-EdgeCloudSim has not been fully tested regarding to many different scenarios.
-There may be some bugs which are waiting to be fixed.
-You can add new features on EdgeCloudSim as well.
-Here is the list of needed features:
+Thank you for your interest in contributing to EdgeCloudSim! We welcome contributions from the community and are pleased to have you join us.
 
-## Needed Features
+## Table of Contents
+- [Code of Conduct](#code-of-conduct)
+- [How Can I Contribute?](#how-can-i-contribute)
+- [Reporting Bugs](#reporting-bugs)
+- [Suggesting Enhancements](#suggesting-enhancements)
+- [Development Setup](#development-setup)
+- [Pull Request Process](#pull-request-process)
 
-* Mist computing features (executing tasks on mobile device)
-* Incorporating cellular access network model into EdgeCloudSim (3G/4G/5G)
-* Task migration among the Edge or Cloud VMs
-* Energy consumption model for the mobile and edge devices as well as the cloud datacenters
-* Adding probabilistic network failure model by considering the congestion or other parameters such as the distance between mobile device and the WiFi access point.
-* Visual tool for displaying the network topology
+## Code of Conduct
 
-# Reporting Bugs
+This project and everyone participating in it is governed by our commitment to creating a welcoming and inclusive environment. Please be respectful and constructive in all interactions.
 
-Before reporting a bug, please search previously reported bugs to avoid duplication.
-After you are sure that you found a non-reported bug, please create a new issue under the "Issues" section of the EdgeCloudSim project.
-Please clearly describe the problem so that we can easily understand it.
-We kindly request you to use following format while reporting bugs:
-<pre>
-<b>Description</b>
-Clear explanation of the bug. What is the wrong behavior, and what is the expected one.
+## How Can I Contribute?
 
-<b>Steps to reproduce</b>
-please indicate the steps to reproduce related bug.
+### Types of Contributions We Welcome:
+- 🐛 **Bug fixes**: Help us identify and fix issues
+- ✨ **New features**: Add functionality that benefits the community
+- 📚 **Documentation**: Improve existing docs or add new ones
+- 🧪 **Testing**: Add test cases or improve test coverage
+- 🔧 **Code quality**: Refactoring, performance improvements
 
-<b>Frequency</b>
-Please state the the probability of occurrence of the bug, e.g.  rare, random, sometimes, always
+EdgeCloudSim is actively developed and tested across many scenarios, but there may still be edge cases and bugs waiting to be discovered.
 
-<b>Additional Information</b>
-If you want to specify more things, add additional notes here
-</pre>
+## Reporting Bugs
 
-# How to Contribute to EdgeCloudSim
+We use GitHub Issues to track bugs. Before creating a new issue:
 
-You can simply follow below steps to contribute to EdgeCloudSim:
+1. **Search existing issues** to avoid duplicates
+2. **Check the latest version** to see if the issue persists
+3. **Gather system information** (OS, Java version, EdgeCloudSim version)
 
-1. Create a working copy (fork the project & clone it)
-2. Specify a new remote upstream repository
-3. Push your modification to the origin repository
-4. Create a new pull request
+### Bug Report Template
 
+When creating a bug report, please include:
 
-Detailed explanation of the steps are given below:
+```markdown
+**Description**
+A clear and concise description of what the bug is.
 
+**Environment**
+- OS: [e.g. Ubuntu 20.04, Windows 10]
+- Java Version: [e.g. OpenJDK 11]
+- EdgeCloudSim Version: [e.g. v4.0]
 
-## Step 1: Create a working copy (fork the project & clone it)
-Open https://github.com/CagataySonmez/EdgeCloudSim on your browser and  press the "fork" button to create a copy of the repository in your own GitHub account.
-Then find forked EdgeCloudSim project in your GitHub account and copy the url for cloning.
-Finally clone this project by using 'git clone' command:
-```
-$ git clone https://github.com/YOUR_USERNAME/EdgeCloudSim.git
-```
+**Steps to Reproduce**
+1. Go to '...'
+2. Click on '....'
+3. Run command '....'
+4. See error
 
-## Step 2: Specify a new remote upstream repository
-In order to sync the a forked repository with the original repository, you need to set up a new remote that points to the original project.
-Change directory to the forked repository and use 'git add remote' command to specify a new remote upstream repository.
-```
-$ cd EdgeCloudSim
-$ git remote add upstream https://github.com/CagataySonmez/EdgeCloudSim.git
-```
+**Expected Behavior**
+A clear description of what you expected to happen.
 
-After this step, you will have two remotes on your local:
+**Actual Behavior**
+A clear description of what actually happened.
 
-- _origin_: points to the forked project with read and write permissions.
-- _upstream_: points to the main project with read permission only.
-
-
-## Step 3: Push your modification to the origin repository
-
-While you are working on your own fork, please use separate and isolated branches for each topic. For new features and improvements, make your pull request to the development branch on the upstream. If you are working on bug fixes or critical updates, make your pull request to the master branch.
-
-**Please use meaningful branch names and commit messages so that we can easily understand what has been changed.**
-You can use "bugfix/" prefix if you fix a bug, or use a "feature/" if you add a new feature.
-
-For example, if you are fixing a bug, firstly sync with the upstream master branch:
-```
-$ git checkout master
-$ git pull upstream master
+**Additional Context**
+- Error logs/stack traces
+- Configuration files (if relevant)
+- Screenshots (if applicable)
 ```
 
-If there are conflicts, resolve them and commit the merge. Then push the merge into your remote.
-```
-$ git push origin master
+## Suggesting Enhancements
+
+We welcome feature requests! Please:
+
+1. **Check existing issues** for similar requests
+2. **Describe the problem** your feature would solve
+3. **Explain your proposed solution** in detail
+4. **Consider the scope** - will this benefit many users?
+
+## Development Setup
+
+### Prerequisites
+- Java 8 or higher
+- Eclipse IDE (recommended) or any Java IDE
+- Git
+
+### Setting Up Your Environment
+
+1. **Fork and Clone**
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/EdgeCloudSim.git
+   cd EdgeCloudSim
+   ```
+
+2. **Add Upstream Remote**
+   ```bash
+   git remote add upstream https://github.com/CagataySonmez/EdgeCloudSim.git
+   ```
+
+3. **Import into IDE**
+   - Open Eclipse/IntelliJ
+   - Import as existing Java project
+   - Ensure all dependencies in `lib/` folder are included
+
+4. **Verify Setup**
+   - Run a sample application to ensure everything works
+   - Check that all imports resolve correctly
+
+## Pull Request Process
+
+### ⚠️ IMPORTANT: All pull requests MUST target the `development` branch
+
+### Workflow Overview
+
+### Workflow Overview
+
+1. **Create a feature branch** from `development`
+2. **Make your changes** with clear commits
+3. **Test thoroughly** before submitting
+4. **Submit a pull request** to `development` branch
+5. **Respond to review feedback** if needed
+
+### Detailed Steps
+
+#### 1. Sync with Upstream Development Branch
+```bash
+git checkout development
+git pull upstream development
+git push origin development
 ```
 
-Now you are in sync with the upstream. Create a new branch and checkout to start working on the bug, then push your new branch to your remote
-```
-$ git checkout -b bugfix/issue#1234
-$ git push -u origin bugfix/issue#1234
-```
+#### 2. Create a Feature Branch
+Use descriptive branch names with prefixes:
+- `feature/` for new features
+- `bugfix/` for bug fixes  
+- `docs/` for documentation
+- `test/` for testing improvements
 
-Implement your changes and commit them, then finally push them to the remote branch
-```
-$ git commit -m "issue#1234: prevent simulation freeze on oom"
-$ git commit -m "issue#1234: prevent simulation freeze on timeout"
-$ ...
-$ git push origin bugfix/issue#1234
+```bash
+git checkout -b feature/new-mobility-model
+git push -u origin feature/new-mobility-model
 ```
 
+#### 3. Make Your Changes
 
-## Step 4: Create a new pull request
+**Commit Guidelines:**
+- Write clear, descriptive commit messages
+- Use present tense ("Add feature" not "Added feature")
+- Reference issues when applicable (`Fixes #123`)
+- Keep commits atomic (one logical change per commit)
 
-Open your GitHub repositories on your web browser, and find your forked EdgeCloudSim project.
-Your new branch will be listed at the top and you will see "Compare & pull request" button next to your new branch.
-Press this button, and create a pull request.
-Please select select correct repository and branch for the **base fork** and **base** options.
-According to the example given in step 3; "base fork" should be YOUR_USERNAME/EdgeCloudSim.git and "base" should be master.
-**Please type sufficient title and description for your pull request.**
+```bash
+git commit -m "feat: implement random waypoint mobility model
+
+- Add RandomWaypointMobility class
+- Update MobilityModule to support new model
+- Add configuration parameters for waypoint generation
+
+Fixes #45"
+```
+
+#### 4. Test Your Changes
+
+Before submitting:
+- [ ] Code compiles without errors
+- [ ] All existing tests pass
+- [ ] New functionality has been tested
+- [ ] Documentation updated if needed
+
+#### 5. Submit Pull Request
+
+**Target Branch:** Always select `development` as the base branch
+
+**PR Checklist:**
+- [ ] Branch is up-to-date with `development`
+- [ ] All tests pass
+- [ ] Code follows project conventions
+- [ ] Documentation updated
+- [ ] Clear description of changes
+
+**PR Template:**
+```markdown
+## Description
+Brief description of changes made.
+
+## Type of Change
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Documentation update
+- [ ] Performance improvement
+- [ ] Other (please describe)
+
+## Testing
+Describe how you tested your changes.
+
+## Related Issues
+Closes #(issue number)
+```
+
+### Review Process
+
+1. **Automated Checks**: Your PR will be automatically checked
+2. **Code Review**: Maintainers will review your changes
+3. **Feedback**: Address any requested changes
+4. **Approval**: Once approved, your PR will be merged
+
+### Branch Protection Rules
+
+- ❌ **Direct pushes to `master`** are not allowed
+- ❌ **Pull requests to `master`** will be rejected
+- ✅ **All changes must go through `development`** branch
+- ✅ **Code review is required** before merging
+
+## Questions?
+
+If you have questions about contributing:
+- Check existing [Issues](https://github.com/CagataySonmez/EdgeCloudSim/issues)
+- Create a [Discussion](https://groups.google.com/g/edgecloudsim)
+- Contact the maintainers
+
+Thank you for contributing to EdgeCloudSim! 🚀

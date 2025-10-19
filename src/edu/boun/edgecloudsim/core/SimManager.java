@@ -32,28 +32,63 @@ import edu.boun.edgecloudsim.network.NetworkModel;
 import edu.boun.edgecloudsim.utils.TaskProperty;
 import edu.boun.edgecloudsim.utils.SimLogger;
 
+/**
+ * Simulation Manager - Main coordination entity for EdgeCloudSim simulations.
+ * 
+ * This singleton class serves as the central coordinator for all simulation components,
+ * managing the lifecycle and interactions between network models, mobility models,
+ * edge orchestrators, and infrastructure managers. It extends SimEntity to participate
+ * in the discrete event simulation engine and handles critical simulation events.
+ * 
+ * Key responsibilities:
+ * - Coordinates simulation initialization and execution flow
+ * - Manages task generation and distribution across the simulation environment  
+ * - Monitors VM states and resource utilization across edge and cloud infrastructure
+ * - Handles simulation progress tracking and logging operations
+ * - Provides centralized access to all simulation components and models
+ */
 public class SimManager extends SimEntity {
-	private static final int CREATE_TASK = 0;
-	private static final int CHECK_ALL_VM = 1;
-	private static final int GET_LOAD_LOG = 2;
-	private static final int PRINT_PROGRESS = 3;
-	private static final int STOP_SIMULATION = 4;
+	// Event type constants for discrete event simulation
+	private static final int CREATE_TASK = 0;        // Task generation event
+	private static final int CHECK_ALL_VM = 1;       // VM monitoring event  
+	private static final int GET_LOAD_LOG = 2;       // Load logging event
+	private static final int PRINT_PROGRESS = 3;     // Progress reporting event
+	private static final int STOP_SIMULATION = 4;    // Simulation termination event
 	
-	private String simScenario;
-	private String orchestratorPolicy;
-	private int numOfMobileDevice;
-	private NetworkModel networkModel;
-	private MobilityModel mobilityModel;
-	private ScenarioFactory scenarioFactory;
-	private EdgeOrchestrator edgeOrchestrator;
-	private EdgeServerManager edgeServerManager;
-	private CloudServerManager cloudServerManager;
-	private MobileServerManager mobileServerManager;
-	private LoadGeneratorModel loadGeneratorModel;
-	private MobileDeviceManager mobileDeviceManager;
+	// Simulation configuration parameters
+	private String simScenario;            // Current simulation scenario name
+	private String orchestratorPolicy;     // Selected orchestration policy
+	private int numOfMobileDevice;         // Number of mobile devices in simulation
 	
+	// Core simulation models and components
+	private NetworkModel networkModel;              // Network delay and bandwidth model
+	private MobilityModel mobilityModel;            // Mobile device movement model  
+	private ScenarioFactory scenarioFactory;       // Factory for creating scenario-specific components
+	private EdgeOrchestrator edgeOrchestrator;      // Task orchestration and placement logic
+	
+	// Infrastructure management components
+	private EdgeServerManager edgeServerManager;     // Edge datacenter and VM management
+	private CloudServerManager cloudServerManager;   // Cloud datacenter and VM management
+	private MobileServerManager mobileServerManager; // Mobile device processing unit management
+	
+	// Task generation and device management
+	private LoadGeneratorModel loadGeneratorModel;   // Task generation patterns and workload simulation
+	private MobileDeviceManager mobileDeviceManager; // Mobile device lifecycle management
+	
+	// Singleton instance
 	private static SimManager instance = null;
 	
+	/**
+	 * Constructs the SimManager and initializes all simulation components.
+	 * Sets up task generation, mobility models, network models, and infrastructure managers
+	 * according to the specified scenario and orchestration policy.
+	 * 
+	 * @param _scenarioFactory Factory for creating scenario-specific simulation components
+	 * @param _numOfMobileDevice Number of mobile devices to simulate
+	 * @param _simScenario Name of the simulation scenario to execute
+	 * @param _orchestratorPolicy Task orchestration policy to use
+	 * @throws Exception if initialization of any component fails
+	 */
 	public SimManager(ScenarioFactory _scenarioFactory, int _numOfMobileDevice, String _simScenario, String _orchestratorPolicy) throws Exception {
 		super("SimManager");
 		simScenario = _simScenario;
@@ -87,23 +122,32 @@ public class SimManager extends SimEntity {
 		cloudServerManager = scenarioFactory.getCloudServerManager();
 		cloudServerManager.initialize();
 		
-		//Create Physical Servers on mobile devices
+		// Create Physical Servers on mobile devices for local processing
 		mobileServerManager = scenarioFactory.getMobileServerManager();
 		mobileServerManager.initialize();
 
-		//Create Client Manager
+		// Create Client Manager for mobile device lifecycle management
 		mobileDeviceManager = scenarioFactory.getMobileDeviceManager();
 		mobileDeviceManager.initialize();
 		
 		instance = this;
 	}
 	
+	/**
+	 * Gets the singleton instance of SimManager.
+	 * 
+	 * @return The current SimManager instance
+	 */
 	public static SimManager getInstance(){
 		return instance;
 	}
 	
 	/**
-	 * Triggering CloudSim to start simulation
+	 * Starts the EdgeCloudSim simulation by triggering CloudSim engine.
+	 * Initializes all datacenters, creates VMs, schedules initial events,
+	 * and begins the discrete event simulation loop.
+	 * 
+	 * @throws Exception if simulation initialization or execution fails
 	 */
 	public void startSimulation() throws Exception{
 		//Starts the simulation
@@ -128,54 +172,115 @@ public class SimManager extends SimEntity {
 		return simScenario;
 	}
 
+	/**
+	 * Gets the current orchestration policy name.
+	 * 
+	 * @return Name of the task orchestration policy being used
+	 */
 	public String getOrchestratorPolicy(){
 		return orchestratorPolicy;
 	}
 	
+	/**
+	 * Gets the scenario factory used for creating simulation components.
+	 * 
+	 * @return ScenarioFactory instance for component creation
+	 */
 	public ScenarioFactory getScenarioFactory(){
 		return scenarioFactory;
 	}
 	
+	/**
+	 * Gets the number of mobile devices in the simulation.
+	 * 
+	 * @return Total number of simulated mobile devices
+	 */
 	public int getNumOfMobileDevice(){
 		return numOfMobileDevice;
 	}
 	
+	/**
+	 * Gets the network model for delay and bandwidth simulation.
+	 * 
+	 * @return NetworkModel instance managing network characteristics
+	 */
 	public NetworkModel getNetworkModel(){
 		return networkModel;
 	}
 
+	/**
+	 * Gets the mobility model for mobile device movement simulation.
+	 * 
+	 * @return MobilityModel instance managing device locations and movement
+	 */
 	public MobilityModel getMobilityModel(){
 		return mobilityModel;
 	}
 	
+	/**
+	 * Gets the edge orchestrator for task placement decisions.
+	 * 
+	 * @return EdgeOrchestrator instance managing task scheduling and placement
+	 */
 	public EdgeOrchestrator getEdgeOrchestrator(){
 		return edgeOrchestrator;
 	}
 	
+	/**
+	 * Gets the edge server manager for edge infrastructure control.
+	 * 
+	 * @return EdgeServerManager instance managing edge datacenters and VMs
+	 */
 	public EdgeServerManager getEdgeServerManager(){
 		return edgeServerManager;
 	}
 	
+	/**
+	 * Gets the cloud server manager for cloud infrastructure control.
+	 * 
+	 * @return CloudServerManager instance managing cloud datacenters and VMs
+	 */
 	public CloudServerManager getCloudServerManager(){
 		return cloudServerManager;
 	}
 	
+	/**
+	 * Gets the mobile server manager for mobile device processing units.
+	 * 
+	 * @return MobileServerManager instance managing mobile computing resources
+	 */
 	public MobileServerManager getMobileServerManager(){
 		return mobileServerManager;
 	}
 
+	/**
+	 * Gets the load generator model for task generation patterns.
+	 * 
+	 * @return LoadGeneratorModel instance managing workload simulation
+	 */
 	public LoadGeneratorModel getLoadGeneratorModel(){
 		return loadGeneratorModel;
 	}
 	
+	/**
+	 * Gets the mobile device manager for device lifecycle management.
+	 * 
+	 * @return MobileDeviceManager instance managing mobile device operations
+	 */
 	public MobileDeviceManager getMobileDeviceManager(){
 		return mobileDeviceManager;
 	}
 	
+	/**
+	 * Starts the simulation entity and initializes all VM lists and event scheduling.
+	 * Submits VM lists from edge, cloud, and mobile servers to the mobile device manager,
+	 * schedules all task creation events, and initiates periodic monitoring events.
+	 */
 	@Override
 	public void startEntity() {
 		int hostCounter=0;
 
+		// Submit edge server VM lists to mobile device manager
 		for(int i= 0; i<edgeServerManager.getDatacenterList().size(); i++) {
 			List<? extends Host> list = edgeServerManager.getDatacenterList().get(i).getHostList();
 			for (int j=0; j < list.size(); j++) {
@@ -184,33 +289,43 @@ public class SimManager extends SimEntity {
 			}
 		}
 		
+		// Submit cloud server VM lists to mobile device manager
 		for(int i = 0; i<SimSettings.getInstance().getNumOfCloudHost(); i++) {
 			mobileDeviceManager.submitVmList(cloudServerManager.getVmList(i));
 		}
 
+		// Submit mobile server VM lists to mobile device manager
 		for(int i=0; i<numOfMobileDevice; i++){
 			if(mobileServerManager.getVmList(i) != null)
 				mobileDeviceManager.submitVmList(mobileServerManager.getVmList(i));
 		}
 		
-		//Creation of tasks are scheduled here!
+		// Schedule all task creation events based on load generator model
 		for(int i=0; i< loadGeneratorModel.getTaskList().size(); i++)
 			schedule(getId(), loadGeneratorModel.getTaskList().get(i).getStartTime(), CREATE_TASK, loadGeneratorModel.getTaskList().get(i));
 		
-		//Periodic event loops starts from here!
-		schedule(getId(), 5, CHECK_ALL_VM);
-		schedule(getId(), SimSettings.getInstance().getSimulationTime()/100, PRINT_PROGRESS);
-		schedule(getId(), SimSettings.getInstance().getVmLoadLogInterval(), GET_LOAD_LOG);
-		schedule(getId(), SimSettings.getInstance().getSimulationTime(), STOP_SIMULATION);
+		// Schedule periodic monitoring and control events
+		schedule(getId(), 5, CHECK_ALL_VM);                                                    // VM status monitoring
+		schedule(getId(), SimSettings.getInstance().getSimulationTime()/100, PRINT_PROGRESS); // Progress reporting
+		schedule(getId(), SimSettings.getInstance().getVmLoadLogInterval(), GET_LOAD_LOG);     // Load logging
+		schedule(getId(), SimSettings.getInstance().getSimulationTime(), STOP_SIMULATION);     // Simulation termination
 		
 		SimLogger.printLine("Done.");
 	}
 
+	/**
+	 * Processes discrete events during simulation execution.
+	 * Handles task creation, VM monitoring, load logging, progress reporting,
+	 * and simulation termination events in a synchronized manner.
+	 * 
+	 * @param ev SimEvent containing event type and associated data
+	 */
 	@Override
 	public void processEvent(SimEvent ev) {
 		synchronized(this){
 			switch (ev.getTag()) {
 			case CREATE_TASK:
+				// Handle task creation and submission to mobile device manager
 				try {
 					TaskProperty edgeTask = (TaskProperty) ev.getData();
 					mobileDeviceManager.submitTask(edgeTask);						
@@ -220,6 +335,7 @@ public class SimManager extends SimEntity {
 				}
 				break;
 			case CHECK_ALL_VM:
+				// Verify all VMs have been successfully created
 				int totalNumOfVm = SimSettings.getInstance().getNumOfEdgeVMs();
 				if(EdgeVmAllocationPolicy_Custom.getCreatedVmNum() != totalNumOfVm){
 					SimLogger.printLine("All VMs cannot be created! Terminating simulation...");
@@ -227,15 +343,18 @@ public class SimManager extends SimEntity {
 				}
 				break;
 			case GET_LOAD_LOG:
+				// Log utilization statistics for edge, cloud, and mobile servers
 				SimLogger.getInstance().addVmUtilizationLog(
 						CloudSim.clock(),
 						edgeServerManager.getAvgUtilization(),
 						cloudServerManager.getAvgUtilization(),
 						mobileServerManager.getAvgUtilization());
 				
+				// Schedule next load logging event
 				schedule(getId(), SimSettings.getInstance().getVmLoadLogInterval(), GET_LOAD_LOG);
 				break;
 			case PRINT_PROGRESS:
+				// Display simulation progress as percentage
 				int progress = (int)((CloudSim.clock()*100)/SimSettings.getInstance().getSimulationTime());
 				if(progress % 10 == 0)
 					SimLogger.print(Integer.toString(progress));
@@ -246,6 +365,7 @@ public class SimManager extends SimEntity {
 
 				break;
 			case STOP_SIMULATION:
+				// Terminate simulation and finalize logging
 				SimLogger.printLine("100");
 				CloudSim.terminateSimulation();
 				try {
@@ -262,6 +382,11 @@ public class SimManager extends SimEntity {
 		}
 	}
 
+	/**
+	 * Shuts down the simulation entity by terminating all datacenters.
+	 * Properly cleans up edge, cloud, and mobile server infrastructures
+	 * to ensure graceful simulation termination.
+	 */
 	@Override
 	public void shutdownEntity() {
 		edgeServerManager.terminateDatacenters();

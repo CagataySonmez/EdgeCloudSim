@@ -24,12 +24,28 @@ import edu.boun.edgecloudsim.task_generator.IdleActiveLoadGenerator;
 import edu.boun.edgecloudsim.task_generator.LoadGeneratorModel;
 import edu.boun.edgecloudsim.network.NetworkModel;
 
+/**
+ * Sample scenario factory for mobile-edge hybrid processing scenarios.
+ * Creates EdgeCloudSim components configured for mobile device local processing
+ * alongside edge server offloading with empirical network modeling.
+ */
 public class SampleScenarioFactory implements ScenarioFactory {
+	/** Number of mobile devices in the simulation */
 	private int numOfMobileDevice;
+	/** Total simulation time in seconds */
 	private double simulationTime;
+	/** Orchestration policy (ONLY_EDGE, ONLY_MOBILE, HYBRID) */
 	private String orchestratorPolicy;
+	/** Simulation scenario identifier for configuration */
 	private String simScenario;
 	
+	/**
+	 * Constructor for sample scenario factory.
+	 * @param _numOfMobileDevice Number of mobile devices in simulation
+	 * @param _simulationTime Total simulation duration in seconds
+	 * @param _orchestratorPolicy Orchestration policy for task placement decisions
+	 * @param _simScenario Scenario identifier for configuration selection
+	 */
 	SampleScenarioFactory(int _numOfMobileDevice,
 			double _simulationTime,
 			String _orchestratorPolicy,
@@ -40,41 +56,74 @@ public class SampleScenarioFactory implements ScenarioFactory {
 		simScenario = _simScenario;
 	}
 	
+	/**
+	 * Creates load generator model for realistic mobile app usage patterns.
+	 * @return IdleActiveLoadGenerator that simulates periods of activity and idleness
+	 */
 	@Override
 	public LoadGeneratorModel getLoadGeneratorModel() {
 		return new IdleActiveLoadGenerator(numOfMobileDevice, simulationTime, simScenario);
 	}
 
+	/**
+	 * Creates sample edge orchestrator supporting mobile-edge hybrid processing.
+	 * @return SampleEdgeOrchestrator with configured orchestration policy
+	 */
 	@Override
 	public EdgeOrchestrator getEdgeOrchestrator() {
 		return new SampleEdgeOrchestrator(orchestratorPolicy, simScenario);
 	}
 
+	/**
+	 * Creates mobility model for mobile device movement simulation.
+	 * @return NomadicMobility model for realistic user mobility patterns
+	 */
 	@Override
 	public MobilityModel getMobilityModel() {
 		return new NomadicMobility(numOfMobileDevice,simulationTime);
 	}
 
+	/**
+	 * Creates network model with empirical WLAN throughput characteristics.
+	 * @return SampleNetworkModel based on real-world wireless measurements
+	 */
 	@Override
 	public NetworkModel getNetworkModel() {
 		return new SampleNetworkModel(numOfMobileDevice, simScenario);
 	}
 
+	/**
+	 * Creates edge server manager for managing edge computing resources.
+	 * @return DefaultEdgeServerManager for standard edge server operations
+	 */
 	@Override
 	public EdgeServerManager getEdgeServerManager() {
 		return new DefaultEdgeServerManager();
 	}
 	
+	/**
+	 * Creates cloud server manager for managing cloud computing resources.
+	 * @return DefaultCloudServerManager for standard cloud server operations
+	 */
 	@Override
 	public CloudServerManager getCloudServerManager() {
 		return new DefaultCloudServerManager();
 	}
 
+	/**
+	 * Creates mobile device manager for hybrid mobile-edge task handling.
+	 * @return SampleMobileDeviceManager supporting local and remote processing
+	 * @throws Exception if mobile device manager creation fails
+	 */
 	@Override
 	public MobileDeviceManager getMobileDeviceManager() throws Exception {
 		return new SampleMobileDeviceManager();
 	}
 
+	/**
+	 * Creates mobile server manager for mobile device processing units.
+	 * @return SampleMobileServerManager configured for specified device count
+	 */
 	@Override
 	public MobileServerManager getMobileServerManager() {
 		return new SampleMobileServerManager(numOfMobileDevice);

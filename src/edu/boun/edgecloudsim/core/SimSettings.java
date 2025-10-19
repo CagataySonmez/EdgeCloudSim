@@ -29,98 +29,129 @@ import org.w3c.dom.NodeList;
 
 import edu.boun.edgecloudsim.utils.SimLogger;
 
+/**
+ * Singleton class providing system-wide simulation settings for EdgeCloudSim.
+ * Loads configuration from properties and XML files and provides centralized
+ * access to all simulation parameters including network settings, device
+ * configurations, and orchestration policies.
+ */
 public class SimSettings {
 	private static SimSettings instance = null;
 	private Document edgeDevicesDoc = null;
 
+	/** Simulation time when client activities begin (in seconds) */
 	public static final double CLIENT_ACTIVITY_START_TIME = 10;
 
-	//enumarations for the VM types
+	/** Enumeration for different types of virtual machines in the simulation */
 	public static enum VM_TYPES { MOBILE_VM, EDGE_VM, CLOUD_VM }
 
-	//enumarations for the VM types
+	/** Enumeration for different types of network delays in edge computing */
 	public static enum NETWORK_DELAY_TYPES { WLAN_DELAY, MAN_DELAY, WAN_DELAY, GSM_DELAY }
 
-	//predifined IDs for the components.
+	/** Predefined component IDs for different simulation entities */
 	public static final int CLOUD_DATACENTER_ID = 1000;
 	public static final int MOBILE_DATACENTER_ID = 1001;
 	public static final int EDGE_ORCHESTRATOR_ID = 1002;
 	public static final int GENERIC_EDGE_DEVICE_ID = 1003;
 
-	//delimiter for output file.
+	/** Delimiter used in output files for data separation */
 	public static final String DELIMITER = ";";
 
-	private double SIMULATION_TIME; //minutes unit in properties file
-	private double WARM_UP_PERIOD; //minutes unit in properties file
-	private double INTERVAL_TO_GET_VM_LOAD_LOG; //minutes unit in properties file
-	private double INTERVAL_TO_GET_LOCATION_LOG; //minutes unit in properties file
-	private double INTERVAL_TO_GET_AP_DELAY_LOG; //minutes unit in properties file
-	private boolean FILE_LOG_ENABLED; //boolean to check file logging option
-	private boolean DEEP_FILE_LOG_ENABLED; //boolean to check deep file logging option
+	// Simulation timing parameters (converted from minutes in properties file)
+	private double SIMULATION_TIME;
+	private double WARM_UP_PERIOD;
+	private double INTERVAL_TO_GET_VM_LOAD_LOG;
+	private double INTERVAL_TO_GET_LOCATION_LOG;
+	private double INTERVAL_TO_GET_AP_DELAY_LOG;
+	
+	// Logging configuration parameters
+	private boolean FILE_LOG_ENABLED;
+	private boolean DEEP_FILE_LOG_ENABLED;
 
+	// Mobile device configuration parameters
 	private int MIN_NUM_OF_MOBILE_DEVICES;
 	private int MAX_NUM_OF_MOBILE_DEVICES;
 	private int MOBILE_DEVICE_COUNTER_SIZE;
 	private int WLAN_RANGE;
 
+	// Edge infrastructure configuration parameters
 	private int NUM_OF_EDGE_DATACENTERS;
 	private int NUM_OF_EDGE_HOSTS;
 	private int NUM_OF_EDGE_VMS;
 	private int NUM_OF_PLACE_TYPES;
 
-	private double WAN_PROPAGATION_DELAY; //seconds unit in properties file
-	private double GSM_PROPAGATION_DELAY; //seconds unit in properties file
-	private double LAN_INTERNAL_DELAY; //seconds unit in properties file
-	private int BANDWITH_WLAN; //Mbps unit in properties file
-	private int BANDWITH_MAN; //Mbps unit in properties file
-	private int BANDWITH_WAN; //Mbps unit in properties file
-	private int BANDWITH_GSM; //Mbps unit in properties file
+	// Network delay and bandwidth parameters (converted from properties file units)
+	private double WAN_PROPAGATION_DELAY;  // Wide Area Network delay (seconds)
+	private double GSM_PROPAGATION_DELAY;  // GSM network delay (seconds)
+	private double LAN_INTERNAL_DELAY;     // Local Area Network delay (seconds)
+	private int BANDWITH_WLAN;             // WLAN bandwidth (Mbps)
+	private int BANDWITH_MAN;              // Metropolitan Area Network bandwidth (Mbps)
+	private int BANDWITH_WAN;              // Wide Area Network bandwidth (Mbps)
+	private int BANDWITH_GSM;              // GSM network bandwidth (Mbps)
 
+	// Cloud infrastructure configuration parameters
 	private int NUM_OF_HOST_ON_CLOUD_DATACENTER;
 	private int NUM_OF_VM_ON_CLOUD_HOST;
-	private int CORE_FOR_CLOUD_VM;
-	private int MIPS_FOR_CLOUD_VM; //MIPS
-	private int RAM_FOR_CLOUD_VM; //MB
-	private int STORAGE_FOR_CLOUD_VM; //Byte
+	private int CORE_FOR_CLOUD_VM;         // CPU cores for cloud VMs
+	private int MIPS_FOR_CLOUD_VM;         // Processing power (MIPS)
+	private int RAM_FOR_CLOUD_VM;          // Memory allocation (MB)
+	private int STORAGE_FOR_CLOUD_VM;     // Storage allocation (Bytes)
 
-	private int CORE_FOR_VM;
-	private int MIPS_FOR_VM; //MIPS
-	private int RAM_FOR_VM; //MB
-	private int STORAGE_FOR_VM; //Byte
+	// Edge VM resource configuration parameters
+	private int CORE_FOR_VM;               // CPU cores for edge VMs
+	private int MIPS_FOR_VM;               // Processing power (MIPS)
+	private int RAM_FOR_VM;                // Memory allocation (MB)
+	private int STORAGE_FOR_VM;           // Storage allocation (Bytes)
 
+	// Simulation scenario and policy configuration
 	private String[] SIMULATION_SCENARIOS;
 	private String[] ORCHESTRATOR_POLICIES;
 
+	// Geographic simulation boundaries
 	private double NORTHERN_BOUND;
 	private double EASTERN_BOUND;
 	private double SOUTHERN_BOUND;
 	private double WESTERN_BOUND;
 
-	// mean waiting time (minute) is stored for each place types
+	// Mobility model configuration - mean waiting time (minutes) for each place type
 	private double[] mobilityLookUpTable;
 
-	// following values are stored for each applications defined in applications.xml
-	// [0] usage percentage (%)
-	// [1] prob. of selecting cloud (%)
-	// [2] poisson mean (sec)
-	// [3] active period (sec)
-	// [4] idle period (sec)
-	// [5] avg data upload (KB)
-	// [6] avg data download (KB)
-	// [7] avg task length (MI)
-	// [8] required # of cores
-	// [9] vm utilization on edge (%)
-	// [10] vm utilization on cloud (%)
-	// [11] vm utilization on mobile (%)
-	// [12] delay sensitivity [0-1]
+	/** 
+	 * Application task lookup table storing parameters for each application type defined in applications.xml
+	 * Array indices represent different application characteristics:
+	 * [0] Usage percentage (%)
+	 * [1] Probability of selecting cloud (%)
+	 * [2] Poisson mean arrival rate (seconds)
+	 * [3] Active period duration (seconds)
+	 * [4] Idle period duration (seconds)
+	 * [5] Average data upload size (KB)
+	 * [6] Average data download size (KB)
+	 * [7] Average task length (MI - Million Instructions)
+	 * [8] Required number of CPU cores
+	 * [9] VM utilization on edge nodes (%)
+	 * [10] VM utilization on cloud (%)
+	 * [11] VM utilization on mobile devices (%)
+	 * [12] Delay sensitivity factor [0-1]
+	 */
 	private double[][] taskLookUpTable = null;
 
+	// Application type names corresponding to taskLookUpTable entries
 	private String[] taskNames = null;
 
+	/**
+	 * Private constructor for singleton pattern implementation.
+	 * Initializes place type counter for mobility configuration.
+	 */
 	private SimSettings() {
 		NUM_OF_PLACE_TYPES = 0;
 	}
 
+	/**
+	 * Gets the singleton instance of SimSettings.
+	 * Creates a new instance if one doesn't already exist (lazy initialization).
+	 * 
+	 * @return The singleton SimSettings instance for global configuration access
+	 */
 	public static SimSettings getInstance() {
 		if(instance == null) {
 			instance = new SimSettings();
@@ -129,9 +160,14 @@ public class SimSettings {
 	}
 
 	/**
-	 * Reads configuration file and stores information to local variables
-	 * @param propertiesFile
-	 * @return
+	 * Initializes simulation settings from configuration files.
+	 * Loads properties from the main configuration file, edge device definitions,
+	 * and application specifications to configure the simulation environment.
+	 * 
+	 * @param propertiesFile Path to the main simulation properties file
+	 * @param edgeDevicesFile Path to the edge devices configuration XML file
+	 * @param applicationsFile Path to the applications configuration XML file
+	 * @return true if all configuration files loaded successfully, false otherwise
 	 */
 	public boolean initialize(String propertiesFile, String edgeDevicesFile, String applicationsFile){
 		boolean result = false;
@@ -450,7 +486,9 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns Storage of the central cloud VMs
+	 * Returns storage capacity of the central cloud VMs.
+	 * 
+	 * @return Storage allocation for cloud VMs in bytes
 	 */
 	public int getStorageForCloudVM()
 	{
@@ -482,7 +520,9 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns Storage of the mobile (processing unit) VMs
+	 * Returns storage capacity of the mobile (processing unit) VMs.
+	 * 
+	 * @return Storage allocation for mobile VMs in bytes
 	 */
 	public int getStorageForMobileVM()
 	{
@@ -523,8 +563,10 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns mobility characteristic within an array
-	 * the result includes mean waiting time (minute) or each place type
+	 * Returns mobility characteristics lookup table.
+	 * Contains mean waiting time (in minutes) for each place type in the mobility model.
+	 * 
+	 * @return Array of waiting times indexed by place type
 	 */ 
 	public double[] getMobilityLookUpTable()
 	{
@@ -532,28 +574,37 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns application characteristic within two dimensional array
-	 * the result includes the following values for each application type
-	 * [0] usage percentage (%)
-	 * [1] prob. of selecting cloud (%)
-	 * [2] poisson mean (sec)
-	 * [3] active period (sec)
-	 * [4] idle period (sec)
-	 * [5] avg data upload (KB)
-	 * [6] avg data download (KB)
-	 * [7] avg task length (MI)
-	 * [8] required # of cores
-	 * [9] vm utilization on edge (%)
-	 * [10] vm utilization on cloud (%)
-	 * [11] vm utilization on mobile (%)
-	 * [12] delay sensitivity [0-1]
-	 * [13] maximum delay requirement (sec)
+	 * Returns application characteristics lookup table containing all task parameters.
+	 * Each row represents an application type with the following characteristics:
+	 * [0] Usage percentage (%)
+	 * [1] Probability of selecting cloud (%)
+	 * [2] Poisson mean arrival rate (seconds)
+	 * [3] Active period duration (seconds)
+	 * [4] Idle period duration (seconds)
+	 * [5] Average data upload size (KB)
+	 * [6] Average data download size (KB)
+	 * [7] Average task length (Million Instructions)
+	 * [8] Required number of CPU cores
+	 * [9] VM utilization on edge nodes (%)
+	 * [10] VM utilization on cloud (%)
+	 * [11] VM utilization on mobile devices (%)
+	 * [12] Delay sensitivity factor [0-1]
+	 * [13] Maximum delay requirement (seconds)
+	 * 
+	 * @return Two-dimensional array containing task characteristics for all application types
 	 */ 
 	public double[][] getTaskLookUpTable()
 	{
 		return taskLookUpTable;
 	}
 
+	/**
+	 * Returns task properties for a specific application type by name.
+	 * Searches through the task names array to find matching application.
+	 * 
+	 * @param taskName Name of the application type to retrieve properties for
+	 * @return Array of task characteristics, or null if taskName not found
+	 */
 	public double[] getTaskProperties(String taskName) {
 		double[] result = null;
 		int index = -1;
@@ -570,11 +621,25 @@ public class SimSettings {
 		return result;
 	}
 
+	/**
+	 * Returns the application name for a given task type index.
+	 * 
+	 * @param taskType Index of the task type in the lookup table
+	 * @return Name of the application type
+	 */
 	public String getTaskName(int taskType)
 	{
 		return taskNames[taskType];
 	}
 
+	/**
+	 * Validates that a required attribute exists in an XML element.
+	 * Throws exception if the attribute is missing or empty.
+	 * 
+	 * @param element XML element to check
+	 * @param key Attribute name to validate
+	 * @throws IllegalArgumentException if attribute is missing or empty
+	 */
 	private void isAttributePresent(Element element, String key) {
 		String value = element.getAttribute(key);
 		if (value.isEmpty() || value == null){
@@ -582,6 +647,14 @@ public class SimSettings {
 		}
 	}
 
+	/**
+	 * Validates that a required child element exists in an XML element.
+	 * Throws exception if the child element is missing or empty.
+	 * 
+	 * @param element Parent XML element to check
+	 * @param key Child element name to validate
+	 * @throws IllegalArgumentException if child element is missing or empty
+	 */
 	private void isElementPresent(Element element, String key) {
 		try {
 			String value = element.getElementsByTagName(key).item(0).getTextContent();
