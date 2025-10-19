@@ -22,44 +22,67 @@ import edu.boun.edgecloudsim.mobility.MobilityModel;
 import edu.boun.edgecloudsim.task_generator.LoadGeneratorModel;
 import edu.boun.edgecloudsim.network.NetworkModel;
 
+/**
+ * Factory interface for creating customizable EdgeCloudSim simulation components.
+ * This interface is critical for extending EdgeCloudSim with custom models and must be
+ * implemented by users who want to provide their own simulation components.
+ * Each method creates a specific component of the edge computing simulation environment.
+ */
 public interface ScenarioFactory {
 	/**
-	 * provides abstract Load Generator Model
+	 * Creates the load generator model for controlling task generation patterns.
+	 * Defines how and when mobile devices generate computational tasks.
+	 * @return LoadGeneratorModel instance for task generation simulation
 	 */
 	public LoadGeneratorModel getLoadGeneratorModel();
 
 	/**
-	 * provides abstract Edge Orchestrator
+	 * Creates the edge orchestrator for making task offloading decisions.
+	 * Determines where tasks should be executed (edge, cloud, or mobile).
+	 * @return EdgeOrchestrator instance for intelligent task placement
 	 */
 	public EdgeOrchestrator getEdgeOrchestrator();
 
 	/**
-	 * provides abstract Mobility Model
+	 * Creates the mobility model for simulating device movement patterns.
+	 * Defines how mobile devices move within the simulation environment.
+	 * @return MobilityModel instance for device location tracking
 	 */
 	public MobilityModel getMobilityModel();
 
 	/**
-	 * provides abstract Network Model
+	 * Creates the network model for simulating communication delays and bandwidth.
+	 * Models WLAN, WAN, and MAN network characteristics and performance.
+	 * @return NetworkModel instance for network delay and capacity simulation
 	 */
 	public NetworkModel getNetworkModel();
 
 	/**
-	 * provides abstract Edge Server Model
+	 * Creates the edge server manager for managing edge computing infrastructure.
+	 * Handles edge datacenter operations, hosts, and VMs.
+	 * @return EdgeServerManager instance for edge resource management
 	 */
 	public EdgeServerManager getEdgeServerManager();
 
 	/**
-	 * provides abstract Cloud Server Model
+	 * Creates the cloud server manager for managing cloud computing infrastructure.
+	 * Handles cloud datacenter operations, hosts, and VMs for remote processing.
+	 * @return CloudServerManager instance for cloud resource management
 	 */
 	public CloudServerManager getCloudServerManager();
 
 	/**
-	 * provides abstract Mobile Server Model
+	 * Creates the mobile server manager for managing mobile device processing units.
+	 * Handles local computational capabilities on mobile devices (if enabled).
+	 * @return MobileServerManager instance for mobile processing management
 	 */
 	public MobileServerManager getMobileServerManager();
 
 	/**
-	 * provides abstract Mobile Device Manager Model
+	 * Creates the mobile device manager for handling mobile device operations.
+	 * Manages task submission, orchestration, and communication for mobile devices.
+	 * @return MobileDeviceManager instance for mobile device coordination
+	 * @throws Exception if mobile device manager creation fails
 	 */
 	public MobileDeviceManager getMobileDeviceManager() throws Exception;
 }

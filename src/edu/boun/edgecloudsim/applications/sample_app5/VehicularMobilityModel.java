@@ -21,36 +21,45 @@ import edu.boun.edgecloudsim.utils.Location;
 import edu.boun.edgecloudsim.utils.SimUtils;
 
 public class VehicularMobilityModel extends MobilityModel {
-	private final double SPEED_FOR_PLACES[] = {20, 40, 60}; //km per hour
+	// Speed limits for different location types (km/h): [low, medium, high attractiveness]
+	private final double SPEED_FOR_PLACES[] = {20, 40, 60};
 
-	private int lengthOfSegment;
-	private double totalTimeForLoop; //seconds
-	private int[] locationTypes;
+	private int lengthOfSegment;          // Length of each road segment in meters
+	private double totalTimeForLoop;      // Total time to complete one full road loop in seconds
+	private int[] locationTypes;          // Attractiveness level for each location (0=low, 1=medium, 2=high)
 
-	//prepare following arrays to decrease computation on getLocation() function
-	//NOTE: if the number of clients is high, keeping following values in RAM
-	//      may be expensive. In that case sacrifice computational resources!
-	private int[] initialLocationIndexArray;
-	private int[] initialPositionArray; //in meters unit
-	private double[] timeToDriveLocationArray;//in seconds unit
-	private double[] timeToReachNextLocationArray; //in seconds unit
+	// Pre-computed arrays to optimize getLocation() performance
+	// NOTE: For large number of clients, consider computing on-demand to save memory
+	private int[] initialLocationIndexArray;        // Starting location index for each vehicle
+	private int[] initialPositionArray;             // Starting position in meters for each vehicle
+	private double[] timeToDriveLocationArray;      // Time required to traverse each location segment
+	private double[] timeToReachNextLocationArray;  // Time for each vehicle to reach next location from start
 
+	/**
+	 * Constructor for vehicular mobility model.
+	 * 
+	 * @param _numberOfMobileDevices number of mobile devices (vehicles)
+	 * @param _simulationTime total simulation duration in seconds
+	 */
 	public VehicularMobilityModel(int _numberOfMobileDevices, double _simulationTime) {
 		super(_numberOfMobileDevices, _simulationTime);
-		// TODO Auto-generated constructor stub
 	}
 
+	/**
+	 * Initializes the mobility model by reading road topology and computing movement parameters.
+	 * Sets up road segments, speeds, and initial positions for all vehicles.
+	 */
 	@Override
 	public void initialize() {
-		//Find total length of the road
+		// Calculate total road length from edge device configuration
 		Document doc = SimSettings.getInstance().getEdgeDevicesDocument();
 		NodeList datacenterList = doc.getElementsByTagName("datacenter");
 		Element location = (Element)((Element)datacenterList.item(0)).getElementsByTagName("location").item(0);
 		int x_pos = Integer.parseInt(location.getElementsByTagName("x_pos").item(0).getTextContent());
-		lengthOfSegment = x_pos * 2; //assume that all segments have the same length
+		lengthOfSegment = x_pos * 2; // Assume uniform segment lengths
 		int totalLengthOfRoad = lengthOfSegment * datacenterList.getLength();
 
-		//prepare locationTypes array to store attractiveness level of the locations
+		// Extract location attractiveness levels and compute travel times
 		locationTypes = new int[datacenterList.getLength()];
 		timeToDriveLocationArray = new double[datacenterList.getLength()];
 		for(int i=0; i<datacenterList.getLength(); i++) {
@@ -59,52 +68,71 @@ public class VehicularMobilityModel extends MobilityModel {
 			Element locationElement = (Element)datacenterElement.getElementsByTagName("location").item(0);
 			locationTypes[i] = Integer.parseInt(locationElement.getElementsByTagName("attractiveness").item(0).getTextContent());
 
-			//(3600 * lengthOfSegment) / (SPEED_FOR_PLACES[x] * 1000);
+			// Calculate time to traverse this segment: time = distance / speed
+			// Convert km/h to m/s: (km/h) * (1000m/km) / (3600s/h) = (km/h) / 3.6
 			timeToDriveLocationArray[i] = ((double)3.6 * (double)lengthOfSegment) /
 					(SPEED_FOR_PLACES[locationTypes[i]]);
 
-			//find the time required to loop in the road
+			// Accumulate total loop time
 			totalTimeForLoop += timeToDriveLocationArray[i];
 		}
 
-		//assign a random x position as an initial position for each device
+		// Assign random initial positions for each vehicle on the road
 		initialPositionArray = new int[numberOfMobileDevices];
 		initialLocationIndexArray =  new int[numberOfMobileDevices];
 		timeToReachNextLocationArray =  new double[numberOfMobileDevices];
 		for(int i=0; i<numberOfMobileDevices; i++) {
+			// Random position anywhere on the road
 			initialPositionArray[i] = SimUtils.getRandomNumber(0, totalLengthOfRoad-1);
+			
+			// Determine which road segment the vehicle starts in
 			initialLocationIndexArray[i] = initialPositionArray[i] / lengthOfSegment;
-			timeToReachNextLocationArray[i] = ((double)3.6 *
-					(double)(lengthOfSegment - (initialPositionArray[i] % lengthOfSegment))) /
+			
+			// Calculate time needed to reach the next location from current position
+			int remainingDistance = lengthOfSegment - (initialPositionArray[i] % lengthOfSegment);
+			timeToReachNextLocationArray[i] = ((double)3.6 * (double)remainingDistance) /
 					(SPEED_FOR_PLACES[locationTypes[initialLocationIndexArray[i]]]);
 		}
 	}
 
+	/**
+	 * Calculates the current location of a vehicle at a given simulation time.
+	 * Vehicles move in a loop along the road with different speeds in different segments.
+	 * 
+	 * @param deviceId identifier of the mobile device (vehicle)
+	 * @param time current simulation time in seconds
+	 * @return Location object containing attractiveness, segment index, and position
+	 */
 	@Override
 	public Location getLocation(int deviceId, double time) {
-		int ofset = 0;
+		int offset = 0;
 		double remainingTime = 0;
 
 		int locationIndex = initialLocationIndexArray[deviceId];
 		double timeToReachNextLocation = timeToReachNextLocationArray[deviceId];
 
 		if(time < timeToReachNextLocation){
-			ofset = initialPositionArray[deviceId];
+			// Vehicle hasn't reached the next segment yet - still in initial segment
+			offset = initialPositionArray[deviceId];
 			remainingTime = time;
 		}
 		else{
+			// Vehicle has completed at least one segment, calculate current position in loop
 			remainingTime = (time - timeToReachNextLocation) % totalTimeForLoop;
 			locationIndex = (locationIndex+1) % locationTypes.length;
 
+			// Find which segment the vehicle is currently in
 			while(remainingTime > timeToDriveLocationArray[locationIndex]) {
 				remainingTime -= timeToDriveLocationArray[locationIndex];
 				locationIndex =  (locationIndex+1) % locationTypes.length;
 			}
 
-			ofset = locationIndex * lengthOfSegment;
+			offset = locationIndex * lengthOfSegment;
 		}
 
-		int x_pos = (int) (ofset + ( (SPEED_FOR_PLACES[locationTypes[locationIndex]] * remainingTime) / (double)3.6));
+		// Calculate exact position within the current segment
+		// Distance = speed * time, convert speed from km/h to m/s
+		int x_pos = (int) (offset + ((SPEED_FOR_PLACES[locationTypes[locationIndex]] * remainingTime) / 3.6));
 
 		return new Location(locationTypes[locationIndex], locationIndex, x_pos, 0);
 	}

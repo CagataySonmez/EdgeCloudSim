@@ -47,56 +47,85 @@ import edu.boun.edgecloudsim.utils.TaskProperty;
 import edu.boun.edgecloudsim.utils.Location;
 import edu.boun.edgecloudsim.utils.SimLogger;
 
+/**
+ * Sample mobile device manager for multi-tier edge-cloud computing scenarios.
+ * Handles complex network topologies with WLAN, MAN, and WAN connections.
+ * Supports task relay through remote edge servers and empirical network modeling.
+ */
 public class SampleMobileDeviceManager extends MobileDeviceManager {
-	private static final int BASE = 100000; //start from base in order not to conflict cloudsim tag!
+	/** Base value for custom event tags to avoid CloudSim tag conflicts */
+	private static final int BASE = 100000;
 	
+	/** Event tag for MM1 queue model updates */
 	private static final int UPDATE_MM1_QUEUE_MODEL = BASE + 1;
+	/** Event tag for task requests received by cloud servers */
 	private static final int REQUEST_RECEIVED_BY_CLOUD = BASE + 2;
+	/** Event tag for task requests received by edge devices */
 	private static final int REQUEST_RECEIVED_BY_EDGE_DEVICE = BASE + 3;
+	/** Event tag for task requests received by remote edge devices */
 	private static final int REQUEST_RECEIVED_BY_REMOTE_EDGE_DEVICE = BASE + 4;
+	/** Event tag for task requests received by edge devices to relay to neighbors */
 	private static final int REQUEST_RECEIVED_BY_EDGE_DEVICE_TO_RELAY_NEIGHBOR = BASE + 5;
+	/** Event tag for task responses received by mobile devices */
 	private static final int RESPONSE_RECEIVED_BY_MOBILE_DEVICE = BASE + 6;
+	/** Event tag for task responses received by edge devices to relay to mobile devices */
 	private static final int RESPONSE_RECEIVED_BY_EDGE_DEVICE_TO_RELAY_MOBILE_DEVICE = BASE + 7;
 
-	private static final double MM1_QUEUE_MODEL_UPDATE_INTEVAL = 5; //seconds
+	/** Update interval for MM1 queue model in seconds */
+	private static final double MM1_QUEUE_MODEL_UPDATE_INTEVAL = 5;
 	
+	/** Counter for generating unique task IDs */
 	private int taskIdCounter=0;
 	
+	/**
+	 * Constructor for sample mobile device manager.
+	 * @throws Exception if initialization fails
+	 */
 	public SampleMobileDeviceManager() throws Exception{
 	}
 
+	/**
+	 * Initialize mobile device manager - no specific initialization needed.
+	 */
 	@Override
 	public void initialize() {
 	}
 	
+	/**
+	 * Returns custom CPU utilization model for mobile device processing.
+	 * @return CpuUtilizationModel_Custom for accurate capacity prediction
+	 */
 	@Override
 	public UtilizationModel getCpuUtilizationModel() {
 		return new CpuUtilizationModel_Custom();
 	}
 	
+	/**
+	 * Start entity and schedule periodic MM1 queue model updates.
+	 * MM1 queue model is used for MAN delay calculations in multi-tier scenarios.
+	 */
 	@Override
 	public void startEntity() {
 		super.startEntity();
+		// Schedule first MM1 queue model update after client activity starts
 		schedule(getId(), SimSettings.CLIENT_ACTIVITY_START_TIME +
 				MM1_QUEUE_MODEL_UPDATE_INTEVAL, UPDATE_MM1_QUEUE_MODEL);
 	}
 	
 	/**
-	 * Submit cloudlets to the created VMs.
-	 * 
-	 * @pre $none
-	 * @post $none
+	 * Submit cloudlets to VMs - not used in this multi-tier scenario.
+	 * Tasks are submitted through submitTask() method instead.
 	 */
 	protected void submitCloudlets() {
-		//do nothing!
+		// Not used in this scenario - tasks submitted via submitTask()
 	}
 	
 	/**
-	 * Process a cloudlet return event.
+	 * Process task completion events from cloud or edge servers.
+	 * Handles complex network routing including MAN relay through remote edge servers.
+	 * Manages mobility effects on task delivery and network availability.
 	 * 
-	 * @param ev a SimEvent object
-	 * @pre ev != $null
-	 * @post $none
+	 * @param ev SimEvent containing the completed task
 	 */
 	protected void processCloudletReturn(SimEvent ev) {
 		NetworkModel networkModel = SimManager.getInstance().getNetworkModel();

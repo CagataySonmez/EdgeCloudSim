@@ -23,48 +23,75 @@ import org.cloudbus.cloudsim.Datacenter;
 import org.cloudbus.cloudsim.Host;
 import org.cloudbus.cloudsim.VmAllocationPolicy;
 
+/**
+ * Abstract base class for managing cloud server infrastructure in EdgeCloudSim.
+ * Handles cloud datacenter operations, VM allocation, and resource management.
+ */
 public abstract class CloudServerManager {
 	protected Datacenter localDatacenter;
 	protected List<List<CloudVM>> vmList;
 
+	/**
+	 * Constructor initializes the VM list structure for cloud servers.
+	 */
 	public CloudServerManager() {
 		vmList = new ArrayList<List<CloudVM>>();
 	}
 
+	/**
+	 * Retrieves the list of VMs running on a specific host.
+	 * @param hostId The ID of the host to query
+	 * @return List of CloudVMs running on the specified host
+	 */
 	public List<CloudVM> getVmList(int hostId){
 		return vmList.get(hostId);
 	}
 	
+	/**
+	 * Gets the cloud datacenter managed by this manager.
+	 * @return The cloud Datacenter instance
+	 */
 	public Datacenter getDatacenter(){
 		return localDatacenter;
 	}
 	
-	/*
-	 * initialize edge server manager if needed
+	/**
+	 * Initializes the cloud server manager with required configurations.
+	 * Called before datacenter operations begin.
 	 */
 	public abstract void initialize();
 
-	/*
-	 * provides abstract Vm Allocation Policy for Cloud Datacenters
+	/**
+	 * Provides VM allocation policy for cloud datacenters.
+	 * Determines how VMs are assigned to physical hosts.
+	 * 
+	 * @param list List of available hosts in the datacenter
+	 * @param dataCenterIndex Index identifier of the datacenter
+	 * @return VmAllocationPolicy instance for VM placement decisions
 	 */
 	public abstract VmAllocationPolicy getVmAllocationPolicy(List<? extends Host> list, int dataCenterIndex);
 
-	/*
-	 * Starts Datacenters
+	/**
+	 * Starts all cloud datacenters and initializes their resources.
+	 * @throws Exception if datacenter initialization fails
 	 */
 	public abstract void startDatacenters() throws Exception;
 	
-	/*
-	 * Terminates Datacenters
+	/**
+	 * Terminates all cloud datacenters and releases their resources.
+	 * Called during simulation cleanup.
 	 */
 	public abstract void terminateDatacenters();
-	/*
-	 * Creates VM List
+	
+	/**
+	 * Creates the list of VMs for all cloud hosts.
+	 * @param brokerId The broker ID that will manage these VMs
 	 */
 	public abstract void createVmList(int brokerId);
 	
-	/*
-	 * returns average utilization of all VMs
+	/**
+	 * Calculates and returns the average CPU utilization across all cloud VMs.
+	 * @return Average utilization percentage (0.0 to 1.0)
 	 */
 	public abstract double getAvgUtilization();
 }

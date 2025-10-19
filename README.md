@@ -1,6 +1,101 @@
 # EdgeCloudSim
 
+[![GitHub stars](https://img.shields.io/github/stars/CagataySonmez/EdgeCloudSim?style=for-the-badge)](https://github.com/CagataySonmez/EdgeCloudSim/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/CagataySonmez/EdgeCloudSim?style=for-the-badge)](https://github.com/CagataySonmez/EdgeCloudSim/network)
+[![License](https://img.shields.io/github/license/CagataySonmez/EdgeCloudSim?style=for-the-badge)](LICENSE)
+[![Java](https://img.shields.io/badge/Java-21+-orange?style=for-the-badge&logo=java)](https://openjdk.org/)
+[![CloudSim](https://img.shields.io/badge/CloudSim-7.0.0--alpha-blue?style=for-the-badge)](https://cloudsim.org/)
+
 EdgeCloudSim provides a simulation environment specific to Edge Computing scenarios where it is possible to conduct experiments that considers both computational and networking resources. EdgeCloudSim is based on CloudSim but adds considerable functionality so that it can be efficiently used for Edge Computing scenarios. EdgeCloudSim is an open source tool and any contributions are welcome. If you want to contribute EdgeCloudSim, please check below feature list and the [contributing guidelines](/CONTRIBUTING.md). If you want to use EdgeCloudSim in your research work, please cite our paper [[3]](https://onlinelibrary.wiley.com/doi/abs/10.1002/ett.3493).
+
+## Table of Contents
+- [🚀 What's New](#-whats-new-october-2025)
+- [Sample Applications and Tutorials](#sample-applications-and-tutorials)
+- [Quick Start Guide](#quick-start-guide)
+- [Architecture Overview](#edgecloudsim-an-environment-for-performance-evaluation-of-edge-computing-systems)
+- [Compilation and Running](#compilation-and-running)
+- [Analyzing the Results](#analyzing-the-results)
+- [Example Output](#example-output-of-edgecloudsim)
+- [Publications](#publications)
+
+## 🚀 What's New (October 2025)
+
+### Major Updates
+- **📚 CloudSim Library Upgrade**: Updated to CloudSim 7.0.0-alpha for improved performance and stability
+  - **Note**: We specifically use 7.0.0-alpha as newer CloudSim versions have breaking API changes and class modifications
+  - Maintains compatibility while providing enhanced simulation capabilities
+  
+- **🎓 New Tutorial Series**: Added comprehensive tutorial applications (`tutorial1-5`) covering **5 different engineering problems**:
+  - **📋 Complete Guide**: See detailed [EdgeCloudSim_ModellingGuide.pdf](/doc/EdgeCloudSim_ModellingGuide.pdf) for comprehensive explanation of edge computing simulation and all 5 tutorials
+  - **Important**: Each tutorial includes both MATLAB and **Python analysis scripts** for result visualization
+
+- **🤖 AI-Enhanced Code Quality**: 
+  - Source code restructured and optimized with AI assistance
+  - Enhanced code comments and documentation for better readability
+
+### Benefits for Researchers
+- **Easier Learning Curve**: New tutorials provide step-by-step guidance
+- **Better Code Understanding**: AI-enhanced comments explain complex algorithms
+- **Improved Stability**: CloudSim 7.0.0-alpha provides more reliable simulations
+
+## Quick Start Guide
+
+### Prerequisites
+- **Java 21+** (OpenJDK or Oracle JDK - recommended for optimal performance)
+- **Eclipse IDE** (recommended) or any Java IDE
+- **Git** for cloning the repository
+- **MATLAB** or **Python** for result analysis
+
+### 🚀 Get Started in 5 Minutes
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/CagataySonmez/EdgeCloudSim.git
+   cd EdgeCloudSim
+   ```
+
+2. **Import to IDE**:
+   - Open Eclipse → File → Import → Existing Projects into Workspace
+   - Select EdgeCloudSim folder → Import
+
+3. **Run your first simulation**:
+   - Navigate to `src/edu/boun/edgecloudsim/applications/tutorial1`
+   - Run `MainApp.java` to see EdgeCloudSim in action!
+
+4. **Explore examples**:
+   - Check [Sample Applications](#sample-applications-sample_app1---sample_app5) for research scenarios
+   - Follow [Tutorials](#tutorials-tutorial1---tutorial5) for step-by-step learning
+
+### 📚 Learning Path
+1. **Start with Tutorial 1** - Basic simulation setup
+2. **Read the [EdgeCloudSim_ModellingGuide.pdf](/doc/EdgeCloudSim_ModellingGuide.pdf)** - Comprehensive guide
+3. **Explore Sample Applications** - Real research scenarios
+4. **Customize your own scenario** - Extend for your research
+
+## Sample Applications and Tutorials
+
+EdgeCloudSim comes with comprehensive examples to help you get started and understand different edge computing scenarios:
+
+### Sample Applications (`sample_app1` - `sample_app5`)
+These applications represent **real-world scenarios published in our research papers**:
+- **[sample_app1](/src/edu/boun/edgecloudsim/applications/sample_app1)**: Basic edge computing environment evaluation (conference version) [[1]](http://ieeexplore.ieee.org/document/7946405/)
+- **[sample_app2](/src/edu/boun/edgecloudsim/applications/sample_app2)**: Single-tier and two-tier cloudlet assisted applications [[2]](http://ieeexplore.ieee.org/document/7962674)
+- **[sample_app3](/src/edu/boun/edgecloudsim/applications/sample_app3)**: Basic edge computing environment evaluation (journal version) [[3]](https://onlinelibrary.wiley.com/doi/abs/10.1002/ett.3493)
+- **[sample_app4](/src/edu/boun/edgecloudsim/applications/sample_app4)**: Fuzzy logic-based workload orchestration for edge computing [[4]](https://ieeexplore.ieee.org/abstract/document/8651335/)
+- **[sample_app5](/src/edu/boun/edgecloudsim/applications/sample_app5)**: Machine learning-based workload orchestrator for vehicular edge computing [[5]](https://ieeexplore.ieee.org/abstract/document/9208723/)
+
+Each sample application includes complete configuration files, simulation scripts, and MATLAB analysis tools for result visualization.
+
+### Tutorials (`tutorial1` - `tutorial5`) 
+These tutorials demonstrate **5 different engineering problems** commonly encountered in edge computing:
+- **[Tutorial 1](/src/edu/boun/edgecloudsim/applications/tutorial1)**: VM Scheduling: Performance Evaluation of Different VM Allocation Policies
+- **[Tutorial 2](/src/edu/boun/edgecloudsim/applications/tutorial2)**: What to Offload: Performance Evaluation of Different Approaches that Decide Granularity of Task Offloading
+- **[Tutorial 3](/src/edu/boun/edgecloudsim/applications/tutorial3)**: Where to Offload: Performance Evaluation of Different Workload Orchestration Policies
+- **[Tutorial 4](/src/edu/boun/edgecloudsim/applications/tutorial4)**: Server Capacity Planning: Performance Evaluation of Different Capacity Planning Approaches
+- **[Tutorial 5](/src/edu/boun/edgecloudsim/applications/tutorial5)**: Network & Server Capacity Planning: Performance Evaluation of Different Capacity Planning Approaches
+
+📋 **For detailed explanations**: Check out our comprehensive [EdgeCloudSim_ModellingGuide.pdf](/doc/EdgeCloudSim_ModellingGuide.pdf) that covers edge computing simulation fundamentals, EdgeCloudSim architecture, and step-by-step tutorial guides.
+
+The tutorials are designed as step-by-step guides for learning EdgeCloudSim's core functionalities and extending them for your specific research needs.
 
 ## Discussion Forum
 
@@ -13,13 +108,6 @@ Please feel free to join and let us discuss issues, share ideas related to EdgeC
 The YouTube channel of EdgeCloudSim can be found [here](https://www.youtube.com/channel/UC2gnXTWHHN6h4bk1D5gpcIA).
 You can find some videos presenting our works and tutorials on this channel.
 Click [here](https://youtu.be/SmQgRANWUts) to watch the video with brief information about EdgeCloudSim.
-
-## Needed Features
-
-* Task migration among the Edge or Cloud VMs
-* Energy consumption model for the mobile and edge devices as well as the cloud datacenters
-* Adding probabilistic network failure model by considering the congestion or other parameters such as the distance between mobile device and the WiFi access point.
-* Visual tool for displaying the network topology
 
 # EdgeCloudSim: An Environment for Performance Evaluation of Edge Computing Systems
 
@@ -86,15 +174,34 @@ EdgeCloudSim reads parameters dynamically from the following files:
 </p>
 
 ## Compilation and Running
-To compile sample application, *compile.sh* script which is located in *scripts/sample_application* folder can be used. You can rewrite similar script for your own application by modifying the arguments of javac command in way to declare the java file which includes your main method. Please note that this script can run on Linux based systems, including Mac OS. You can also use your favorite IDE (eclipse, netbeans etc.) to compile your project.
 
-In order to run multiple sample_application scenarios in parallel, you can use *run_scenarios.sh* script which is located in *scripts/sample_application* folder. To run your own application, modify the java command in *runner.sh* script in a way to declare the java class which includes your main method. The details of using this script is explained in [this](/wiki/How-to-run-EdgeCloudSim-application-in-parallel) wiki page.
+### Using IDE (Recommended)
+1. **Import project** into Eclipse or IntelliJ IDEA
+2. **Run directly** from your IDE:
+   - For tutorials: Navigate to `src/edu/boun/edgecloudsim/applications/tutorial1-5/MainApp.java`
+   - For sample apps: Navigate to `src/edu/boun/edgecloudsim/applications/sample_app1-5/MainApp.java`
+3. **No compilation needed** - IDE handles everything!
 
-You can also monitor each process via the output files located under *scripts/sample_application/output/date* folder. For example:
+### Using Command Line
+For each sample application or tutorial, use the corresponding script:
+- **Sample App 1**: Use `scripts/sample_app1/compile.sh` and `scripts/sample_app1/run_scenarios.sh`
+- **Sample App 2**: Use `scripts/sample_app2/compile.sh` and `scripts/sample_app2/run_scenarios.sh`
+- And so on...
+
+### Running Parallel Simulations
+To run multiple scenarios in parallel:
+```bash
+cd scripts/sample_app1
+./run_scenarios.sh 8 10  # 8 parallel processes, 10 iterations each
 ```
-./run_scenarios.sh 8 10
-tail -f output/date/ite_1.log
+
+Monitor progress:
+```bash
+tail -f output/date/scenario_name/progress.log
 ```
+
+**Note**: Scripts are compatible with Linux, macOS, and Windows (with WSL).
+
 
 ## Analyzing the Results
 At the end of each iteration, simulation results will be compressed in the *output/date/ite_n.tgz* files. When you extract these tgz files, you will see lots of log file in csv format. You can find matlab files which can plot graphics by using these files under *scripts/sample_application/matlab* folder. You can also write other scripts (e.g. python scripts) with the same manner of matlab plotter files.

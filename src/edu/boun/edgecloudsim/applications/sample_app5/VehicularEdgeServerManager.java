@@ -49,15 +49,26 @@ public class VehicularEdgeServerManager extends EdgeServerManager{
 
 	@Override
 	public void initialize() {
+		// No specific initialization required for vehicular edge server manager
 	}
 
+	/**
+	 * Returns the VM allocation policy for edge datacenters
+	 * @param hostList List of hosts in the datacenter
+	 * @param dataCenterIndex Index of the datacenter
+	 * @return Custom VM allocation policy for edge computing
+	 */
 	@Override
 	public VmAllocationPolicy getVmAllocationPolicy(List<? extends Host> hostList, int dataCenterIndex) {
 		return new EdgeVmAllocationPolicy_Custom(hostList,dataCenterIndex);
 	}
 
+	/**
+	 * Initializes and starts all edge datacenters based on configuration
+	 * Creates datacenters from XML configuration file with location-specific parameters
+	 */
 	public void startDatacenters() throws Exception{
-		//create random number generator for each place
+		// Parse edge devices configuration file to create datacenters
 		Document doc = SimSettings.getInstance().getEdgeDevicesDocument();
 		NodeList datacenterList = doc.getElementsByTagName("datacenter");
 		for (int i = 0; i < datacenterList.getLength(); i++) {
@@ -67,11 +78,15 @@ public class VehicularEdgeServerManager extends EdgeServerManager{
 		}
 	}
 
+	/**
+	 * Creates virtual machines for all hosts across edge datacenters
+	 * @param brockerId CloudSim broker ID for VM ownership
+	 */
 	public void createVmList(int brockerId){
 		int hostCounter=0;
 		int vmCounter=0;
 
-		//Create VMs for each hosts
+		// Create VMs for each host based on XML configuration
 		Document doc = SimSettings.getInstance().getEdgeDevicesDocument();
 		NodeList datacenterList = doc.getElementsByTagName("datacenter");
 		for (int i = 0; i < datacenterList.getLength(); i++) {
@@ -94,9 +109,10 @@ public class VehicularEdgeServerManager extends EdgeServerManager{
 					double mips = Double.parseDouble(vmElement.getElementsByTagName("mips").item(0).getTextContent());
 					int ram = Integer.parseInt(vmElement.getElementsByTagName("ram").item(0).getTextContent());
 					long storage = Long.parseLong(vmElement.getElementsByTagName("storage").item(0).getTextContent());
+					// Distribute WLAN bandwidth among hosts and VMs
 					long bandwidth = SimSettings.getInstance().getWlanBandwidth() / (hostNodeList.getLength()+vmNodeList.getLength());
 
-					//VM Parameters		
+					// Create EdgeVM with specified resources and time-shared scheduling
 					EdgeVM vm = new EdgeVM(vmCounter, brockerId, mips, numOfCores, ram, bandwidth, storage, vmm, new CloudletSchedulerTimeShared());
 					vmList.get(hostCounter).add(vm);
 					vmCounter++;
@@ -107,25 +123,31 @@ public class VehicularEdgeServerManager extends EdgeServerManager{
 		}
 	}
 
+	/**
+	 * Gracefully shuts down all edge datacenters
+	 */
 	public void terminateDatacenters(){
 		for (Datacenter datacenter : localDatacenters) {
 			datacenter.shutdownEntity();
 		}
 	}
 
-	//average utilization of all VMs
+	/**
+	 * Calculates average CPU utilization across all edge VMs
+	 * @return Average utilization percentage (0-100)
+	 */
 	public double getAvgUtilization(){
 		double totalUtilization = 0;
 		int hostCounter = 0;
 		int vmCounter = 0;
 
-		// for each datacenter...
+		// Iterate through all datacenters
 		for(int i= 0; i<localDatacenters.size(); i++) {
 			List<? extends Host> list = localDatacenters.get(i).getHostList();
-			// for each host...
+			// Iterate through all hosts in datacenter
 			for (int hostIndex=0; hostIndex < list.size(); hostIndex++) {
 				List<EdgeVM> vmArray = SimManager.getInstance().getEdgeServerManager().getVmList(hostCounter);
-				//for each vm...
+				// Sum CPU utilization for all VMs on this host
 				for(int vmIndex=0; vmIndex<vmArray.size(); vmIndex++){
 					totalUtilization += vmArray.get(vmIndex).getCloudletScheduler().getTotalUtilizationOfCpu(CloudSim.clock());
 					vmCounter++;
@@ -136,7 +158,14 @@ public class VehicularEdgeServerManager extends EdgeServerManager{
 		return totalUtilization / (double)vmCounter;
 	}
 
+	/**
+	 * Creates a single edge datacenter from XML configuration
+	 * @param index Datacenter index for naming
+	 * @param datacenterElement XML element containing datacenter configuration
+	 * @return Configured CloudSim Datacenter instance
+	 */
 	private Datacenter createDatacenter(int index, Element datacenterElement) throws Exception{
+		// Parse datacenter attributes from XML
 		String arch = datacenterElement.getAttribute("arch");
 		String os = datacenterElement.getAttribute("os");
 		String vmm = datacenterElement.getAttribute("vmm");
@@ -148,17 +177,14 @@ public class VehicularEdgeServerManager extends EdgeServerManager{
 		List<EdgeHost> hostList=createHosts(datacenterElement);
 
 		String name = "EdgeDatacenter_" + Integer.toString(index);
-		double time_zone = 3.0;         // time zone this resource located
-		LinkedList<Storage> storageList = new LinkedList<Storage>();	//we are not adding SAN devices by now
+		double time_zone = 3.0;         // Time zone for this datacenter location
+		LinkedList<Storage> storageList = new LinkedList<Storage>();	// No SAN storage devices configured
 
-		// 5. Create a DatacenterCharacteristics object that stores the
-		//    properties of a data center: architecture, OS, list of
-		//    Machines, allocation policy: time- or space-shared, time zone
-		//    and its price (G$/Pe time unit).
+		// Create datacenter characteristics with hardware specs and costs
 		DatacenterCharacteristics characteristics = new DatacenterCharacteristics(
 				arch, os, vmm, hostList, time_zone, costPerSec, costPerMem, costPerStorage, costPerBw);
 
-		// 6. Finally, we need to create a PowerDatacenter object.
+		// Create the datacenter with custom VM allocation policy
 		Datacenter datacenter = null;
 
 		VmAllocationPolicy vm_policy = getVmAllocationPolicy(hostList,index);
@@ -167,12 +193,17 @@ public class VehicularEdgeServerManager extends EdgeServerManager{
 		return datacenter;
 	}
 
+	/**
+	 * Creates hosts for a datacenter from XML configuration
+	 * @param datacenterElement XML element containing host specifications
+	 * @return List of configured EdgeHost instances with location information
+	 */
 	private List<EdgeHost> createHosts(Element datacenterElement){
 
-		// Here are the steps needed to create a PowerDatacenter:
-		// 1. We need to create a list to store one or more Machines
+		// Initialize list to store hosts for this datacenter
 		List<EdgeHost> hostList = new ArrayList<EdgeHost>();
 
+		// Parse location information for all hosts in this datacenter
 		Element location = (Element)datacenterElement.getElementsByTagName("location").item(0);
 		String attractiveness = location.getElementsByTagName("attractiveness").item(0).getTextContent();
 		int wlan_id = Integer.parseInt(location.getElementsByTagName("wlan_id").item(0).getTextContent());
@@ -189,29 +220,28 @@ public class VehicularEdgeServerManager extends EdgeServerManager{
 			double mips = Double.parseDouble(hostElement.getElementsByTagName("mips").item(0).getTextContent());
 			int ram = Integer.parseInt(hostElement.getElementsByTagName("ram").item(0).getTextContent());
 			long storage = Long.parseLong(hostElement.getElementsByTagName("storage").item(0).getTextContent());
+			// Distribute WLAN bandwidth equally among all hosts
 			long bandwidth = SimSettings.getInstance().getWlanBandwidth() / hostNodeList.getLength();
 
-			// 2. A Machine contains one or more PEs or CPUs/Cores. Therefore, should
-			//    create a list to store these PEs before creating
-			//    a Machine.
+			// Create processing elements (CPU cores) for this host
 			List<Pe> peList = new ArrayList<Pe>();
 
-			// 3. Create PEs and add these into the list.
-			//for a quad-core machine, a list of 4 PEs is required:
+			// Create individual PEs with specified MIPS capacity
 			for(int i=0; i<numOfCores; i++){
-				peList.add(new Pe(i, new PeProvisionerSimple(mips))); // need to store Pe id and MIPS Rating
+				peList.add(new Pe(i, new PeProvisionerSimple(mips))); // PE with unique ID and MIPS rating
 			}
 
-			//4. Create Hosts with its id and list of PEs and add them to the list of machines
+			// Create EdgeHost with resource provisioners and space-shared VM scheduler
 			EdgeHost host = new EdgeHost(
 					hostIdCounter,
 					new RamProvisionerSimple(ram),
-					new BwProvisionerSimple(bandwidth), //kbps
+					new BwProvisionerSimple(bandwidth), // Bandwidth in kbps
 					storage,
 					peList,
 					new VmSchedulerSpaceShared(peList)
 					);
 
+			// Set geographical location for vehicular mobility simulation
 			host.setPlace(new Location(placeTypeIndex, wlan_id, x_pos, y_pos));
 			hostList.add(host);
 			hostIdCounter++;

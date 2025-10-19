@@ -1,6 +1,6 @@
 # Sample Application 5
 
-This application includes the source code which is used in our paper submitted to IEEE Transactions on Intelligent Transportation Systems [[1]](https://ieeexplore.ieee.org/abstract/document/9208723/).
+This application includes the source code which is used in our paper published in IEEE Transactions on Intelligent Transportation Systems [[1]](https://ieeexplore.ieee.org/abstract/document/9208723/).
 
 You can find the presentation of this work on our YouTube channel. Click [here](https://youtu.be/mlcLDpDcdw8) to watch!
 
@@ -18,7 +18,7 @@ The concept of Internet of Vehicle (IoV), its pioneering applications, and the s
 
 ## Machine Learning-Based Workload Orchestrator
 
-In this application we introduce a machine learning (ML) based workload orchestrator. the ML-based orchestrator performs a two-stage process as shown in Figure 2. In the first stage, a classifier model predicts whether the results of the offloading options are successful or not for each target device. In the second stage, a regression model estimates the service time of the related options. Finally, the target device which promises the lowest service time is selected.
+In this application we introduce a machine learning (ML) based workload orchestrator. The ML-based orchestrator performs a two-stage process as shown in Figure 2. In the first stage, a classifier model predicts whether the results of the offloading options are successful or not for each target device. In the second stage, a regression model estimates the service time of the related options. Finally, the target device which promises the lowest service time is selected.
 
 <p align="center">
   <img src="/doc/images/sample_app5/ml_stages.png" width="100%">
@@ -27,7 +27,7 @@ In this application we introduce a machine learning (ML) based workload orchestr
   </p>
 </p>
 
-We experimented with multiple classifiers, including naive Bayes (NB), support vector machine (SVM) and multi layer perceptron (MLP) models. The MLP was chosen as the best classifier based on the performance comparison of these models. A demonstrative example of a two-stage ML-based vehicular edge orchestrator is illustrated in Fig. 4. As shown in Figure 3, offloading to the edge and cloud via cellular network (CN) options are predicted to be successful in the first stage; hence they are selected as the initial candidates. The cloud via CN option is determined as the best candidate in the second stage since it promises better service time value than the edge option.
+We experimented with multiple classifiers, including naive Bayes (NB), support vector machine (SVM) and multilayer perceptron (MLP) models. The MLP was chosen as the best classifier based on the performance comparison of these models. A demonstrative example of a two-stage ML-based vehicular edge orchestrator is illustrated in Figure 3. As shown in Figure 3, offloading to the edge and cloud via cellular network (CN) options are predicted to be successful in the first stage; hence they are selected as the initial candidates. The cloud via CN option is determined as the best candidate in the second stage since it promises better service time value than the edge option.
 
 <p align="center">
   <img src="/doc/images/sample_app5/ml_details.png" width="60%">
@@ -43,7 +43,7 @@ Orchestrating the dynamic and heterogeneous resources in the VEC systems is a ch
 
 ## Simulated Environment
 
-The road and mobility model used in the simulations is implemented on EdgeCloudSim, as shown in Figure 6.9. To simulate the vehicular mobility more realistically, the road is divided into segments, and a dynamic velocity value for the vehicle position is used. Therefore, the speed of the vehicles varies at each segment to differentiate the traffic density on the road. The hotspot locations, which are shown with red color, occur due to the traffic jam. 100 to 1800 vehicles are distributed to random locations when the simulation is started. Then they move in a single direction with a predefined speed with respect to the crossed segment. The road is modeled as a circular route to keep the number of vehicles the same during the simulation.
+The road and mobility model used in the simulations is implemented on EdgeCloudSim, as shown in Figure 4. To simulate the vehicular mobility more realistically, the road is divided into segments, and a dynamic velocity value for the vehicle position is used. Therefore, the speed of the vehicles varies at each segment to differentiate the traffic density on the road. The hotspot locations, which are shown with red color, occur due to the traffic jam. 100 to 1800 vehicles are distributed to random locations when the simulation is started. Then they move in a single direction with a predefined speed with respect to the crossed segment. The road is modeled as a circular route to keep the number of vehicles the same during the simulation.
 
 <p align="center">
   <img src="/doc/images/sample_app5/road.png" width="45%">

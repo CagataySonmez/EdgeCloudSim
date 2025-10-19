@@ -22,9 +22,20 @@ import edu.boun.edgecloudsim.network.NetworkModel;
 import edu.boun.edgecloudsim.utils.Location;
 import edu.boun.edgecloudsim.utils.SimLogger;
 
+/**
+ * Sample network model using empirical WLAN throughput measurements.
+ * Provides realistic wireless network delays based on real-world deployment data.
+ * Supports 802.11ac performance characteristics with client load-based throughput degradation.
+ */
 public class SampleNetworkModel extends NetworkModel {
+	/** Array tracking number of active clients per WLAN access point */
 	private int[] wlanClients;
 	
+	/**
+	 * Empirical WLAN throughput data from real deployments (in Kbps).
+	 * Throughput decreases as more clients share the same access point.
+	 * Data collected from 802.11n networks, adjusted for 802.11ac (3x faster).
+	 */
 	public static final double[] experimentalWlanDelay = {
 		/*1 Client*/ 88040.279 /*(Kbps)*/,
 		/*2 Clients*/ 45150.982 /*(Kbps)*/,
@@ -129,23 +140,38 @@ public class SampleNetworkModel extends NetworkModel {
 		/*100 Clients*/ 1500.631 /*(Kbps)*/
 	};
 	
+	/**
+	 * Constructor for sample network model.
+	 * @param _numberOfMobileDevices Number of mobile devices in simulation
+	 * @param _simScenario Simulation scenario identifier
+	 */
 	public SampleNetworkModel(int _numberOfMobileDevices, String _simScenario) {
 		super(_numberOfMobileDevices, _simScenario);
 	}
 
+	/**
+	 * Initialize network model with WLAN client tracking arrays.
+	 * Assumes one access point per edge datacenter for network modeling.
+	 */
 	@Override
 	public void initialize() {
-		wlanClients = new int[SimSettings.getInstance().getNumOfEdgeDatacenters()];  //we have one access point for each datacenter
+		wlanClients = new int[SimSettings.getInstance().getNumOfEdgeDatacenters()];
 	}
 
     /**
-    * source device is always mobile device in our simulation scenarios!
-    */
+     * Calculate upload delay from mobile device to destination.
+     * Source device is always mobile device in this simulation scenario.
+     * 
+     * @param sourceDeviceId Mobile device ID (source)
+     * @param destDeviceId Destination device ID 
+     * @param task Task being uploaded
+     * @return Upload delay in seconds
+     */
 	@Override
 	public double getUploadDelay(int sourceDeviceId, int destDeviceId, Task task) {
 		double delay = 0;
 
-		//mobile device to edge device (wifi access point)
+		// Handle mobile device to edge device (WiFi access point) upload
 		if (destDeviceId == SimSettings.GENERIC_EDGE_DEVICE_ID) {
 			delay = getWlanUploadDelay(task.getSubmittedLocation(), task.getCloudletFileSize());
 		}
@@ -157,15 +183,22 @@ public class SampleNetworkModel extends NetworkModel {
 	}
 
     /**
-    * destination device is always mobile device in our simulation scenarios!
-    */
+     * Calculate download delay from source to mobile device.
+     * Destination device is always mobile device in this simulation scenario.
+     * 
+     * @param sourceDeviceId Source device ID
+     * @param destDeviceId Mobile device ID (destination)
+     * @param task Task being downloaded
+     * @return Download delay in seconds
+     */
 	@Override
 	public double getDownloadDelay(int sourceDeviceId, int destDeviceId, Task task) {
 		double delay = 0;
 		
+		// Get mobile device location for access point identification
 		Location accessPointLocation = SimManager.getInstance().getMobilityModel().getLocation(destDeviceId,CloudSim.clock());
 		
-		//edge device (wifi access point) to mobile device
+		// Handle edge device (WiFi access point) to mobile device download
 		if (sourceDeviceId == SimSettings.GENERIC_EDGE_DEVICE_ID) {
 			delay = getWlanDownloadDelay(accessPointLocation, task.getCloudletOutputSize());
 		}
@@ -177,6 +210,13 @@ public class SampleNetworkModel extends NetworkModel {
 		return delay;
 	}
 
+	/**
+	 * Track upload start event for WLAN client load balancing.
+	 * Increments client count for the serving access point.
+	 * 
+	 * @param accessPointLocation Location of the access point
+	 * @param destDeviceId Destination device ID
+	 */
 	@Override
 	public void uploadStarted(Location accessPointLocation, int destDeviceId) {
 		if (destDeviceId == SimSettings.GENERIC_EDGE_DEVICE_ID) {
@@ -188,6 +228,13 @@ public class SampleNetworkModel extends NetworkModel {
 		}
 	}
 
+	/**
+	 * Track upload completion event for WLAN client load balancing.
+	 * Decrements client count for the serving access point.
+	 * 
+	 * @param accessPointLocation Location of the access point
+	 * @param destDeviceId Destination device ID
+	 */
 	@Override
 	public void uploadFinished(Location accessPointLocation, int destDeviceId) {
 		 if (destDeviceId == SimSettings.GENERIC_EDGE_DEVICE_ID) {
@@ -199,6 +246,13 @@ public class SampleNetworkModel extends NetworkModel {
 		}
 	}
 
+	/**
+	 * Track download start event for WLAN client load balancing.
+	 * Increments client count for the serving access point.
+	 * 
+	 * @param accessPointLocation Location of the access point
+	 * @param sourceDeviceId Source device ID
+	 */
 	@Override
 	public void downloadStarted(Location accessPointLocation, int sourceDeviceId) {
 		if(sourceDeviceId == SimSettings.GENERIC_EDGE_DEVICE_ID) {
@@ -210,6 +264,13 @@ public class SampleNetworkModel extends NetworkModel {
 		}
 	}
 
+	/**
+	 * Track download completion event for WLAN client load balancing.
+	 * Decrements client count for the serving access point.
+	 * 
+	 * @param accessPointLocation Location of the access point
+	 * @param sourceDeviceId Source device ID
+	 */
 	@Override
 	public void downloadFinished(Location accessPointLocation, int sourceDeviceId) {
 		if(sourceDeviceId == SimSettings.GENERIC_EDGE_DEVICE_ID) {
@@ -221,22 +282,38 @@ public class SampleNetworkModel extends NetworkModel {
 		}
 	}
 
+	/**
+	 * Calculate WLAN download delay based on empirical throughput data.
+	 * Throughput degrades with increased client load on the access point.
+	 * 
+	 * @param accessPointLocation Location containing serving WLAN ID
+	 * @param dataSize Data size in bytes to download
+	 * @return Download delay in seconds
+	 */
 	private double getWlanDownloadDelay(Location accessPointLocation, double dataSize) {
 		int numOfWlanUser = wlanClients[accessPointLocation.getServingWlanId()];
-		double taskSizeInKb = dataSize * (double)8; //KB to Kb
+		double taskSizeInKb = dataSize * (double)8; // Convert KB to Kb
 		double result=0;
 		
+		// Validate client count (should never be negative)
 		if(numOfWlanUser < 0)
-			System.out.println("--> ");
+			System.out.println("Warning: Negative WLAN client count detected");
 		
+		// Calculate delay using empirical throughput data if within bounds
 		if(numOfWlanUser < experimentalWlanDelay.length)
-			result = taskSizeInKb /*Kb*/ / (experimentalWlanDelay[numOfWlanUser] * (double) 3 ) /*Kbps*/; //802.11ac is around 3 times faster than 802.11n
+			result = taskSizeInKb / (experimentalWlanDelay[numOfWlanUser] * (double) 3); // 802.11ac ~3x faster than 802.11n
 
-		//System.out.println("--> " + numOfWlanUser + " user, " + taskSizeInKb + " KB, " +result + " sec");
 		return result;
 	}
 	
-	//wlan upload and download delay is symmetric in this model
+	/**
+	 * Calculate WLAN upload delay using symmetric model.
+	 * Upload and download delays are assumed equal in this network model.
+	 * 
+	 * @param accessPointLocation Location containing serving WLAN ID
+	 * @param dataSize Data size in bytes to upload
+	 * @return Upload delay in seconds
+	 */
 	private double getWlanUploadDelay(Location accessPointLocation, double dataSize) {
 		return getWlanDownloadDelay(accessPointLocation, dataSize);
 	}

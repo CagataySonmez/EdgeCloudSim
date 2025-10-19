@@ -26,29 +26,54 @@ import edu.boun.edgecloudsim.network.NetworkModel;
 import edu.boun.edgecloudsim.utils.Location;
 import edu.boun.edgecloudsim.utils.SimLogger;
 
+/**
+ * Sample network model using empirical WLAN/WAN data and MM1 queue model for MAN.
+ * Combines real-world wireless measurements with analytical queueing models for accurate
+ * multi-tier network simulation including edge server relay scenarios.
+ */
 public class SampleNetworkModel extends NetworkModel {
+	/** Network type enumeration for WLAN and LAN identification */
 	public static enum NETWORK_TYPE {WLAN, LAN};
+	/** Link direction enumeration for upload and download traffic */
 	public static enum LINK_TYPE {DOWNLOAD, UPLOAD};
-	public static double MAN_BW = 1300*1024; //Kbps
+	/** Metropolitan Area Network bandwidth in Kbps (1.3 Gbps) */
+	public static double MAN_BW = 1300*1024;
 
+	/** Number of MAN clients (unused in current implementation) */
 	@SuppressWarnings("unused")
 	private int manClients;
+	/** Array tracking number of active WAN clients per edge datacenter */
 	private int[] wanClients;
+	/** Array tracking number of active WLAN clients per edge datacenter */
 	private int[] wlanClients;
 	
+	/** Last time MM1 queue model was updated */
 	private double lastMM1QueueUpdateTime;
-	private double ManPoissonMeanForDownload; //seconds
-	private double ManPoissonMeanForUpload; //seconds
+	/** Poisson arrival rate mean for MAN download traffic (seconds) */
+	private double ManPoissonMeanForDownload;
+	/** Poisson arrival rate mean for MAN upload traffic (seconds) */
+	private double ManPoissonMeanForUpload;
 
-	private double avgManTaskInputSize; //bytes
-	private double avgManTaskOutputSize; //bytes
+	/** Average MAN task input size in bytes */
+	private double avgManTaskInputSize;
+	/** Average MAN task output size in bytes */
+	private double avgManTaskOutputSize;
 
-	//record last n task statistics during MM1_QUEUE_MODEL_UPDATE_INTEVAL seconds to simulate mmpp/m/1 queue model
+	// MM1 queue model statistics for MMPP/M/1 queue simulation
+	/** Total MAN task input size during current update interval */
 	private double totalManTaskInputSize;
+	/** Total MAN task output size during current update interval */
 	private double totalManTaskOutputSize;
+	/** Number of MAN download tasks during current update interval */
 	private double numOfManTaskForDownload;
+	/** Number of MAN upload tasks during current update interval */
 	private double numOfManTaskForUpload;
 	
+	/**
+	 * Empirical WLAN throughput data from real deployments (in Kbps).
+	 * Throughput decreases as more clients share the same access point.
+	 * Data collected from 802.11n networks, adjusted for 802.11ac (3x faster).
+	 */
 	public static final double[] experimentalWlanDelay = {
 		/*1 Client*/ 88040.279 /*(Kbps)*/,
 		/*2 Clients*/ 45150.982 /*(Kbps)*/,
@@ -153,6 +178,11 @@ public class SampleNetworkModel extends NetworkModel {
 		/*100 Clients*/ 1500.631 /*(Kbps)*/
 	};
 	
+	/**
+	 * Empirical WAN throughput data from real deployments (in Kbps).
+	 * Shows throughput degradation with increasing client load on WAN connections.
+	 * Used for cloud server communication delay calculations.
+	 */
 	public static final double[] experimentalWanDelay = {
 		/*1 Client*/ 20703.973 /*(Kbps)*/,
 		/*2 Clients*/ 12023.957 /*(Kbps)*/,
@@ -181,14 +211,24 @@ public class SampleNetworkModel extends NetworkModel {
 		/*25 Clients*/ 1311.131 /*(Kbps)*/
 	};
 	
+	/**
+	 * Constructor for sample network model.
+	 * @param _numberOfMobileDevices Number of mobile devices in simulation
+	 * @param _simScenario Simulation scenario identifier
+	 */
 	public SampleNetworkModel(int _numberOfMobileDevices, String _simScenario) {
 		super(_numberOfMobileDevices, _simScenario);
 	}
 
+	/**
+	 * Initialize network model with client tracking arrays and MM1 queue parameters.
+	 * Sets up empirical data for WLAN/WAN delays and calculates MAN queue parameters.
+	 */
 	@Override
 	public void initialize() {
-		wanClients = new int[SimSettings.getInstance().getNumOfEdgeDatacenters()];  //we have one access point for each datacenter
-		wlanClients = new int[SimSettings.getInstance().getNumOfEdgeDatacenters()];  //we have one access point for each datacenter
+		// Initialize client tracking arrays (one access point per edge datacenter)
+		wanClients = new int[SimSettings.getInstance().getNumOfEdgeDatacenters()];
+		wlanClients = new int[SimSettings.getInstance().getNumOfEdgeDatacenters()];
 
 		int numOfApp = SimSettings.getInstance().getTaskLookUpTable().length;
 		SimSettings SS = SimSettings.getInstance();
