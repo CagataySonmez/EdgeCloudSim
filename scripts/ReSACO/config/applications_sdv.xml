@@ -1,0 +1,72 @@
+<?xml version="1.0"?>
+<!-- SDV (software-defined vehicle) workloads, used by the sdv_highway /
+     sdv_rural_road / sdv_urban simulation.list rows. Mirrored exactly by
+     resaco/scenario.py's SDV_APP_PROFILES (same keep-in-sync-by-hand
+     contract as applications.xml <-> APP_PROFILES): if you change one,
+     change both. usage_percentage is the fleet mix. -->
+<applications>
+	<application name="ADAS_PERCEPTION">
+		<usage_percentage>35</usage_percentage>
+		<prob_cloud_selection>20</prob_cloud_selection>
+		<poisson_interarrival>1</poisson_interarrival>
+		<delay_sensitivity>1</delay_sensitivity>
+		<active_period>300</active_period>
+		<idle_period>10</idle_period>
+		<data_upload>1200</data_upload>
+		<data_download>80</data_download>
+		<task_length>7000</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>8</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>0.8</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>30</vm_utilization_on_mobile>
+		<max_delay_requirement>1</max_delay_requirement>
+	</application>
+	<application name="HD_MAP_UPDATE">
+		<usage_percentage>25</usage_percentage>
+		<prob_cloud_selection>20</prob_cloud_selection>
+		<poisson_interarrival>5</poisson_interarrival>
+		<delay_sensitivity>0.6</delay_sensitivity>
+		<active_period>60</active_period>
+		<idle_period>30</idle_period>
+		<data_upload>100</data_upload>
+		<data_download>2000</data_download>
+		<task_length>4000</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>5</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>0.5</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>15</vm_utilization_on_mobile>
+		<max_delay_requirement>3</max_delay_requirement>
+	</application>
+	<application name="DRIVER_MONITORING">
+		<usage_percentage>20</usage_percentage>
+		<prob_cloud_selection>20</prob_cloud_selection>
+		<poisson_interarrival>3</poisson_interarrival>
+		<delay_sensitivity>0.8</delay_sensitivity>
+		<active_period>300</active_period>
+		<idle_period>10</idle_period>
+		<data_upload>200</data_upload>
+		<data_download>20</data_download>
+		<task_length>2500</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>3</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>0.3</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>12</vm_utilization_on_mobile>
+		<max_delay_requirement>2</max_delay_requirement>
+	</application>
+	<application name="OTA_SOFTWARE_UPDATE">
+		<usage_percentage>20</usage_percentage>
+		<prob_cloud_selection>20</prob_cloud_selection>
+		<poisson_interarrival>30</poisson_interarrival>
+		<delay_sensitivity>0.05</delay_sensitivity>
+		<active_period>20</active_period>
+		<idle_period>300</idle_period>
+		<data_upload>50</data_upload>
+		<data_download>2500</data_download>
+		<task_length>8000</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>6</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>0.6</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>20</vm_utilization_on_mobile>
+		<max_delay_requirement>120</max_delay_requirement>
+	</application>
+</applications>

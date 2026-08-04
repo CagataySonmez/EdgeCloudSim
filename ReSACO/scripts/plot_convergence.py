@@ -27,12 +27,15 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_RESACO_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, _RESACO_DIR)                      # ReSACO/  -> `resaco`, `bridge`
+sys.path.insert(0, os.path.dirname(_RESACO_DIR))     # repo root -> `mec_core`, `baselines`
 
-from resaco import config
+from mec_core import config
 from resaco.reptile import inner_loop, _evaluate
 from resaco.sac import SACAgent
-from resaco.scenario import sample_scenario
+from mec_core.scenario import sample_scenario
+from mec_core.seeding import seed_everything
 
 
 def run_curve(theta, scenario, num_episodes, num_inner_updates, seed, label):
@@ -44,7 +47,7 @@ def run_curve(theta, scenario, num_episodes, num_inner_updates, seed, label):
 
         eval_agent = SACAgent()
         eval_agent.load_params(theta)
-        avg_reward = _evaluate(eval_agent, scenario, seed=rng_seed)
+        avg_reward, _, _ = _evaluate(eval_agent, scenario, seed=rng_seed)
         rewards.append(avg_reward)
         rng_seed += 1
 
@@ -68,6 +71,10 @@ def main():
     parser.add_argument("--inner", type=int, default=config.NUM_INNER_SAC_UPDATES)
     parser.add_argument("--seed", type=int, default=999,
                          help="seed for the new test scenario (kept out of train_meta.py's training pool)")
+    parser.add_argument("--scenario-source", type=str, default="mixed",
+                         choices=["mixed", "table2", "apps", "nextgen", "sdv"],
+                         help="how the held-out test scenario's task profile is drawn; "
+                              "'table2' matches the paper's own metadata construction")
     parser.add_argument("--theta", type=str, default=os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "checkpoints", "theta_star.pt"))
     parser.add_argument("--out", type=str, default=os.path.join(
@@ -76,12 +83,15 @@ def main():
 
     import torch
 
+    seed_everything(args.seed)  # see resaco/seeding.py
+
     if not os.path.exists(args.theta):
         print(f"ERROR: {args.theta} not found. Run scripts/train_meta.py first.")
         sys.exit(1)
     theta_star = torch.load(args.theta, map_location="cpu")
 
-    test_scenario = sample_scenario(__import__("random").Random(args.seed))
+    test_scenario = sample_scenario(__import__("random").Random(args.seed),
+                                    source=args.scenario_source)
     p = test_scenario.app_profile
     print(f"Test scenario (held out, seed={args.seed}): devices={test_scenario.number_of_mobile_devices} "
           f"app={p.name} interarrival={p.poisson_interarrival:.1f}s "

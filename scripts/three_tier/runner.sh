@@ -1,4 +1,11 @@
 #!/bin/sh
+# Windows' java wants ';' between classpath entries even under Git
+# Bash/MSYS, where ':' silently fails with NoClassDefFoundError.
+case "$(uname -s)" in
+	CYGWIN*|MINGW*|MSYS*) SEP=";" ;;
+	*) SEP=":" ;;
+esac
+
 
 script_root_path="$(dirname "$(readlink -f "$0")")"
 simulation_out_folder=$1
@@ -13,6 +20,6 @@ scenario_edge_devices_file=${script_root_path}/config/${edge_devices_file}
 scenario_applications_file=${script_root_path}/config/${applications_file}
 
 mkdir -p $scenario_out_folder
-java -classpath '../../bin:../../lib/cloudsim-4.0.jar:../../lib/commons-math3-3.6.1.jar:../../lib/colt.jar' edu.boun.edgecloudsim.applications.three_tier.ThreeTierMainApp $scenario_conf_file $scenario_edge_devices_file $scenario_applications_file $scenario_out_folder $iteration_number > ${scenario_out_folder}.log
+java -classpath "../../bin${SEP}../../lib/cloudsim-4.0.jar${SEP}../../lib/commons-math3-3.6.1.jar${SEP}../../lib/colt.jar" edu.boun.edgecloudsim.applications.three_tier.ThreeTierMainApp $scenario_conf_file $scenario_edge_devices_file $scenario_applications_file $scenario_out_folder $iteration_number > ${scenario_out_folder}.log
 tar -czf ${scenario_out_folder}.tar.gz -C $simulation_out_folder/${scenario_name} ite${iteration_number}
 rm -rf $scenario_out_folder

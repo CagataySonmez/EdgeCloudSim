@@ -176,6 +176,32 @@ public class ReSACOBridgeClient {
 		}
 	}
 
+	/**
+	 * Asks the bridge to re-run Algorithm 4 line 1 for this algorithm: copy
+	 * the originally loaded theta* back into theta_adapt and drop the replay
+	 * buffer/in-flight state, so each simulation run (each new S_new in the
+	 * device-count x scenario x policy sweep) adapts from the meta-trained
+	 * parameter instead of inheriting the previous run's drift. Best-effort:
+	 * a missing bridge just means the run continues with whatever the bridge
+	 * ends up serving (or the static fallback), same as every other call.
+	 */
+	public synchronized void reset(String algo) {
+		if (!ensureConnected()) {
+			return;
+		}
+		try {
+			out.write("RESET " + algo);
+			out.newLine();
+			out.flush();
+			String response = in.readLine();
+			if (response != null && response.trim().startsWith("ERROR")) {
+				SimLogger.printLine("ReSACO bridge RESET " + algo + ": " + response.trim());
+			}
+		} catch (Exception e) {
+			closeQuietly();
+		}
+	}
+
 	private void closeQuietly() {
 		try {
 			if (socket != null) {

@@ -34,6 +34,14 @@ Protocol (newline-delimited ASCII, one request per line):
          step (Algorithm 4); A2C/A3C (on-policy) just discard it -- their
          served policy is exactly what scripts/train_baselines.py produced.
 
+  RESET <algo>
+      -> "OK" | "ERROR ..."
+         Algorithm 4 line 1 for a new scenario: re-copies the originally
+         loaded checkpoint into theta_adapt and clears the replay buffer +
+         in-flight state, so each EdgeCloudSim run adapts from theta*
+         instead of inheriting the previous run's drift. The Java
+         orchestrator sends this once per simulation run at initialize().
+
   PING
       -> "PONG"
 
@@ -56,13 +64,15 @@ import threading
 
 import torch
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_RESACO_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, _RESACO_DIR)                      # ReSACO/  -> `resaco`, `bridge`
+sys.path.insert(0, os.path.dirname(_RESACO_DIR))     # repo root -> `mec_core`, `baselines`
 
-from resaco import config
+from mec_core import config
 from resaco.deploy import DeploymentAgent, FrozenPolicyAgent
 from resaco.sac import SACAgent
-from resaco.baselines.ddpg import DDPGAgent
-from resaco.baselines.a2c import A2CAgent
+from baselines.ddpg import DDPGAgent
+from baselines.a2c import A2CAgent
 
 # name -> (checkpoint filename, agent factory, wrapper factory, persist)
 # persist=True means the wrapper is a DeploymentAgent that keeps adapting
@@ -145,6 +155,21 @@ class Handler(socketserver.StreamRequestHandler):
             # result is None only when request_id was never seen by select_action
             # (e.g. the bridge was unreachable/restarted at decision time).
             return "OK" if result is not None else "IGNORED"
+
+        if cmd == "RESET":
+            algo = parts[1] if len(parts) > 1 else None
+            if algo is None:
+                return "ERROR RESET requires an algo name"
+            agent = _agents.get(algo)
+            if agent is None:
+                return f"ERROR unknown algo {algo}"
+            with _locks[algo]:
+                ok = agent.reset()
+            # Algorithm 4 line 1 for a new scenario S_new: theta_adapt is
+            # re-copied from the originally loaded parameter and the replay
+            # buffer/pending state dropped, so each simulation run adapts
+            # from theta* instead of inheriting the previous run's drift.
+            return "OK" if ok else "ERROR nothing to reset (no checkpoint was loaded for this algo)"
 
         if cmd == "SAVE":
             algo = parts[1] if len(parts) > 1 else None

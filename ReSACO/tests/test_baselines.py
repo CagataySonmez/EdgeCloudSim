@@ -3,12 +3,12 @@ ReSACO/README.md's "Convergence" section) -- these check each baseline
 actually uses its own tuned learning rate, plus a light training smoke
 test for each (construction + a short train_loop doesn't error)."""
 
-from resaco import config
-from resaco.env import MECOffloadEnv
-from resaco.baselines.a2c import A2CAgent
-from resaco.baselines.a3c import A3CTrainer
-from resaco.baselines.ddpg import DDPGAgent
-from resaco.scenario import AppProfile, Scenario
+from mec_core import config
+from mec_core.env import MECOffloadEnv
+from baselines.a2c import A2CAgent
+from baselines.a3c import A3CTrainer
+from baselines.ddpg import DDPGAgent
+from mec_core.scenario import AppProfile, Scenario
 
 
 def _make_scenario():

@@ -14,6 +14,7 @@
 		<vm_utilization_on_edge>6</vm_utilization_on_edge>
 		<vm_utilization_on_cloud>0.6</vm_utilization_on_cloud>
 		<vm_utilization_on_mobile>20</vm_utilization_on_mobile>
+		<max_delay_requirement>2</max_delay_requirement>
 	</application>
 	<application name="HEALTH_APP">
 		<usage_percentage>20</usage_percentage>
@@ -29,6 +30,7 @@
 		<vm_utilization_on_edge>2</vm_utilization_on_edge>
 		<vm_utilization_on_cloud>0.2</vm_utilization_on_cloud>
 		<vm_utilization_on_mobile>10</vm_utilization_on_mobile>
+		<max_delay_requirement>4</max_delay_requirement>
 	</application>
 	<application name="HEAVY_COMP_APP">
 		<usage_percentage>20</usage_percentage>
@@ -44,6 +46,7 @@
 		<vm_utilization_on_edge>30</vm_utilization_on_edge>
 		<vm_utilization_on_cloud>3</vm_utilization_on_cloud>
 		<vm_utilization_on_mobile>50</vm_utilization_on_mobile>
+		<max_delay_requirement>60</max_delay_requirement>
 	</application>
 	<application name="INFOTAINMENT_APP">
 		<usage_percentage>30</usage_percentage>
@@ -59,5 +62,6 @@
 		<vm_utilization_on_edge>10</vm_utilization_on_edge>
 		<vm_utilization_on_cloud>1</vm_utilization_on_cloud>
 		<vm_utilization_on_mobile>25</vm_utilization_on_mobile>
+		<max_delay_requirement>8</max_delay_requirement>
 	</application>
 </applications>

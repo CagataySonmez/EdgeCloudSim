@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<edge_devices>
+	<datacenter arch="x86" os="Linux" vmm="Xen">
+		<costPerBw>0.1</costPerBw>
+		<costPerSec>3.0</costPerSec>
+		<costPerMem>0.05</costPerMem>
+		<costPerStorage>0.1</costPerStorage>
+		<location>
+			<x_pos>3000</x_pos>
+			<y_pos>0</y_pos>
+			<wlan_id>0</wlan_id>
+			<attractiveness>0</attractiveness>
+		</location>
+		<hosts>
+			<host>
+				<core>4</core>
+				<mips>20000</mips>
+				<ram>64000</ram>
+				<storage>250000</storage>
+				<VMs>
+					<VM vmm="Xen">
+						<core>4</core>
+						<mips>20000</mips>
+						<ram>64000</ram>
+						<storage>250000</storage>
+					</VM>
+				</VMs>
+			</host>
+		</hosts>
+	</datacenter>
+</edge_devices>

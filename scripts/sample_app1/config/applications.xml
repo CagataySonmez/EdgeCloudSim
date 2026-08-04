@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<applications>
+	<application name="AUGMENTED_REALITY">
+		<usage_percentage>30</usage_percentage>
+		<prob_cloud_selection>20</prob_cloud_selection>
+		<poisson_interarrival>5</poisson_interarrival>
+		<delay_sensitivity>0</delay_sensitivity>
+		<active_period>45</active_period>
+		<idle_period>15</idle_period>
+		<data_upload>1500</data_upload>
+		<data_download>25</data_download>
+		<task_length>2000</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>20</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>2</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>0</vm_utilization_on_mobile>
+	</application>
+	<application name="HEALTH_APP">
+		<usage_percentage>20</usage_percentage>
+		<prob_cloud_selection>20</prob_cloud_selection>
+		<poisson_interarrival>30</poisson_interarrival>
+		<delay_sensitivity>0</delay_sensitivity>
+		<active_period>10</active_period>
+		<idle_period>20</idle_period>
+		<data_upload>1250</data_upload>
+		<data_download>20</data_download>
+		<task_length>400</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>5</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>0.5</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>0</vm_utilization_on_mobile>
+	</application>
+	<application name="HEAVY_COMP_APP">
+		<usage_percentage>20</usage_percentage>
+		<prob_cloud_selection>40</prob_cloud_selection>
+		<poisson_interarrival>60</poisson_interarrival>
+		<delay_sensitivity>0</delay_sensitivity>
+		<active_period>60</active_period>
+		<idle_period>60</idle_period>
+		<data_upload>2500</data_upload>
+		<data_download>250</data_download>
+		<task_length>3000</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>30</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>3</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>0</vm_utilization_on_mobile>
+	</application>
+	<application name="INFOTAINMENT_APP">
+		<usage_percentage>30</usage_percentage>
+		<prob_cloud_selection>15</prob_cloud_selection>
+		<poisson_interarrival>7</poisson_interarrival>
+		<delay_sensitivity>0</delay_sensitivity>
+		<active_period>15</active_period>
+		<idle_period>45</idle_period>
+		<data_upload>25</data_upload>
+		<data_download>2000</data_download>
+		<task_length>750</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>10</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>1</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>0</vm_utilization_on_mobile>
+	</application>
+</applications>

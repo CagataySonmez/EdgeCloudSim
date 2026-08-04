@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<applications>
+	<application name="TRAFFIC_MANAGEMENT">
+		<usage_percentage>30</usage_percentage>
+		<prob_cloud_selection>0</prob_cloud_selection>
+		<delay_sensitivity>0.5</delay_sensitivity>
+		<max_delay_requirement>0.5</max_delay_requirement>
+		<poisson_interarrival>3</poisson_interarrival>
+		<active_period>3600</active_period>
+		<idle_period>1</idle_period>
+		<data_upload>20</data_upload>
+		<data_download>20</data_download>
+		<task_length>3000</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>6</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>1.2</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>0</vm_utilization_on_mobile>
+	</application>
+	<application name="DANGER_ASSESSMENT">
+		<usage_percentage>35</usage_percentage>
+		<prob_cloud_selection>0</prob_cloud_selection>
+		<delay_sensitivity>0.8</delay_sensitivity>
+		<max_delay_requirement>1</max_delay_requirement>
+		<poisson_interarrival>5</poisson_interarrival>
+		<active_period>3600</active_period>
+		<idle_period>1</idle_period>
+		<data_upload>40</data_upload>
+		<data_download>20</data_download>
+		<task_length>10000</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>20</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>4</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>0</vm_utilization_on_mobile>
+	</application>
+	<application name="INFOTAINMENT">
+		<usage_percentage>35</usage_percentage>
+		<prob_cloud_selection>0</prob_cloud_selection>
+		<delay_sensitivity>0.25</delay_sensitivity>
+		<max_delay_requirement>1.5</max_delay_requirement>
+		<poisson_interarrival>15</poisson_interarrival>
+		<active_period>3600</active_period>
+		<idle_period>1</idle_period>
+		<data_upload>20</data_upload>
+		<data_download>80</data_download>
+		<task_length>20000</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>40</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>8</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>0</vm_utilization_on_mobile>
+	</application>
+</applications>

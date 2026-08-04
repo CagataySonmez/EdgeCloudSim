@@ -5,8 +5,8 @@ missing-checkpoint fallback, and save_all_agents()."""
 import torch
 
 import bridge.inference_server as srv
-from resaco.baselines.a2c import A2CAgent
-from resaco.baselines.ddpg import DDPGAgent
+from baselines.a2c import A2CAgent
+from baselines.ddpg import DDPGAgent
 from resaco.sac import SACAgent
 
 
@@ -57,6 +57,34 @@ def test_persist_capable_agent_gets_correct_adapted_save_path(tmp_path):
 
     frozen_agent = srv._agents["A2C_BASELINE"]
     assert frozen_agent.save() is False  # on-policy: nothing to persist
+
+
+def test_reset_command_restores_loaded_checkpoint(tmp_path):
+    _write_fake_checkpoints(tmp_path)
+    srv.load_agents(str(tmp_path))
+    original = torch.load(tmp_path / "theta_star.pt", map_location="cpu")
+
+    agent = srv._agents["RESACO"]
+    # drift theta_adapt away from theta* via online outcomes
+    state = [0.5] * 18
+    for i in range(70):
+        rid = f"reset-test-{i}"
+        agent.select_action(state, request_id=rid)
+        agent.report_outcome(rid, -1.0, state, False)
+    drifted = agent.state_dict()
+    assert any(not torch.equal(original["actor"][k], drifted["actor"][k])
+               for k in original["actor"])
+
+    assert agent.reset() is True
+    restored = agent.state_dict()
+    assert all(torch.equal(original["actor"][k], restored["actor"][k])
+               for k in original["actor"])
+
+
+def test_reset_on_random_init_agent_reports_error(tmp_path):
+    # no checkpoints on disk -> agents serve random init -> nothing to reset to
+    srv.load_agents(str(tmp_path))
+    assert srv._agents["RESACO"].reset() is False
 
 
 def test_save_all_agents_writes_adapted_files_for_persist_capable_algos_only(tmp_path):

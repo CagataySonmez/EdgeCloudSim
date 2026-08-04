@@ -1,0 +1,87 @@
+<?xml version="1.0"?>
+<applications>
+    <!-- Application for COCO Dataset -->
+    <application name="COCO">
+        <usage_percentage>20</usage_percentage>
+        <prob_cloud_selection>30</prob_cloud_selection>
+        <poisson_interarrival>10</poisson_interarrival>
+        <delay_sensitivity>1</delay_sensitivity>
+        <active_period>120</active_period>
+        <idle_period>30</idle_period>
+        <data_upload>100</data_upload>
+        <data_download>500</data_download>
+        <task_length>20000</task_length>
+        <required_core>4</required_core>
+        <vm_utilization_on_edge>5.0</vm_utilization_on_edge>
+        <vm_utilization_on_cloud>0.5</vm_utilization_on_cloud>
+        <vm_utilization_on_mobile>12</vm_utilization_on_mobile>
+    </application>
+
+    <!-- Application for Google Speech Commands Dataset -->
+    <application name="GOOGLE_SPEECH_COMMANDS">
+        <usage_percentage>20</usage_percentage>
+        <prob_cloud_selection>20</prob_cloud_selection>
+        <poisson_interarrival>3</poisson_interarrival>
+        <delay_sensitivity>1</delay_sensitivity>
+        <active_period>60</active_period>
+        <idle_period>20</idle_period>
+        <data_upload>1</data_upload>
+        <data_download>5</data_download>
+        <task_length>10000</task_length>
+        <required_core>2</required_core>
+        <vm_utilization_on_edge>3.0</vm_utilization_on_edge>
+        <vm_utilization_on_cloud>0.3</vm_utilization_on_cloud>
+        <vm_utilization_on_mobile>8</vm_utilization_on_mobile>
+    </application>
+
+    <!-- Application for Human Activity Recognition Using Smartphones -->
+    <application name="HUMAN_ACTIVITY_RECOGNITION">
+        <usage_percentage>10</usage_percentage>
+        <prob_cloud_selection>10</prob_cloud_selection>
+        <poisson_interarrival>5</poisson_interarrival>
+        <delay_sensitivity>1</delay_sensitivity>
+        <active_period>45</active_period>
+        <idle_period>30</idle_period>
+        <data_upload>0.5</data_upload>
+        <data_download>1</data_download>
+        <task_length>8000</task_length>
+        <required_core>2</required_core>
+        <vm_utilization_on_edge>2.5</vm_utilization_on_edge>
+        <vm_utilization_on_cloud>0.25</vm_utilization_on_cloud>
+        <vm_utilization_on_mobile>7</vm_utilization_on_mobile>
+    </application>
+
+    <!-- Application for Urban Sound Dataset -->
+    <application name="URBAN_SOUND">
+        <usage_percentage>25</usage_percentage>
+        <prob_cloud_selection>25</prob_cloud_selection>
+        <poisson_interarrival>6</poisson_interarrival>
+        <delay_sensitivity>1</delay_sensitivity>
+        <active_period>90</active_period>
+        <idle_period>40</idle_period>
+        <data_upload>10</data_upload>
+        <data_download>50</data_download>
+        <task_length>15000</task_length>
+        <required_core>3</required_core>
+        <vm_utilization_on_edge>4.5</vm_utilization_on_edge>
+        <vm_utilization_on_cloud>0.45</vm_utilization_on_cloud>
+        <vm_utilization_on_mobile>18</vm_utilization_on_mobile>
+    </application>
+
+    <!-- Application for CIFAR-10/CIFAR-100 Dataset -->
+    <application name="CIFAR">
+        <usage_percentage>25</usage_percentage>
+        <prob_cloud_selection>15</prob_cloud_selection>
+        <poisson_interarrival>8</poisson_interarrival>
+        <delay_sensitivity>1</delay_sensitivity>
+        <active_period>70</active_period>
+        <idle_period>30</idle_period>
+        <data_upload>2</data_upload>
+        <data_download>10</data_download>
+        <task_length>12000</task_length>
+        <required_core>2</required_core>
+        <vm_utilization_on_edge>3.5</vm_utilization_on_edge>
+        <vm_utilization_on_cloud>0.35</vm_utilization_on_cloud>
+        <vm_utilization_on_mobile>10</vm_utilization_on_mobile>
+    </application>
+</applications>

@@ -4,8 +4,8 @@ save_path is configured) and FrozenPolicyAgent's always-a-no-op save()."""
 
 import os
 
-from resaco import config
-from resaco.baselines.a2c import A2CAgent
+from mec_core import config
+from baselines.a2c import A2CAgent
 from resaco.deploy import DeploymentAgent, FrozenPolicyAgent
 from resaco.sac import SACAgent
 
@@ -41,6 +41,39 @@ def test_deployment_agent_manual_save(tmp_path):
     agent = DeploymentAgent(SACAgent(), save_path=save_path, autosave_every=10_000)
     assert agent.save() is True
     assert os.path.exists(save_path)
+
+
+def test_deployment_agent_reset_restores_initial_params_and_clears_state():
+    import torch
+
+    source = SACAgent()
+    params = source.get_params()
+    agent = DeploymentAgent(SACAgent(), params=params)
+
+    # adapt online well past batch size so weights genuinely move
+    _drive_transitions(agent, config.BATCH_SIZE + 5)
+    drifted = agent.state_dict()
+    assert any(not torch.equal(params["actor"][k], drifted["actor"][k])
+               for k in params["actor"]), "online updates never moved the params"
+
+    assert agent.reset() is True
+    restored = agent.state_dict()
+    assert all(torch.equal(params["actor"][k], restored["actor"][k])
+               for k in params["actor"]), "reset did not restore theta*"
+    assert len(agent.agent.replay_buffer) == 0
+    assert not agent._pending
+
+
+def test_deployment_agent_reset_without_params_returns_false():
+    agent = DeploymentAgent(SACAgent())  # served randomly-initialized: nothing to reset to
+    assert agent.reset() is False
+
+
+def test_frozen_agent_reset_is_safe():
+    frozen = FrozenPolicyAgent(A2CAgent())
+    frozen.select_action([0.5] * config.STATE_DIM, request_id="r1")
+    assert frozen.reset() is True
+    assert frozen.report_outcome("r1", -1.0, [0.5] * config.STATE_DIM) is None  # correlation dropped
 
 
 def test_deployment_agent_report_outcome_unknown_request_returns_none():

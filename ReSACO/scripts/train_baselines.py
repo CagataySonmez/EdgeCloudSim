@@ -18,15 +18,18 @@ import sys
 
 import torch
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_RESACO_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, _RESACO_DIR)                      # ReSACO/  -> `resaco`, `bridge`
+sys.path.insert(0, os.path.dirname(_RESACO_DIR))     # repo root -> `mec_core`, `baselines`
 
-from resaco import config
-from resaco.env import MECOffloadEnv
+from mec_core import config
+from mec_core.env import MECOffloadEnv
 from resaco.sac import SACAgent
-from resaco.baselines.ddpg import DDPGAgent
-from resaco.baselines.a2c import A2CAgent
-from resaco.baselines.a3c import train_a3c
-from resaco.scenario import sample_scenario_pool
+from baselines.ddpg import DDPGAgent
+from baselines.a2c import A2CAgent
+from baselines.a3c import train_a3c
+from mec_core.scenario import sample_scenario_pool
+from mec_core.seeding import seed_everything
 
 
 def train_sac_no_meta(scenarios, total_steps, seed):
@@ -69,6 +72,7 @@ def main():
 
     os.makedirs(args.out_dir, exist_ok=True)
 
+    seed_everything(args.seed)  # see resaco/seeding.py
     scenarios = sample_scenario_pool(args.scenarios, seed=args.seed)
     print(f"Training baselines on {len(scenarios)} scenarios, {args.steps} transitions each...")
 

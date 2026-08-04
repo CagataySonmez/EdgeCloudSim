@@ -34,3 +34,38 @@ jobs:
           cache-dependency-path: scripts/requirements.txt
       - run: pip install -r requirements.txt pytest==8.3.5
       - run: pytest tests/ -v
+
+  # Every application under src/edu/boun/edgecloudsim/applications must keep
+  # compiling. They share one src/ tree, so a change to the simulator core
+  # can break an application nobody happened to rebuild -- which is exactly
+  # how several of them silently rotted before.
+  java-applications:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Compile every application
+        run: |
+          failed=""
+          for dir in src/edu/boun/edgecloudsim/applications/*/; do
+            app=$(basename "$dir")
+            main=$(find "$dir" -maxdepth 1 -name "*MainApp.java" -o -maxdepth 1 -name "MainApp.java" | head -1)
+            if [ -z "$main" ]; then
+              echo "::warning::$app has no main class, skipping"
+              continue
+            fi
+            echo "--- $app ($main)"
+            if ! javac -nowarn -encoding UTF-8 -classpath "lib/*" -sourcepath src "$main" -d "/tmp/build_$app"; then
+              failed="$failed $app"
+            fi
+          done
+          if [ -n "$failed" ]; then
+            echo "::error::applications failed to compile:$failed"
+            exit 1
+          fi
+
+      - name: Run the Java test suite
+        run: ./test.sh

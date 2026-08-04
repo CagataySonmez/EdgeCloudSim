@@ -8,9 +8,17 @@ These wrap the object the Java-side inference bridge
 algorithm (ReSACO, SAC baseline, DDPG baseline, A2C baseline, A3C baseline).
 """
 
+import copy
+
 import torch
 
-from . import config
+from mec_core import config
+
+# In-flight decision correlation entries whose OUTCOME never arrives (e.g.
+# tasks still airborne when a simulation run's clock is cut off) would
+# otherwise accumulate forever in a long-lived bridge process; past this
+# many, the oldest are evicted (dicts preserve insertion order).
+_MAX_PENDING = 20_000
 
 
 class DeploymentAgent:
@@ -35,6 +43,9 @@ class DeploymentAgent:
         self.agent = agent
         if params is not None:
             self.agent.load_params(params)  # theta* -> theta_adapt (line 1)
+        # kept so reset() can re-run Algorithm 4 line 1 ("copy theta* into
+        # theta_adapt") for a *new* scenario S_new without a process restart
+        self._initial_params = copy.deepcopy(params) if params is not None else None
         self._pending = {}  # correlate an in-flight decision with its later outcome
         self.save_path = save_path
         self.autosave_every = autosave_every
@@ -43,7 +54,23 @@ class DeploymentAgent:
     def select_action(self, state, request_id, greedy: bool = False) -> int:
         action = self.agent.select_action(state, greedy=greedy)
         self._pending[request_id] = (state, action)
+        while len(self._pending) > _MAX_PENDING:
+            self._pending.pop(next(iter(self._pending)))
         return action
+
+    def reset(self) -> bool:
+        """Algorithm 4 line 1 for a new scenario: reload the original
+        trained parameter (theta_star as loaded at construction), drop all
+        accumulated online adaptation, the replay buffer, and in-flight
+        correlation state. Returns False when the agent was constructed
+        without params (nothing to reset back to)."""
+        if self._initial_params is None:
+            return False
+        self.agent.load_params(copy.deepcopy(self._initial_params))
+        self.agent.replay_buffer.clear()
+        self._pending.clear()
+        self._updates_since_save = 0
+        return True
 
     def report_outcome(self, request_id, reward: float, next_state, done: bool = False,
                         min_buffer_before_update: int = config.BATCH_SIZE):
@@ -105,8 +132,20 @@ class FrozenPolicyAgent:
         self._seen = set()  # request ids we actually decided, for accurate IGNORED reporting
 
     def select_action(self, state, request_id, greedy: bool = True) -> int:
+        if len(self._seen) > _MAX_PENDING:
+            # orphaned ids from cut-off simulation runs; sets are unordered,
+            # so shed them wholesale (worst case: a few stale OUTCOMEs answer
+            # IGNORED, which is what they deserve anyway)
+            self._seen.clear()
         self._seen.add(request_id)
         return self.agent.select_action(state, greedy=greedy)
+
+    def reset(self) -> bool:
+        """A frozen policy has no online adaptation to roll back -- only
+        the request-correlation state is dropped. Present so callers can
+        treat every agent uniformly (mirrors DeploymentAgent.reset())."""
+        self._seen.clear()
+        return True
 
     def report_outcome(self, request_id, reward: float, next_state, done: bool = False):
         if request_id not in self._seen:

@@ -82,19 +82,32 @@ public class ReSACOMobileDeviceManager extends MobileDeviceManager {
 	 */
 	private void reportReSACOOutcome(Task task, boolean success) {
 		String requestId = ReSACOStateBuilder.requestIdFor(task);
+		// Always consume the submission clock entry -- the failure branch
+		// doesn't need the elapsed time, but leaving its entry behind would
+		// leak one map entry per failed task for the life of the process.
+		double serviceTime = ReSACOBridgeClient.getInstance().elapsedSince(requestId);
+		// Same delay-sensitivity reward weighting as the training env
+		// (resaco/env.py step()): w = base + this app type's delay_sensitivity,
+		// applied to both the success and the failure branch.
+		double weight = ReSACOStateBuilder.delaySensitivityWeight(task);
 		double reward;
 		if (success) {
-			double serviceTime = ReSACOBridgeClient.getInstance().elapsedSince(requestId);
 			if (serviceTime < 0) {
 				return; // this task wasn't decided by the bridge (e.g. it was down at submission time)
 			}
-			reward = -serviceTime;
+			// energy / monetary cost / SLA-deadline penalties, mirroring the
+			// training env's industry-direction reward terms
+			reward = -weight * serviceTime - ReSACOStateBuilder.industryPenalty(task, serviceTime);
 		} else {
-			reward = -(ReSACOStateBuilder.RESACO_TMAX_SECONDS + 1);
+			reward = -weight * (ReSACOStateBuilder.RESACO_TMAX_SECONDS + 1);
 		}
 		String algo = SimManager.getInstance().getOrchestratorPolicy();
-		double[] nextState = ReSACOStateBuilder.buildStateForDevice(task.getMobileDeviceId());
-		ReSACOBridgeClient.getInstance().reportOutcome(algo, requestId, reward, true, nextState);
+		double[] nextState = ReSACOStateBuilder.buildStateForDevice(task.getMobileDeviceId(), task.getTaskType());
+		// done=false: the paper's task stream is continuing, never episodic --
+		// training (env.py) always stores done=False, and done=1 would zero
+		// Eq. (10)'s bootstrap term gamma*V(s') on every single online update,
+		// silently degrading Algorithm 4's adaptation to a one-step bandit.
+		ReSACOBridgeClient.getInstance().reportOutcome(algo, requestId, reward, false, nextState);
 	}
 
 	protected void processCloudletReturn(SimEvent ev) {

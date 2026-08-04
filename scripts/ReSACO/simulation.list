@@ -1,1 +1,11 @@
 default_config;edge_devices.xml;applications.xml
+high_mobility;edge_devices.xml;applications.xml
+congested_wan;edge_devices.xml;applications.xml
+weak_edge;edge_devices_weak_edge.xml;applications.xml
+nextgen_apps;edge_devices.xml;applications_nextgen.xml
+mmwave_5g;edge_devices.xml;applications_nextgen.xml
+ntn_backhaul;edge_devices.xml;applications_nextgen.xml
+gpu_edge;edge_devices_gpu_edge.xml;applications_nextgen.xml
+sdv_highway;edge_devices.xml;applications_sdv.xml
+sdv_rural_road;edge_devices_sdv_rural.xml;applications_sdv.xml
+sdv_urban;edge_devices_sdv_urban.xml;applications_sdv.xml

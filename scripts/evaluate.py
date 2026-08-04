@@ -109,6 +109,54 @@ def select_date_folder(date_folders, auto=False):
             print("Please enter a valid number.")
 
 
+def get_available_scenario_folders(base_path, selected_date):
+    """Scenario (simulation.list entry) folders under one date folder --
+    e.g. default_config, high_mobility, congested_wan, weak_edge for
+    ReSACO. Older runs only ever contain default_config."""
+    date_dir = os.path.join(base_path, selected_date)
+    try:
+        return natsorted([f for f in os.listdir(date_dir)
+                          if os.path.isdir(os.path.join(date_dir, f))])
+    except Exception as e:
+        print(f"Error: Unable to read {date_dir} directory: {e}")
+        sys.exit(1)
+
+
+def select_scenario_folder(scenario_folders, auto=False):
+    """Pick which scenario folder to evaluate. Auto mode (and the
+    single-scenario case) prefers default_config to keep unattended runs
+    evaluating the same baseline scenario they always did."""
+    if not scenario_folders:
+        return "default_config"  # let the caller fail with its usual error path
+    if len(scenario_folders) == 1:
+        return scenario_folders[0]
+    if auto:
+        chosen = "default_config" if "default_config" in scenario_folders else scenario_folders[0]
+        print(f"[--auto] Using scenario folder: {chosen}")
+        return chosen
+
+    print("\nAvailable Scenario Folders:")
+    print("-" * 50)
+    print("0. (Auto) Use default_config" if "default_config" in scenario_folders
+          else "0. (Auto) Use first scenario")
+    for idx, name in enumerate(scenario_folders, start=1):
+        print(f"{idx}. {name}")
+    print("-" * 50)
+
+    while True:
+        try:
+            selection = int(input("Select a scenario by number: ")) - 1
+            if selection == -1:
+                return ("default_config" if "default_config" in scenario_folders
+                        else scenario_folders[0])
+            elif 0 <= selection < len(scenario_folders):
+                return scenario_folders[selection]
+            else:
+                print("Invalid selection. Try again.")
+        except ValueError:
+            print("Please enter a valid number.")
+
+
 ###############################################################################
 # 2. Create 'logs' and 'graph' folders under the resolved results directory
 ###############################################################################
@@ -296,11 +344,13 @@ def read_logs(logs_dir):
 ###############################################################################
 # 6. Process files by date
 ###############################################################################
-def process_files_by_date(base_path, results_dir, selected_date):
+def process_files_by_date(base_path, results_dir, selected_date, scenario_name='default_config'):
     """
     1) Check and parse 'selected_date'.
-    2) Locate base_dir = <base_path>/<selected_date>/default_config.
-    3) Create logs & graph folders under results_dir.
+    2) Locate base_dir = <base_path>/<selected_date>/<scenario_name>.
+    3) Create logs & graph folders under results_dir (non-default scenarios
+       get their own results_dir/<scenario_name>/ subtree so evaluating
+       several scenarios of one run never mixes their logs/plots).
     4) Copy and extract files from base_dir to logs_dir.
     5) Read logs (only ALL_APPS_GENERIC) and return (log_data, logs_dir, graph_dir).
     """
@@ -311,15 +361,20 @@ def process_files_by_date(base_path, results_dir, selected_date):
         print(f"Invalid date format. Please use DD-MM-YYYY_HH-MM. Error: {e}")
         return {}
 
-    # 1) Source directory: <base_path>/<date>/default_config
-    # ("default_config" is the scenario name in simulation.list; every
-    # EdgeCloudSim application here uses that same name for its one config.)
-    base_dir = os.path.join(base_path, selected_date, 'default_config')
+    # 1) Source directory: <base_path>/<date>/<scenario> ("default_config"
+    # etc. -- one folder per simulation.list entry; ReSACO's environment
+    # presets add high_mobility/congested_wan/weak_edge alongside it.)
+    base_dir = os.path.join(base_path, selected_date, scenario_name)
     if not os.path.isdir(base_dir):
         print(f"Error: Base directory not found: {base_dir}")
         return {}
 
-    # 2) Create logs/graph folders under results_dir
+    # 2) Create logs/graph folders under results_dir. default_config keeps
+    # the historical layout (directly under results_dir); other scenarios
+    # get a subfolder so nothing collides.
+    if scenario_name != 'default_config':
+        results_dir = os.path.join(results_dir, scenario_name)
+        os.makedirs(results_dir, exist_ok=True)
     logs_dir, graph_dir = create_result_structure(results_dir)
 
     # 3) Copy and extract files
@@ -834,16 +889,24 @@ def run_app_evaluation(app_dir_name, results_dir, auto=False):
 
     date_folders = get_available_date_folders(base_path)
     input_date = select_date_folder(date_folders, auto=auto)
+    scenario_folders = get_available_scenario_folders(base_path, input_date)
+    scenario_name = select_scenario_folder(scenario_folders, auto=auto)
     print("\n" + "-" * 20)
     print(f"Application: {app_dir_name}")
     print(f"Selected simulation date: {input_date}")
+    print(f"Selected scenario: {scenario_name}")
     print(f"Results directory: {results_dir}")
     print("-" * 20)
 
-    result = process_files_by_date(base_path, results_dir, input_date)
+    result = process_files_by_date(base_path, results_dir, input_date, scenario_name)
     if not result:
         sys.exit(1)  # Exit if processing fails
     log_data, logs_dir, graph_dir = result
+
+    # Non-default scenarios carry their name in every CSV/plot filename so
+    # artifacts from different scenarios of the same run stay tellable apart.
+    if scenario_name != 'default_config':
+        input_date = f"{input_date}_{scenario_name}"
 
     selected_ites, ite_part, selected_policies, policy_part = select_ite_and_policy(log_data, auto=auto)
 

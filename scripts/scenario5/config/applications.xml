@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<applications>
+	<application name="GENERIC_APPLICATION">
+		<usage_percentage>100</usage_percentage>
+		<prob_cloud_selection>0</prob_cloud_selection>
+		<delay_sensitivity>0.5</delay_sensitivity>
+		<max_delay_requirement>0.5</max_delay_requirement>
+		<poisson_interarrival>5</poisson_interarrival>
+		<active_period>3600</active_period>
+		<idle_period>1</idle_period>
+		<data_upload>30</data_upload>
+		<data_download>30</data_download>
+		<task_length>500</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>3</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>0</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>0</vm_utilization_on_mobile>
+	</application>
+</applications>

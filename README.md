@@ -109,6 +109,35 @@ You can also monitor each process via the output files located under *scripts/sa
 ./run_scenarios.sh {# of parallel Processes} {# of iteration}
 tail -f output/date/ite_1.log
 ```
+# Repository layout
+
+Two rules keep this repo navigable as more algorithms and scenarios get
+added:
+
+**1. Every EdgeCloudSim application lives under
+`src/edu/boun/edgecloudsim/applications/`** -- one package per
+application, each with its own `MainApp`/`ScenarioFactory`, and a
+matching `scripts/<application>/` folder holding its `compile.sh`,
+`runner.sh`, `simulation.list` and `config/`. Currently: `fuzzy`,
+`motivation2`, `resaco`, `sample_app1`-`sample_app5`,
+`scenario1`-`scenario5`, `three_tier`. They all share the
+single `src/edu/boun/edgecloudsim/` simulator core, so CI compiles every
+one of them on each push (see `.github/workflows/tests.yml`) -- a change
+to the core that breaks an application nobody happened to rebuild fails
+the build instead of rotting silently.
+
+**2. The Python side is split by concern, not by algorithm:**
+
+| Folder | Holds |
+|---|---|
+| `mec_core/` | shared, algorithm-agnostic MEC infrastructure: the offloading environment, scenario/app profiles, networks, replay buffer, normalization, config, seeding |
+| `baselines/` | the non-ReSACO learners (DDPG, A2C, A3C) |
+| `ReSACO/` | **only** the ReSACO algorithm (SAC-Update, the Reptile loops, the Deployment Phase) plus its serving bridge, training scripts and tests |
+
+So adding or comparing another offloading algorithm means adding a module
+under `baselines/` (or a sibling folder) -- never editing `ReSACO/`. See
+[ReSACO/README.md](ReSACO/README.md) for the ReSACO specifics.
+
 # To make new scenario
 ## Change following files
 **scripts/{scenario_name}** 
@@ -159,10 +188,16 @@ on its own.
 | A3C_BASELINE   | Asynchronous A3C. On-policy: served frozen, same as A2C_BASELINE. |
 
 For every task, `ReSACOEdgeOrchestrator` sends the current state (task
-size, device/edge/cloud utilization, network bandwidth) to whichever
-algorithm the active policy names, over TCP, and offloads to whatever tier
-(device / edge / cloud) it returns; the task's real outcome is reported
-back afterwards. If the bridge or the requested algorithm's checkpoint is
+size, device utilization, *per-edge-host* utilization -- one state slot
+per edge host, so the policy can tell edge servers apart -- cloud
+utilization, network bandwidth) to whichever algorithm the active policy
+names, over TCP, and offloads to whatever it returns: the device, the
+cloud, or the *specific* edge host the chosen edge action names (falling
+back to a global least-loaded edge dispatch only if that host has no VM
+capacity left). The task's real outcome is reported back afterwards as a
+delay-sensitivity-weighted reward (matching the training environment's
+reward scale -- see ReSACO/README.md's "Delay-sensitivity-weighted
+reward"). If the bridge or the requested algorithm's checkpoint is
 unavailable -- or the bridge is up but hung (a 10s read timeout guards
 against this too) -- it falls back to a static EDGE_PRIORITY-style
 heuristic instead of crashing -- so the simulation is always safe to run
@@ -224,6 +259,35 @@ config, run in parallel, matching `three_tier`'s workflow):
 ./run_scenarios.sh {# of parallel processes} {# of iterations}
 tail -f output/<date>/ite_1.log
 ```
+
+`simulation.list` runs eleven *scenarios* per sweep, each its own config
+preset under `config/` (delete lines from `simulation.list` to run
+fewer). The first four run the classic `applications.xml` workload, the
+next four run `applications_nextgen.xml` (GenAI inference, XR streaming,
+V2X perception, smart-city analytics), and the last three run
+`applications_sdv.xml` (software-defined-vehicle fleet: ADAS perception,
+HD-map updates, driver monitoring, OTA) across the three canonical
+driving environments:
+
+| Scenario line   | Preset                                            | Environment                                  |
+|-----------------|---------------------------------------------------|----------------------------------------------|
+| `default_config`| baseline three_tier-style values                  | pedestrians, healthy network, standard edge  |
+| `high_mobility` | attractiveness dwell times 480/300/120 -> 60/30/15s | fast-moving devices (vehicles/commuters): frequent WLAN handoffs, mobility failures |
+| `congested_wan` | `wan_bandwidth` 15 -> 3 Mbps                      | rural/overloaded backhaul: cloud hard to reach |
+| `weak_edge`     | `edge_devices_weak_edge.xml`: edge MIPS / 4       | cheap micro-datacenter edge tier             |
+| `nextgen_apps`  | default environment + next-gen workloads          | trend workloads on today's infrastructure    |
+| `mmwave_5g`     | WLAN 1000 / WAN 50 Mbps, dwell 30/20/10s          | 5G mmWave small cells: huge pipes, constant handoffs |
+| `ntn_backhaul`  | `wan_propagation_delay` 0.1 -> 0.6s, WAN 30 Mbps  | LEO-satellite (3GPP NTN) backhaul            |
+| `gpu_edge`      | `edge_devices_gpu_edge.xml`: edge MIPS x 4        | GPU/NPU-accelerated AI-first edge            |
+| `sdv_highway`   | WLAN 300 / WAN 30 Mbps, dwell 10/8/5s             | vehicles at highway speed past sparse RSU corridors |
+| `sdv_rural_road`| WLAN 100 / WAN 8 Mbps, `edge_devices_sdv_rural.xml`: edge MIPS / 2, dwell 60/45/30s | thin rural roadside infrastructure |
+| `sdv_urban`     | WLAN 400 Mbps, `edge_devices_sdv_urban.xml`: edge MIPS x 2, dwell 35/25/15s | stop-and-go traffic under dense city MEC |
+
+These mirror the Python training side's `resaco/scenario.py`
+`ENV_PROFILES`/`NEXTGEN_APP_PROFILES` (same names, same knobs), which
+meta-training now samples across -- so the served policies have actually
+trained on these conditions. If you change a preset on one side, change
+the other.
 
 Note: the RL-backed policies (RESACO/SAC/DDPG/A2C/A3C) are noticeably
 slower wall-clock than static heuristics like EDGE_PRIORITY, since every

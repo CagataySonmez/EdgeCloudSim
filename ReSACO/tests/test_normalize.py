@@ -1,11 +1,11 @@
 import numpy as np
 
-from resaco import config
-from resaco.normalize import normalize_state
+from mec_core import config
+from mec_core.normalize import normalize_state
 
 
 def test_scale_matches_state_dim():
-    from resaco.normalize import _SCALE
+    from mec_core.normalize import _SCALE
     assert _SCALE.shape == (config.STATE_DIM,)
 
 

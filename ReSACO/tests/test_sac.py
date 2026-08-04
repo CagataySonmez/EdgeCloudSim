@@ -12,10 +12,10 @@ import copy
 
 import torch
 
-from resaco import config
-from resaco.env import MECOffloadEnv
+from mec_core import config
+from mec_core.env import MECOffloadEnv
 from resaco.sac import SACAgent
-from resaco.scenario import AppProfile, Scenario
+from mec_core.scenario import AppProfile, Scenario
 
 
 def _make_scenario():
@@ -64,6 +64,46 @@ def test_update_returns_none_below_batch_size():
     agent = SACAgent()
     agent.replay_buffer.push([0.0] * config.STATE_DIM, 0, -1.0, [0.0] * config.STATE_DIM, 0.0)
     assert agent.update() is None
+
+
+def test_auto_entropy_tuning_actually_moves_alpha():
+    assert config.AUTO_ENTROPY_TUNING, (
+        "auto entropy tuning is expected on by default -- with a fixed tau the "
+        "policy can collapse onto one action and never recover (see README)"
+    )
+    env = MECOffloadEnv(_make_scenario(), seed=3)
+    agent = SACAgent()
+    alpha_before = agent.alpha
+    assert abs(alpha_before - config.ENTROPY_TAU) < 1e-6  # initialized at the paper's tau
+
+    stats = agent.sac_update_loop(env, num_transitions=config.NUM_INNER_SAC_UPDATES)
+
+    assert agent.alpha != alpha_before, "log_alpha never received a gradient update"
+    assert agent.alpha > 0.0
+    # every update reports the diagnostics the training scripts log
+    assert all("alpha" in s and "entropy" in s and "alpha_loss" in s for s in stats)
+
+
+def test_load_params_accepts_pre_alpha_checkpoints():
+    # Checkpoints saved before auto entropy tuning existed have no "alpha"
+    # group -- they must still load (log_alpha simply keeps its init).
+    agent = SACAgent()
+    old_format = {k: v for k, v in agent.get_params().items() if k != "alpha"}
+
+    fresh = SACAgent()
+    fresh.load_params(old_format)  # must not raise
+    assert abs(fresh.alpha - config.ENTROPY_TAU) < 1e-6
+
+
+def test_get_load_params_round_trips_alpha():
+    agent = SACAgent()
+    with torch.no_grad():
+        agent.log_alpha.fill_(-2.5)
+    params = agent.get_params()
+
+    other = SACAgent()
+    other.load_params(params)
+    assert abs(other.log_alpha.item() - (-2.5)) < 1e-6
 
 
 def test_select_action_within_action_space():

@@ -1,0 +1,72 @@
+<?xml version="1.0"?>
+<!-- Next-generation edge workloads (2025-era trends), used by the
+     nextgen_apps / mmwave_5g / ntn_backhaul / gpu_edge simulation.list
+     rows. Mirrored exactly by resaco/scenario.py's NEXTGEN_APP_PROFILES
+     (same keep-in-sync-by-hand contract as applications.xml <->
+     APP_PROFILES): if you change one, change both. -->
+<applications>
+	<application name="GENAI_INFERENCE">
+		<usage_percentage>25</usage_percentage>
+		<prob_cloud_selection>20</prob_cloud_selection>
+		<poisson_interarrival>5</poisson_interarrival>
+		<delay_sensitivity>0.6</delay_sensitivity>
+		<active_period>45</active_period>
+		<idle_period>30</idle_period>
+		<data_upload>300</data_upload>
+		<data_download>60</data_download>
+		<task_length>60000</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>40</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>4</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>80</vm_utilization_on_mobile>
+		<max_delay_requirement>10</max_delay_requirement>
+	</application>
+	<application name="XR_STREAMING">
+		<usage_percentage>30</usage_percentage>
+		<prob_cloud_selection>20</prob_cloud_selection>
+		<poisson_interarrival>2</poisson_interarrival>
+		<delay_sensitivity>1</delay_sensitivity>
+		<active_period>60</active_period>
+		<idle_period>15</idle_period>
+		<data_upload>1800</data_upload>
+		<data_download>2500</data_download>
+		<task_length>12000</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>15</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>1.5</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>35</vm_utilization_on_mobile>
+		<max_delay_requirement>1.5</max_delay_requirement>
+	</application>
+	<application name="V2X_PERCEPTION">
+		<usage_percentage>25</usage_percentage>
+		<prob_cloud_selection>20</prob_cloud_selection>
+		<poisson_interarrival>1</poisson_interarrival>
+		<delay_sensitivity>1</delay_sensitivity>
+		<active_period>120</active_period>
+		<idle_period>5</idle_period>
+		<data_upload>1500</data_upload>
+		<data_download>100</data_download>
+		<task_length>6000</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>8</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>0.8</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>25</vm_utilization_on_mobile>
+		<max_delay_requirement>1</max_delay_requirement>
+	</application>
+	<application name="SMART_CITY_ANALYTICS">
+		<usage_percentage>20</usage_percentage>
+		<prob_cloud_selection>20</prob_cloud_selection>
+		<poisson_interarrival>10</poisson_interarrival>
+		<delay_sensitivity>0.2</delay_sensitivity>
+		<active_period>60</active_period>
+		<idle_period>60</idle_period>
+		<data_upload>900</data_upload>
+		<data_download>40</data_download>
+		<task_length>20000</task_length>
+		<required_core>1</required_core>
+		<vm_utilization_on_edge>12</vm_utilization_on_edge>
+		<vm_utilization_on_cloud>1.2</vm_utilization_on_cloud>
+		<vm_utilization_on_mobile>30</vm_utilization_on_mobile>
+		<max_delay_requirement>60</max_delay_requirement>
+	</application>
+</applications>

@@ -11,11 +11,15 @@
  * ReSACO/scripts/train_baselines.py) -- so listing all five as
  * orchestrator_policies runs all five through the same real CloudSim
  * simulation for a like-for-like comparison. The bridge's action space is
- * {0=device, 1..N=edge, N+1=cloud}; edge indices are collapsed to
- * GENERIC_EDGE_DEVICE_ID since getVmToOffload() already load-balances
- * across edge hosts/VMs via a least-loaded search. If the bridge or the
- * requested algorithm is unavailable, falls back to a static
- * EDGE_PRIORITY-style heuristic so the simulation never crashes.
+ * {0=device, 1..N=edge, N+1=cloud}; an edge action e routes to edge host
+ * e-1 specifically (matching resaco/env.py's per-server semantics -- the
+ * per-slot utilizations ReSACOStateBuilder now sends make that choice
+ * informed), with getVmToOffload() preferring the chosen host's
+ * least-loaded VM and only widening to the global least-loaded search if
+ * that host has no VM with capacity (or the host index exceeds what
+ * edge_devices.xml defines). If the bridge or the requested algorithm is
+ * unavailable, falls back to a static EDGE_PRIORITY-style heuristic so
+ * the simulation never crashes.
  *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  */
@@ -26,7 +30,6 @@ import java.util.List;
 
 /*CLOUDSIM*/
 import org.cloudbus.cloudsim.Host;
-import org.cloudbus.cloudsim.UtilizationModelFull;
 import org.cloudbus.cloudsim.Vm;
 import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.core.SimEvent;
@@ -52,6 +55,16 @@ public class ReSACOEdgeOrchestrator extends EdgeOrchestrator {
 
 	private int numberOfHost; // used by load balancer
 
+	/**
+	 * Edge host chosen by the policy's last getDeviceToOffload() call (-1 =
+	 * no specific host, i.e. non-edge action or fallback heuristic), consumed
+	 * by the immediately-following getVmToOffload() call for the same task.
+	 * A plain field is safe here because CloudSim's event loop is
+	 * single-threaded and MobileDeviceManager.submitTask() always calls the
+	 * two back-to-back with nothing in between.
+	 */
+	private int preferredEdgeHost = -1;
+
 	public ReSACOEdgeOrchestrator(String _policy, String _simScenario) {
 		super(_policy, _simScenario);
 	}
@@ -59,6 +72,11 @@ public class ReSACOEdgeOrchestrator extends EdgeOrchestrator {
 	@Override
 	public void initialize() {
 		numberOfHost = SimSettings.getInstance().getNumOfEdgeHosts();
+		// Each simulation run is a new deployment scenario S_new: per
+		// Algorithm 4 line 1, adaptation starts from the meta-trained
+		// theta*, not from wherever the previous run's online updates left
+		// theta_adapt. Best-effort -- harmless if the bridge is down.
+		ReSACOBridgeClient.getInstance().reset(policy);
 	}
 
 	@Override
@@ -68,12 +86,20 @@ public class ReSACOEdgeOrchestrator extends EdgeOrchestrator {
 		double[] state = ReSACOStateBuilder.buildStateForTask(task);
 		int action = ReSACOBridgeClient.getInstance().selectAction(policy, ReSACOStateBuilder.requestIdFor(task), state);
 
+		preferredEdgeHost = -1;
 		if (action == ReSACOBridgeClient.NO_ACTION) {
 			result = fallbackHeuristic(task);
 		} else if (action == 0) {
 			result = SimSettings.MOBILE_DATACENTER_ID;
 		} else if (action >= 1 && action <= ReSACOStateBuilder.RESACO_NUM_EDGE_SLOTS) {
 			result = SimSettings.GENERIC_EDGE_DEVICE_ID;
+			// Edge action e means edge host e-1 (whose own utilization sits in
+			// state slot e) -- honored by getVmToOffload() below. A slot index
+			// beyond the hosts edge_devices.xml actually defines carries no
+			// per-host meaning, so it stays a plain least-loaded edge dispatch.
+			if (action - 1 < numberOfHost) {
+				preferredEdgeHost = action - 1;
+			}
 		} else {
 			result = SimSettings.CLOUD_DATACENTER_ID;
 		}
@@ -81,12 +107,26 @@ public class ReSACOEdgeOrchestrator extends EdgeOrchestrator {
 		return result;
 	}
 
+	/** Least-loaded VM with capacity on one specific edge host, or null if none fits. */
+	private Vm leastLoadedEdgeVmOnHost(Task task, int hostIndex) {
+		Vm selectedVM = null;
+		double selectedVmCapacity = 0;
+		List<EdgeVM> vmArray = SimManager.getInstance().getEdgeServerManager().getVmList(hostIndex);
+		for (int vmIndex = 0; vmIndex < vmArray.size(); vmIndex++) {
+			double requiredCapacity = ((CpuUtilizationModel_Custom) task.getUtilizationModelCpu()).predictUtilization(vmArray.get(vmIndex).getVmType());
+			double targetVmCapacity = (double) 100 - vmArray.get(vmIndex).getCloudletScheduler().getTotalUtilizationOfCpu(CloudSim.clock());
+			if (requiredCapacity <= targetVmCapacity && targetVmCapacity > selectedVmCapacity) {
+				selectedVM = vmArray.get(vmIndex);
+				selectedVmCapacity = targetVmCapacity;
+			}
+		}
+		return selectedVM;
+	}
+
 	/** EDGE_PRIORITY-style heuristic used only while the ReSACO bridge is unreachable. */
 	private int fallbackHeuristic(Task task) {
-		Task dummyTask = new Task(0, 0, 0, 0, 128, 128, new UtilizationModelFull(), new UtilizationModelFull(),
-				new UtilizationModelFull());
 		double wanDelay = SimManager.getInstance().getNetworkModel().getUploadDelay(task.getMobileDeviceId(),
-				SimSettings.CLOUD_DATACENTER_ID, dummyTask /* 1 Mbit */);
+				SimSettings.CLOUD_DATACENTER_ID, ReSACOStateBuilder.probeTask() /* 1 Mbit */);
 		double wanBW = (wanDelay == 0) ? 0 : (1 / wanDelay); /* Mbps */
 		double edgeUtilization = SimManager.getInstance().getEdgeServerManager().getAvgUtilization();
 
@@ -114,16 +154,30 @@ public class ReSACOEdgeOrchestrator extends EdgeOrchestrator {
 		}
 
 		else if (deviceId == SimSettings.GENERIC_EDGE_DEVICE_ID) {
-			//Select VM on edge devices via Least Loaded algorithm!
-			double selectedVmCapacity = 0; //start with min value
-			for (int hostIndex = 0; hostIndex < numberOfHost; hostIndex++) {
-				List<EdgeVM> vmArray = SimManager.getInstance().getEdgeServerManager().getVmList(hostIndex);
-				for (int vmIndex = 0; vmIndex < vmArray.size(); vmIndex++) {
-					double requiredCapacity = ((CpuUtilizationModel_Custom) task.getUtilizationModelCpu()).predictUtilization(vmArray.get(vmIndex).getVmType());
-					double targetVmCapacity = (double) 100 - vmArray.get(vmIndex).getCloudletScheduler().getTotalUtilizationOfCpu(CloudSim.clock());
-					if (requiredCapacity <= targetVmCapacity && targetVmCapacity > selectedVmCapacity) {
-						selectedVM = vmArray.get(vmIndex);
-						selectedVmCapacity = targetVmCapacity;
+			// Prefer the specific edge host the policy chose (its action index
+			// maps 1:1 to the per-host utilization slot it observed); consume
+			// the preference so it can never leak onto a later task.
+			int chosenHost = preferredEdgeHost;
+			preferredEdgeHost = -1;
+
+			if (chosenHost >= 0) {
+				selectedVM = leastLoadedEdgeVmOnHost(task, chosenHost);
+			}
+			if (selectedVM == null) {
+				// No host preference (fallback heuristic) or the chosen host has
+				// no VM with capacity left -- widen to the least-loaded VM across
+				// all edge hosts (including hosts beyond the policy's slot count)
+				// rather than failing a task the edge tier as a whole could serve.
+				double selectedVmCapacity = 0; //start with min value
+				for (int hostIndex = 0; hostIndex < numberOfHost; hostIndex++) {
+					List<EdgeVM> vmArray = SimManager.getInstance().getEdgeServerManager().getVmList(hostIndex);
+					for (int vmIndex = 0; vmIndex < vmArray.size(); vmIndex++) {
+						double requiredCapacity = ((CpuUtilizationModel_Custom) task.getUtilizationModelCpu()).predictUtilization(vmArray.get(vmIndex).getVmType());
+						double targetVmCapacity = (double) 100 - vmArray.get(vmIndex).getCloudletScheduler().getTotalUtilizationOfCpu(CloudSim.clock());
+						if (requiredCapacity <= targetVmCapacity && targetVmCapacity > selectedVmCapacity) {
+							selectedVM = vmArray.get(vmIndex);
+							selectedVmCapacity = targetVmCapacity;
+						}
 					}
 				}
 			}
