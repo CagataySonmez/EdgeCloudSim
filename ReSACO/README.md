@@ -593,27 +593,93 @@ agent (random-init) -- tracking the greedy-evaluation reward after every
 episode, min-max normalized onto the same 0-1 scale as the paper's Fig. 5.
 Saves `checkpoints/convergence.png` + `.csv`.
 
-**Result, run locally:** the two curves still do **not** clearly reproduce
-the paper's shape (meta-init starting higher and converging within a
-handful of episodes) -- at the paper's own Table II defaults (K=300, N=50,
-M=10), meta-init and random-init end up statistically close on a fresh
-held-out scenario (overall mean reward across 300 episodes: meta-init
--1.95 vs. random-init -1.92 in one local run). This is no longer because
-training silently does nothing (see "Fixed" below) -- it now measurably
-learns -- but M=10 meta-training scenarios refined by Reptile's
-deliberately small per-iteration step (`META_LR`) just isn't much signal
-to generalize from onto a *new* scenario at this budget. A local test with
-an 8x larger budget (`python scripts/train_meta.py --outer 1200 --inner
-100`) did produce a policy with a much lower failure rate against a fixed
-evaluation set (0.6% vs. 19.7% at the K=300/N=50 default) -- but it also
-fully collapsed onto always picking the device tier regardless of state,
-which avoids contention-driven failures but forfeits the throughput edge
-and cloud offer when they're *not* contended. Getting a genuinely
-scenario-adaptive policy (not collapsed to one dominant action either way)
-most likely needs some combination of a larger/more diverse meta-training
-scenario pool, entropy-coefficient tuning, or reward shaping -- none of
-which this pass attempted. The script itself is a correct, working
-reproduction of the paper's *procedure*.
+**Result, run locally:** at the paper's own Table II defaults (K=300,
+N=50, M=10, `META_LR`=0.001), the two curves do **not** reproduce the
+paper's shape -- meta-init and random-init end up statistically
+indistinguishable on a fresh held-out scenario. An earlier revision of
+this section diagnosed that as "M=10 scenarios refined by a small step
+just isn't much signal". **That diagnosis was wrong.** The sweep below
+shows the same M=10/K=300/N=50 budget produces a clear, CI-backed
+meta-init advantage once the outer stepsize is raised to what the Reptile
+paper itself uses -- the default `META_LR` was the bottleneck, not the
+scenario count.
+
+### Why: meta_lr, not scenario count (the H1 sweep)
+
+Eq. 8 -- `theta <- theta + alpha*(theta_k - theta)` -- is an exponential
+moving average, so after K iterations exactly `prod_k(1 - alpha_k)` of
+the *random initialization* survives inside theta*
+(`resaco/reptile.py::residual_init_fraction`; `outer_loop` prints it at
+startup):
+
+| meta_lr (alpha) | K | random init surviving in theta* |
+|---|---|---|
+| **0.001 (Table II default)** | **300** | **0.741** |
+| 0.001 | 1200 | 0.301 |
+| 0.01 | 300 | 0.049 |
+| 0.1 | 300 | ~0 |
+
+At the paper's defaults, **74% of theta\* is literally its random
+initialization** -- and the theta_k pulls filling the other 26% are
+themselves only N=50 SAC updates away from theta. (For reference, the
+Reptile paper -- Nichol et al. 2018 -- anneals its outer stepsize
+linearly from **1.0** to 0, three orders of magnitude above 0.001.)
+
+Hypothesis H1: Fig. 5 fails to reproduce because theta* barely differs
+from a random init at the default meta_lr. `scripts/sweep_meta_lr.py`
+tested it -- meta_lr in {0.001, 0.01, 0.1, 0.5} (constant) plus
+linear-annealing-from-1.0, 5 seeds each at the unchanged paper budget,
+each config measured against a **paired random-init control** (identical
+adaptation/env random streams) on a never-seen scenario:
+
+    delta_vs_random_init = mean(meta-init adaptation curve)
+                         - mean(random-init adaptation curve)
+
+aggregated with IQM + percentile-bootstrap 95% CIs, with the judgment
+rule pre-registered before the sweep ran (any config whose CI lower
+bound clears 0 supports H1):
+
+| schedule | meta_lr | random init left in theta* | delta IQM [95% CI] | verdict |
+|---|---|---|---|---|
+| constant | 0.001 (default) | 0.741 | -0.018 [-0.115, +0.037] | CI spans 0 |
+| constant | 0.01 | 0.049 | +0.044 [-0.054, +0.092] | CI spans 0 |
+| constant | 0.1 | ~1.9e-14 | -0.092 [-0.267, +0.115] | CI spans 0 |
+| constant | 0.5 | ~4.9e-91 | **+0.292 [+0.043, +0.681]** | **CI > 0** |
+| linear from 1.0 | (Reptile's own protocol) | 0 | **+0.492 [+0.070, +1.046]** | **CI > 0** |
+
+**H1 is supported**, and both winning configs also survive a Bonferroni
+multiple-comparison correction (alpha = 0.05/5 -- reported because the
+pre-registered any-of-5 rule is otherwise anti-conservative). At the
+paper's default stepsize there is no meta-learning advantage to find; at
+Reptile-scale stepsizes there is, on the very same budget, and the
+strongest configuration is exactly the Reptile paper's own
+linear-from-1.0 protocol.
+
+Two honest caveats, not to be smoothed over:
+
+- The effect is **not monotone in meta_lr**: 0.01 and 0.1 leave
+  essentially no random init in theta* yet still show no CI-clear
+  advantage. A low residual is necessary but evidently not sufficient --
+  the advantage only emerges at stepsizes near Reptile's own protocol.
+  So "the default meta_lr was the bottleneck" is established, but the
+  full mechanism is more than the residual fraction alone.
+- n = 5 seeds per config. The CIs are honest about that width; anyone
+  wanting tighter bounds can rerun with more seeds
+  (`python scripts/sweep_meta_lr.py --seeds 0 1 2 3 4 5 6 7 8 9`, ~2 min
+  per config-seed on CPU; `--smoke` sanity-checks the pipeline in ~30s
+  and explicitly does *not* apply the judgment rule).
+
+`META_LR` stays 0.001 by default -- paper-exact mode is preserved; the
+better-performing settings are opt-in via
+`train_meta.py --meta-lr 0.5` or `--meta-lr 1.0 --meta-lr-schedule
+linear`.
+
+Separately, a local test with an 8x larger budget (`python
+scripts/train_meta.py --outer 1200 --inner 100`) at the default meta_lr
+produced a much lower failure rate against a fixed evaluation set (0.6%
+vs. 19.7%) but collapsed onto always picking the device tier; whether
+the Reptile-scale stepsizes above also fix that collapse at larger
+budgets has not been measured yet.
 
 **Fixed this pass** (previously the training pipeline was silently
 producing an untrained network no matter how long you ran it -- see
@@ -861,16 +927,18 @@ python bridge/inference_server.py --autosave-every 50   # default; lower it for 
   injected background load (see "Fixed this pass" above), not as literally
   simulated independent agents. It is a research/training aid, not a
   literal multi-agent discrete-event simulation.
-- At the paper's Table II default training budget (M=10, K=300, N=50),
-  the resulting policies (ReSACO and, to a lesser extent, SAC/DDPG) don't
-  yet reliably show either a clear meta-init-vs-random-init advantage or a
-  clear win over the on-policy baselines -- see "Convergence" and "Compare"
-  above for the concrete numbers and what a larger budget does to them.
-  The training pipeline itself is verified correct (gradients genuinely
-  flow, and an isolated test showed the agent correctly learning to prefer
-  the device tier when contention makes it the better choice); reaching
-  paper-competitive numbers needs more meta-training budget/tuning than
-  the fast, paper-matched defaults spend by design.
+- At the paper's Table II default `META_LR`=0.001, meta-init shows no
+  advantage over random-init -- the H1 sweep (see "Convergence") locates
+  the bottleneck in the outer stepsize itself: 74% of theta* is still its
+  random initialization after K=300 EMA steps at alpha=0.001, and the
+  advantage appears (CI-clear, Bonferroni-surviving) only at
+  Reptile-scale stepsizes (constant 0.5, or linear annealing from 1.0).
+  Defaults deliberately stay paper-exact, so training with the *default*
+  flags still produces a theta* with no measurable meta advantage --
+  opt into `--meta-lr`/`--meta-lr-schedule` for the settings that work.
+  A clear win over the on-policy baselines in `compare_algorithms.py`
+  remains unestablished either way (see "Compare"; Phase 2's multi-task
+  control is the missing comparison).
 - `a3c.py` uses Python threads sharing one process (not
   `torch.multiprocessing`), so it's algorithmically faithful to A3C's
   shared-model/async-gradient structure but doesn't get true multi-core
