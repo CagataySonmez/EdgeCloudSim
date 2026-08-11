@@ -45,6 +45,7 @@ from baselines.a2c import A2CAgent
 from mec_core.scenario import (APP_PROFILES, ENV_PROFILES, NEXTGEN_APP_PROFILES,
                               SDV_APP_PROFILES, Scenario, sample_table2_profile)
 from mec_core.seeding import seed_everything
+from stats import bootstrap_ci, iqm
 
 
 DEVICE_COUNTS = list(range(200, 2001, 200))
@@ -144,6 +145,86 @@ def combine(metric_dicts, weights):
     return out
 
 
+def run_sweep(args, loaders, env_profile, eval_profiles, master_seed, seed_tag=""):
+    """One full device-count x algorithm sweep under `master_seed`.
+    Extracted from main() so --seeds can replicate it; with seed_tag=""
+    and master_seed=args.seed this is byte-for-byte the original sweep."""
+    rows = []
+    for device_count in DEVICE_COUNTS:
+        for name, (loader, params) in loaders.items():
+            profile_metrics, profile_weights = [], []
+            for p_idx, (profile, usage_weight) in enumerate(eval_profiles):
+                scenario = Scenario(app_profile=profile,
+                                    number_of_mobile_devices=device_count,
+                                    env_profile=env_profile)
+                iteration_metrics = []
+                for it in range(args.iterations):
+                    # fresh copy of the trained parameters per condition so
+                    # one condition's Algorithm-4 adaptation never leaks
+                    # into the next (each condition is its own S_new)
+                    agent = loader(params)
+                    run_seed = master_seed + device_count + 7919 * it + 104729 * p_idx
+                    adapt(agent, scenario, args.adapt_steps, seed=run_seed + 1)
+                    iteration_metrics.append(
+                        evaluate(agent, scenario, args.episode_steps, seed=run_seed))
+                profile_metrics.append(combine(iteration_metrics, [1.0] * len(iteration_metrics)))
+                profile_weights.append(usage_weight)
+            metrics = combine(profile_metrics, profile_weights)
+            row = {"algorithm": name, "devices": device_count, **metrics}
+            rows.append(row)
+            print(f"{seed_tag}devices={device_count:5d}  {name:8s}  "
+                  f"completion={metrics['completion_rate']*100:6.2f}%  "
+                  f"service_time={metrics['avg_service_time']:.3f}s  "
+                  f"net_fail={metrics['network_fail_rate']*100:5.2f}%  "
+                  f"vm_fail={metrics['vm_fail_rate']*100:5.2f}%  "
+                  f"mob_fail={metrics['mobility_fail_rate']*100:5.2f}%  "
+                  f"energy={metrics['avg_energy_j']:6.2f}J  "
+                  f"cost={metrics['avg_cost']:5.2f}  "
+                  f"sla_viol={metrics['sla_violation_rate']*100:5.2f}%")
+    return rows
+
+
+def print_table3(last, header):
+    """Table III style: ReSACO's improvement over each baseline at the
+    highest device count. `last` maps algorithm name -> metric dict."""
+
+    def pct_improve(base, resaco):
+        """Relative percent improvement -- fine for service_time, a positive
+        duration essentially never at/near zero."""
+        if base in (0, None) or base != base:
+            return float("nan")
+        return (base - resaco) / base * 100
+
+    def pct_point_diff(base, resaco):
+        """Absolute percentage-point difference (base - resaco), for
+        network_fail_rate/vm_fail_rate -- both already bounded in [0, 100].
+        A relative percent-improvement formula blows up for these: it's NaN
+        whenever a baseline's rate is exactly 0 (common here -- network
+        failures never happen in this env) and explodes to absurd values
+        (e.g. -13150%) whenever the baseline is merely close to 0."""
+        if base is None or base != base or resaco is None or resaco != resaco:
+            return float("nan")
+        return base - resaco
+
+    def fmt_rel(v):
+        return f"{v:.1f}%" if v == v else "n/a"
+
+    print(f"\n{header}")
+    print(f"{'Algorithm':10s} {'Service Time':>13s} {'Net Fail rel':>13s} {'Net Fail':>10s} "
+          f"{'VM Fail rel':>12s} {'VM Fail':>10s}")
+    resaco_row = last["ReSACO"]
+    for name, row in last.items():
+        if name == "ReSACO":
+            continue
+        st = pct_improve(row["avg_service_time"], resaco_row["avg_service_time"])
+        nf_rel = pct_improve(row["network_fail_rate"], resaco_row["network_fail_rate"])
+        vf_rel = pct_improve(row["vm_fail_rate"], resaco_row["vm_fail_rate"])
+        nf = pct_point_diff(row["network_fail_rate"], resaco_row["network_fail_rate"])
+        vf = pct_point_diff(row["vm_fail_rate"], resaco_row["vm_fail_rate"])
+        print(f"{name:10s} {st:12.1f}% {fmt_rel(nf_rel):>13s} {nf:8.1f}pp "
+              f"{fmt_rel(vf_rel):>12s} {vf:8.1f}pp")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--episode-steps", type=int, default=500)
@@ -151,6 +232,13 @@ def main():
                          help="independent repetitions per device count (paper Section V-C: "
                               "'Each MD count is tested 10 times, and average values are "
                               "reported')")
+    parser.add_argument("--seeds", type=int, default=1,
+                         help="independent full-sweep replicates, each under its own master "
+                              "seed (spaced 1,000,000 apart so their per-run seed streams "
+                              "never overlap). 1 (default) = the original single-run "
+                              "behavior; > 1 reports every metric as IQM [95% bootstrap CI] "
+                              "across seeds (Agarwal et al. 2021) and keeps all per-seed "
+                              "raw rows in the CSV")
     parser.add_argument("--adapt-steps", type=int, default=config.NUM_INNER_SAC_UPDATES,
                          help="Algorithm-4 online-adaptation updates each off-policy agent "
                               "(ReSACO/SAC/DDPG) runs on the condition before measurement; "
@@ -212,89 +300,95 @@ def main():
     print(f"Task profiles: {', '.join(p.name for p, _ in eval_profiles)} "
           f"x {args.iterations} iterations, adapt_steps={args.adapt_steps}")
 
-    rows = []
-    for device_count in DEVICE_COUNTS:
-        for name, (loader, params) in loaders.items():
-            profile_metrics, profile_weights = [], []
-            for p_idx, (profile, usage_weight) in enumerate(eval_profiles):
-                scenario = Scenario(app_profile=profile,
-                                    number_of_mobile_devices=device_count,
-                                    env_profile=env_profile)
-                iteration_metrics = []
-                for it in range(args.iterations):
-                    # fresh copy of the trained parameters per condition so
-                    # one condition's Algorithm-4 adaptation never leaks
-                    # into the next (each condition is its own S_new)
-                    agent = loader(params)
-                    run_seed = args.seed + device_count + 7919 * it + 104729 * p_idx
-                    adapt(agent, scenario, args.adapt_steps, seed=run_seed + 1)
-                    iteration_metrics.append(
-                        evaluate(agent, scenario, args.episode_steps, seed=run_seed))
-                profile_metrics.append(combine(iteration_metrics, [1.0] * len(iteration_metrics)))
-                profile_weights.append(usage_weight)
-            metrics = combine(profile_metrics, profile_weights)
-            row = {"algorithm": name, "devices": device_count, **metrics}
-            rows.append(row)
-            print(f"devices={device_count:5d}  {name:8s}  "
-                  f"completion={metrics['completion_rate']*100:6.2f}%  "
-                  f"service_time={metrics['avg_service_time']:.3f}s  "
-                  f"net_fail={metrics['network_fail_rate']*100:5.2f}%  "
-                  f"vm_fail={metrics['vm_fail_rate']*100:5.2f}%  "
-                  f"mob_fail={metrics['mobility_fail_rate']*100:5.2f}%  "
-                  f"energy={metrics['avg_energy_j']:6.2f}J  "
-                  f"cost={metrics['avg_cost']:5.2f}  "
-                  f"sla_viol={metrics['sla_violation_rate']*100:5.2f}%")
+    # replicate master seeds spaced 1M apart: the per-run seed formula below
+    # spans well under 1M (device_count + 7919*it + 104729*p_idx), so
+    # replicates can never share an env/adaptation seed
+    seed_list = [args.seed + 1_000_000 * i for i in range(args.seeds)]
+    all_rows = []
+    for rep, master_seed in enumerate(seed_list):
+        if rep > 0:
+            # rep 0 runs under the seed_everything(args.seed) call above,
+            # exactly like the original single-run path
+            seed_everything(master_seed)
+        seed_tag = f"[seed {master_seed}] " if args.seeds > 1 else ""
+        if args.seeds > 1:
+            print(f"\n--- replicate {rep + 1}/{args.seeds} (master seed {master_seed}) ---")
+        rows = run_sweep(args, loaders, env_profile, eval_profiles, master_seed,
+                         seed_tag=seed_tag)
+        if args.seeds > 1:
+            rows = [{"seed": master_seed, **r} for r in rows]
+        all_rows.extend(rows)
 
     os.makedirs(os.path.dirname(args.out_csv), exist_ok=True)
     with open(args.out_csv, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        writer = csv.DictWriter(f, fieldnames=list(all_rows[0].keys()))
         writer.writeheader()
-        writer.writerows(rows)
+        writer.writerows(all_rows)  # per-seed RAW rows, never only aggregates
     print(f"\nSaved comparison table -> {args.out_csv}")
 
-    def pct_improve(base, resaco):
-        """Relative percent improvement -- fine for service_time, a positive
-        duration essentially never at/near zero."""
-        if base in (0, None) or base != base:
-            return float("nan")
-        return (base - resaco) / base * 100
+    if args.seeds == 1:
+        rows = all_rows
+        # Table III style: ReSACO's improvement over each baseline at the
+        # highest device count. Failure-rate columns are shown BOTH as the
+        # paper's relative reduction (Table III's own metric; n/a when the
+        # baseline's rate is 0 -- the formula divides by it) and as absolute
+        # percentage-point differences (robust when baselines sit at/near 0).
+        if "ReSACO" in loaders:
+            last = {r["algorithm"]: r for r in rows if r["devices"] == DEVICE_COUNTS[-1]}
+            if "ReSACO" in last:
+                print_table3(last, f"ReSACO improvement at {DEVICE_COUNTS[-1]} devices "
+                                   f"(Table III style):")
+        return
 
-    def pct_point_diff(base, resaco):
-        """Absolute percentage-point difference (base - resaco), for
-        network_fail_rate/vm_fail_rate -- both already bounded in [0, 100].
-        A relative percent-improvement formula blows up for these: it's NaN
-        whenever a baseline's rate is exactly 0 (common here -- network
-        failures never happen in this env) and explodes to absurd values
-        (e.g. -13150%) whenever the baseline is merely close to 0."""
-        if base is None or base != base or resaco is None or resaco != resaco:
-            return float("nan")
-        return base - resaco
+    # ---- multi-seed aggregation: IQM + bootstrap 95% CI per metric ----
+    metric_keys = [k for k in all_rows[0] if k not in ("seed", "algorithm", "devices")]
+    groups = {}
+    for r in all_rows:
+        groups.setdefault((r["algorithm"], r["devices"]), []).append(r)
 
-    # Table III style: ReSACO's improvement over each baseline at the
-    # highest device count. Failure-rate columns are shown BOTH as the
-    # paper's relative reduction (Table III's own metric; n/a when the
-    # baseline's rate is 0 -- the formula divides by it) and as absolute
-    # percentage-point differences (robust when baselines sit at/near 0).
+    agg = {}  # (algorithm, devices) -> metric -> (iqm, lo, hi, n)
+    for key, rs in sorted(groups.items()):
+        per = {}
+        for metric in metric_keys:
+            vals = [r[metric] for r in rs if r[metric] == r[metric]]  # drop NaN
+            if vals:
+                lo, hi = bootstrap_ci(vals, statistic=iqm)
+                per[metric] = (iqm(vals), lo, hi, len(vals))
+            else:
+                per[metric] = (float("nan"), float("nan"), float("nan"), 0)
+        agg[key] = per
+
+    summary_csv = os.path.splitext(args.out_csv)[0] + "_summary.csv"
+    with open(summary_csv, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["algorithm", "devices", "metric", "n_seeds", "iqm",
+                         "ci_low", "ci_high"])
+        for (name, devices), per in agg.items():
+            for metric, (point, lo, hi, n) in per.items():
+                writer.writerow([name, devices, metric, n, point, lo, hi])
+    print(f"Saved per-metric IQM/CI aggregates -> {summary_csv}")
+
+    def ci(per, metric, scale=1.0, unit=""):
+        point, lo, hi, _ = per[metric]
+        return f"{point*scale:.2f}{unit} [{lo*scale:.2f}, {hi*scale:.2f}]"
+
+    print(f"\n=== Aggregate over {args.seeds} seeds "
+          f"(IQM [95% bootstrap CI]; full per-metric table in the summary CSV) ===")
+    for (name, devices), per in agg.items():
+        print(f"devices={devices:5d}  {name:9s}  "
+              f"completion={ci(per, 'completion_rate', 100, '%'):24s}  "
+              f"service_time={ci(per, 'avg_service_time', 1, 's'):22s}  "
+              f"vm_fail={ci(per, 'vm_fail_rate', 100, '%'):22s}  "
+              f"sla_viol={ci(per, 'sla_violation_rate', 100, '%')}")
+
+    # Table III over the per-metric IQMs at the highest device count
     if "ReSACO" in loaders:
-        last = {r["algorithm"]: r for r in rows if r["devices"] == DEVICE_COUNTS[-1]}
+        last = {name: {m: v[0] for m, v in per.items()}
+                for (name, devices), per in agg.items()
+                if devices == DEVICE_COUNTS[-1]}
         if "ReSACO" in last:
-            def fmt_rel(v):
-                return f"{v:.1f}%" if v == v else "n/a"
-
-            print(f"\nReSACO improvement at {DEVICE_COUNTS[-1]} devices (Table III style):")
-            print(f"{'Algorithm':10s} {'Service Time':>13s} {'Net Fail rel':>13s} {'Net Fail':>10s} "
-                  f"{'VM Fail rel':>12s} {'VM Fail':>10s}")
-            resaco_row = last["ReSACO"]
-            for name, row in last.items():
-                if name == "ReSACO":
-                    continue
-                st = pct_improve(row["avg_service_time"], resaco_row["avg_service_time"])
-                nf_rel = pct_improve(row["network_fail_rate"], resaco_row["network_fail_rate"])
-                vf_rel = pct_improve(row["vm_fail_rate"], resaco_row["vm_fail_rate"])
-                nf = pct_point_diff(row["network_fail_rate"], resaco_row["network_fail_rate"])
-                vf = pct_point_diff(row["vm_fail_rate"], resaco_row["vm_fail_rate"])
-                print(f"{name:10s} {st:12.1f}% {fmt_rel(nf_rel):>13s} {nf:8.1f}pp "
-                      f"{fmt_rel(vf_rel):>12s} {vf:8.1f}pp")
+            print_table3(last, f"ReSACO improvement at {DEVICE_COUNTS[-1]} devices "
+                               f"(Table III style, computed on {args.seeds}-seed IQMs):")
 
 
 if __name__ == "__main__":
