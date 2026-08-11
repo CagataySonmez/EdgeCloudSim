@@ -233,12 +233,13 @@ instead of a hand-written heuristic. It reuses `three_tier`'s
 `ThreeTierNetworkModel` and `ThreeTierMobileServerManager` unchanged;
 `three_tier` itself is untouched.
 
-The bridge serves five algorithms from the ReSACO paper's Section V-C
-comparison at once, each selectable as its own `orchestrator_policies`
-entry -- listing all five (the default in `scripts/ReSACO/config/default_config.properties`)
-runs all five through the *same* real CloudSim simulation (topology,
-network model, workload) for a like-for-like comparison, not just ReSACO
-on its own.
+The bridge serves six algorithms at once -- the five from the ReSACO
+paper's Section V-C comparison plus a multi-task pretraining control --
+each selectable as its own `orchestrator_policies` entry: listing all six
+(the default in `scripts/ReSACO/config/default_config.properties`) runs
+them all through the *same* real CloudSim simulation (topology, network
+model, workload) for a like-for-like comparison, not just ReSACO on its
+own.
 
 | Policy         | Description                                                                                                                                                     |
 |----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -247,6 +248,7 @@ on its own.
 | DDPG_BASELINE  | DDPG, adapted to the discrete offload action space. Off-policy, also adapts online. |
 | A2C_BASELINE   | Synchronous Advantage Actor-Critic. On-policy: served frozen, exactly as trained by `train_baselines.py` (on-policy methods don't have a well-defined single-transition online update). |
 | A3C_BASELINE   | Asynchronous A3C. On-policy: served frozen, same as A2C_BASELINE. |
+| MULTITASK_BASELINE | Multi-task (joint) pretraining control: plain SAC trained on the same scenario pool with a shared replay buffer and ReSACO's exact env-interaction budget, no Reptile. Off-policy, adapts online. The comparison that separates "meta-learning helped" from "pretraining helped". |
 
 For every task, `ReSACOEdgeOrchestrator` sends the current state (task
 size, device utilization, *per-edge-host* utilization -- one state slot

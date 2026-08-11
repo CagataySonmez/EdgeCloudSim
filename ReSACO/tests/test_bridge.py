@@ -16,6 +16,7 @@ def _write_fake_checkpoints(tmp_path):
     torch.save(DDPGAgent().get_params(), tmp_path / "ddpg.pt")
     torch.save(A2CAgent().get_params(), tmp_path / "a2c.pt")
     torch.save(A2CAgent().get_params(), tmp_path / "a3c.pt")
+    torch.save(SACAgent().get_params(), tmp_path / "multitask.pt")
 
 
 def test_adapted_path_helper():
@@ -93,10 +94,11 @@ def test_save_all_agents_writes_adapted_files_for_persist_capable_algos_only(tmp
 
     saved = srv.save_all_agents()
 
-    assert set(saved) == {"RESACO", "SAC_BASELINE", "DDPG_BASELINE"}
+    assert set(saved) == {"RESACO", "SAC_BASELINE", "DDPG_BASELINE", "MULTITASK_BASELINE"}
     assert (tmp_path / "theta_star_adapted.pt").exists()
     assert (tmp_path / "sac_no_meta_adapted.pt").exists()
     assert (tmp_path / "ddpg_adapted.pt").exists()
+    assert (tmp_path / "multitask_adapted.pt").exists()
     assert not (tmp_path / "a2c_adapted.pt").exists()
     assert not (tmp_path / "a3c_adapted.pt").exists()
 

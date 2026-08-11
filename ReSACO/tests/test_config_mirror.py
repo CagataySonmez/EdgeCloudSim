@@ -266,3 +266,20 @@ def test_java_task_lookup_indices_match_simsettings_parse_order():
             f"{java_const} points at column {_java_constant(source, java_const)} but "
             f"SimSettings parses '{attribute}' into column {expected[attribute]}"
         )
+
+
+def test_every_orchestrator_policy_is_served_by_the_bridge():
+    """Every policy named in any scripts/ReSACO/config/*.properties must
+    have a bridge ALGO_REGISTRY entry -- an unknown name would make the
+    Java side silently run its static-heuristic fallback for that entire
+    scenario while the results claim to be that algorithm's."""
+    from bridge.inference_server import ALGO_REGISTRY
+
+    for name in sorted(os.listdir(CONFIG_DIR)):
+        if not name.endswith(".properties"):
+            continue
+        policies = _read_properties(name).get("orchestrator_policies", "")
+        for policy in filter(None, (p.strip() for p in policies.split(","))):
+            assert policy in ALGO_REGISTRY, (
+                f"{name} lists orchestrator policy {policy!r} but the bridge's "
+                f"ALGO_REGISTRY has no such algorithm")

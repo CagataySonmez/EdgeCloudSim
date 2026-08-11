@@ -1,10 +1,11 @@
 """TCP bridge that lets the Java EdgeCloudSim orchestrator use trained
 ReSACO/baseline policies for live offloading decisions.
 
-Serves all five algorithms compared in Section V-C of the paper at once,
-each loaded from its own checkpoint and selected per-request by name --
-this lets EdgeCloudSim run ReSACO, SAC (no meta-init), DDPG, A2C and A3C
-as five separate `orchestrator_policies` in the *same* real CloudSim
+Serves six algorithms at once -- the five compared in Section V-C of the
+paper plus the MULTITASK joint-pretraining control (P2-1) -- each loaded
+from its own checkpoint and selected per-request by name. This lets
+EdgeCloudSim run ReSACO, SAC (no meta-init), DDPG, A2C, A3C and MULTITASK
+as separate `orchestrator_policies` in the *same* real CloudSim
 simulation (scripts/ReSACO), instead of only the toy env used by
 scripts/compare_algorithms.py.
 
@@ -85,6 +86,11 @@ ALGO_REGISTRY = {
     "DDPG_BASELINE": ("ddpg.pt", DDPGAgent, DeploymentAgent, True),
     "A2C_BASELINE": ("a2c.pt", A2CAgent, FrozenPolicyAgent, False),
     "A3C_BASELINE": ("a3c.pt", A2CAgent, FrozenPolicyAgent, False),
+    # multi-task (joint) pretraining control (P2-1): plain SAC trained on
+    # the same scenario pool with a shared replay buffer and ReSACO's exact
+    # env-interaction budget -- off-policy, so it adapts online like the
+    # other SAC-family entries
+    "MULTITASK_BASELINE": ("multitask.pt", SACAgent, DeploymentAgent, True),
 }
 
 _agents = {}  # algo name -> DeploymentAgent | FrozenPolicyAgent

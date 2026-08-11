@@ -55,6 +55,10 @@ ALGORITHMS = {
     "DDPG": ("ddpg.pt", lambda params: _load(DDPGAgent(), params)),
     "A2C": ("a2c.pt", lambda params: _load(A2CAgent(), params)),
     "A3C": ("a3c.pt", lambda params: _load(A2CAgent(), params)),
+    # multi-task joint-pretraining control (P2-1): the comparison that
+    # separates "meta-learning helped" from "pretraining on the scenario
+    # pool helped" -- same pool, same env-interaction budget, no Reptile
+    "MULTITASK": ("multitask.pt", lambda params: _load(SACAgent(), params)),
 }
 
 
