@@ -29,6 +29,16 @@ def main():
     parser.add_argument("--scenarios", type=int, default=config.NUM_META_SCENARIOS)
     parser.add_argument("--outer", type=int, default=config.NUM_OUTER_ITERATIONS)
     parser.add_argument("--inner", type=int, default=config.NUM_INNER_SAC_UPDATES)
+    parser.add_argument("--meta-lr", type=float, default=config.META_LR,
+                         help="Reptile outer stepsize alpha (default: Table II's "
+                              f"{config.META_LR}). Note Eq. 8 is an EMA, so after K "
+                              "iterations (1-alpha)^K of the random init survives in "
+                              "theta* -- outer_loop prints that number at startup.")
+    parser.add_argument("--meta-lr-schedule", type=str, default="constant",
+                         choices=["constant", "linear"],
+                         help="'constant' (default, the paper's setup) or 'linear' "
+                              "(Reptile's own annealing: alpha_k = meta_lr * (1 - k/K), "
+                              "reaching 0 at the final iteration)")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--scenario-source", type=str, default="mixed",
                          choices=["mixed", "table2", "apps", "nextgen", "sdv"],
@@ -98,12 +108,14 @@ def main():
         scenarios,
         num_outer_iterations=args.outer,
         num_inner_updates=args.inner,
+        meta_lr=args.meta_lr,
         seed=args.seed,
         progress_every=max(1, args.outer // 15),
         metrics_log=metrics_log,
         eval_every=max(1, args.eval_every),
         persist_buffers=args.persist_buffers,
         eval_scenarios=eval_scenarios,
+        meta_lr_schedule=args.meta_lr_schedule,
     )
 
     torch.save(theta_star, args.out)

@@ -6,9 +6,15 @@ to theta (see test_sac.py), so this would have been a no-op no matter how
 many outer iterations ran.
 """
 
+import functools
+import math
+import operator
+
+import pytest
 import torch
 
-from resaco.reptile import outer_loop, sample_heldout_scenarios
+from resaco.reptile import (_schedule_alpha, outer_loop, residual_init_fraction,
+                            sample_heldout_scenarios)
 from resaco.sac import SACAgent
 from mec_core.scenario import sample_scenario_pool
 
@@ -139,3 +145,38 @@ def test_eval_scenarios_are_observational_only():
     # and the metrics rows actually carry the new columns
     assert metrics_log and all(
         "eval_reward_mean" in m and "eval_reward_std" in m for m in metrics_log)
+
+
+def test_residual_init_fraction_constant_matches_closed_form():
+    assert math.isclose(residual_init_fraction(0.001, 300), (1 - 0.001) ** 300)
+    assert math.isclose(residual_init_fraction(0.01, 300), (1 - 0.01) ** 300)
+    # the number the whole Phase-1 diagnosis hangs on: at Table II defaults,
+    # 74.1% of theta* is its random initialization
+    assert round(residual_init_fraction(0.001, 300), 3) == 0.741
+
+
+def test_linear_schedule_anneals_to_zero():
+    K = 10
+    alphas = [_schedule_alpha(0.5, k, K, "linear") for k in range(1, K + 1)]
+    assert math.isclose(alphas[0], 0.5 * (1 - 1 / K))  # starts just under meta_lr
+    assert alphas[-1] == 0.0                            # final iteration: exactly 0
+    assert all(a > b for a, b in zip(alphas, alphas[1:]))  # strictly decreasing
+
+    # residual under linear == the explicit product of its per-step factors
+    expected = functools.reduce(operator.mul, (1 - a for a in alphas), 1.0)
+    assert math.isclose(residual_init_fraction(0.5, K, "linear"), expected)
+    # and annealing keeps more late-run signal: with the same starting lr,
+    # linear's residual is strictly larger than constant's
+    assert residual_init_fraction(0.5, K, "linear") > residual_init_fraction(0.5, K)
+
+
+def test_constant_schedule_is_the_default_and_identity():
+    for k in (1, 5, 300):
+        assert _schedule_alpha(0.001, k, 300, "constant") == 0.001
+
+
+def test_unknown_schedule_rejected():
+    with pytest.raises(ValueError):
+        _schedule_alpha(0.1, 1, 10, "cosine")
+    with pytest.raises(ValueError):
+        residual_init_fraction(0.1, 10, "cosine")

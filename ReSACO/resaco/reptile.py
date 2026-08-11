@@ -26,6 +26,45 @@ def _interpolate_params(theta, theta_k, alpha):
     return new_theta
 
 
+def _schedule_alpha(meta_lr: float, k: int, num_outer_iterations: int, schedule: str) -> float:
+    """Effective Reptile outer stepsize alpha_k at iteration k (1-based).
+
+    "constant": alpha_k = meta_lr, every iteration -- the paper's Table II
+                setup (alpha = 0.001 throughout).
+    "linear":   alpha_k = meta_lr * (1 - k/K) -- the Reptile paper's own
+                protocol (Nichol et al. 2018 anneal the outer stepsize
+                linearly to 0; they *start* it at 1.0, i.e. three orders of
+                magnitude above Table II's 0.001).
+    """
+    if schedule == "constant":
+        return meta_lr
+    if schedule == "linear":
+        return meta_lr * (1.0 - k / num_outer_iterations)
+    raise ValueError(f"unknown meta_lr_schedule {schedule!r} (use 'constant' or 'linear')")
+
+
+def residual_init_fraction(meta_lr: float, num_outer_iterations: int,
+                           schedule: str = "constant") -> float:
+    """Fraction of the RANDOM INITIALIZATION still present in theta* after
+    K outer iterations.
+
+    Eq. 8 is an exponential moving average -- theta <- (1-alpha_k)*theta +
+    alpha_k*theta_k -- so the initial (random) theta_0 survives into theta*
+    with weight prod_k (1 - alpha_k): exactly (1 - alpha)^K under the
+    constant schedule, and the numerically-computed product otherwise. At
+    the paper's Table II defaults (alpha=0.001, K=300) this is 0.741 --
+    74% of theta* is literally its random initialization, before even
+    asking how informative the theta_k pulls that fill the other 26% are.
+    This one number is the core diagnostic for hypothesis H1 (that Fig. 5
+    fails to reproduce because theta* barely differs from a random init),
+    which is why outer_loop prints it at startup.
+    """
+    residual = 1.0
+    for k in range(1, num_outer_iterations + 1):
+        residual *= 1.0 - _schedule_alpha(meta_lr, k, num_outer_iterations, schedule)
+    return residual
+
+
 def inner_loop(theta, scenario, num_inner_updates: int, agent_kwargs=None, seed=None,
                replay_buffer=None):
     """Algorithm 2: refine a local copy of theta on scenario `scenario` for
@@ -70,6 +109,7 @@ def outer_loop(
     eval_every: int = 1,
     persist_buffers: bool = False,
     eval_scenarios=None,
+    meta_lr_schedule: str = "constant",
 ):
     """Algorithm 1: repeatedly sample a scenario, refine a local copy via
     the Inner Loop, and shift the global meta-parameter theta towards it.
@@ -103,10 +143,22 @@ def outer_loop(
     logging settings, a run with eval_scenarios produces bit-identical
     theta* to one without.
 
+    `meta_lr_schedule`: how the Reptile outer stepsize evolves over k --
+    "constant" (default, the paper's setup) or "linear" (Reptile's own
+    annealing; see _schedule_alpha). "constant" reproduces the previous
+    behavior exactly, float-op for float-op.
+
     Returns the final meta-learned parameter theta*.
     """
     agent_kwargs = agent_kwargs or {}
     rng = random.Random(seed)
+
+    # The single most important diagnostic of this training run: how much
+    # of the random initialization Eq. 8's EMA will leave inside theta*.
+    residual = residual_init_fraction(meta_lr, num_outer_iterations, meta_lr_schedule)
+    print(f"[Outer Loop] meta_lr={meta_lr:g} schedule={meta_lr_schedule} "
+          f"K={num_outer_iterations}: prod(1-alpha_k) = {residual:.4g} "
+          f"-- that fraction of the random init survives in theta*")
 
     # Eval seeds fixed once so iteration-to-iteration eval curves compare
     # theta on identical episodes (not fresh eval noise), and drawn from a
@@ -134,7 +186,9 @@ def outer_loop(
             theta, scenario, num_inner_updates, agent_kwargs=agent_kwargs,
             seed=rng.randint(0, 2**31), replay_buffer=replay_buffer,
         )
-        theta = _interpolate_params(theta, theta_k, meta_lr)
+        theta = _interpolate_params(
+            theta, theta_k,
+            _schedule_alpha(meta_lr, k, num_outer_iterations, meta_lr_schedule))
 
         want_log = (reward_log is not None or metrics_log is not None) and k % eval_every == 0
         if want_log or (progress_every and k % progress_every == 0):
