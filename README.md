@@ -50,20 +50,30 @@ python3 -m venv venv
 venv/bin/pip install torch==2.13.0 --index-url https://download.pytorch.org/whl/cpu
 venv/bin/pip install -r requirements.txt
 cd ..
-pip install -r scripts/requirements.txt
+ReSACO/venv/bin/pip install -r scripts/requirements.txt
 ```
 
-Install the **CPU torch wheel first** (line 3): on Linux a plain
-`pip install torch` pulls the CUDA build, which adds ~6 GB of GPU
-libraries a GPU-less VM can never use. Everything in this repo trains
-and serves on CPU. (On Windows/macOS the plain install already gets the
-CPU wheel, so this line is unnecessary there.)
+Two notes on why the block looks the way it does:
+
+- Install the **CPU torch wheel first** (line 3): on Linux a plain
+  `pip install torch` pulls the CUDA build, which adds ~6 GB of GPU
+  libraries a GPU-less VM can never use. Everything in this repo trains
+  and serves on CPU. (On Windows/macOS the plain install already gets
+  the CPU wheel, so this line is unnecessary there.)
+- **Everything goes into the one venv** (last line included): Ubuntu
+  marks the system Python externally managed (PEP 668), so a bare
+  `pip install` outside a venv fails with
+  `error: externally-managed-environment` by design.
+  `scripts/requirements.txt` pins the same versions as ReSACO's, so
+  installing it into the same venv is a no-op-safe way to run
+  `evaluate.py` too -- just invoke it with that venv's interpreter
+  (`ReSACO/venv/bin/python scripts/evaluate.py ...`).
 
 ### Verify the setup
 
 ```
 cd ReSACO && venv/bin/python -m pytest tests/ -q && cd ..
-python3 -m pytest scripts/tests/ -q
+ReSACO/venv/bin/python -m pytest scripts/tests/ -q
 ./test.sh
 cd scripts/ReSACO && ./compile.sh
 ```
