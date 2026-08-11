@@ -158,8 +158,9 @@ def test_residual_init_fraction_constant_matches_closed_form():
 def test_linear_schedule_anneals_to_zero():
     K = 10
     alphas = [_schedule_alpha(0.5, k, K, "linear") for k in range(1, K + 1)]
-    assert math.isclose(alphas[0], 0.5 * (1 - 1 / K))  # starts just under meta_lr
-    assert alphas[-1] == 0.0                            # final iteration: exactly 0
+    assert alphas[0] == 0.5                    # first iteration: exactly meta_lr
+    assert math.isclose(alphas[-1], 0.5 / K)   # final iteration: meta_lr/K -> 0 as K grows
+    assert all(a > 0 for a in alphas)          # no iteration is a discarded no-op
     assert all(a > b for a, b in zip(alphas, alphas[1:]))  # strictly decreasing
 
     # residual under linear == the explicit product of its per-step factors
@@ -168,6 +169,15 @@ def test_linear_schedule_anneals_to_zero():
     # and annealing keeps more late-run signal: with the same starting lr,
     # linear's residual is strictly larger than constant's
     assert residual_init_fraction(0.5, K, "linear") > residual_init_fraction(0.5, K)
+
+
+def test_empty_eval_scenarios_disables_heldout_eval():
+    scenarios = sample_scenario_pool(2, seed=13)
+    metrics_log = []
+    outer_loop(scenarios, num_outer_iterations=2, num_inner_updates=3, seed=13,
+               progress_every=0, metrics_log=metrics_log, eval_every=1,
+               eval_scenarios=[])
+    assert metrics_log and all("eval_reward_mean" not in m for m in metrics_log)
 
 
 def test_constant_schedule_is_the_default_and_identity():

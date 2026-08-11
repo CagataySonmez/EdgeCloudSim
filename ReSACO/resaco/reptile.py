@@ -31,15 +31,19 @@ def _schedule_alpha(meta_lr: float, k: int, num_outer_iterations: int, schedule:
 
     "constant": alpha_k = meta_lr, every iteration -- the paper's Table II
                 setup (alpha = 0.001 throughout).
-    "linear":   alpha_k = meta_lr * (1 - k/K) -- the Reptile paper's own
-                protocol (Nichol et al. 2018 anneal the outer stepsize
-                linearly to 0; they *start* it at 1.0, i.e. three orders of
-                magnitude above Table II's 0.001).
+    "linear":   alpha_k = meta_lr * (1 - (k-1)/K) -- the Reptile paper's
+                own protocol (Nichol et al. 2018 anneal the outer stepsize
+                linearly toward 0; they *start* it at 1.0, i.e. three
+                orders of magnitude above Table II's 0.001). The (k-1)
+                keeps the first iteration at exactly meta_lr and the final
+                one at meta_lr/K -- annealing with 1 - k/K instead would
+                make alpha_K exactly 0, silently discarding the entire
+                final outer iteration's training.
     """
     if schedule == "constant":
         return meta_lr
     if schedule == "linear":
-        return meta_lr * (1.0 - k / num_outer_iterations)
+        return meta_lr * (1.0 - (k - 1) / num_outer_iterations)
     raise ValueError(f"unknown meta_lr_schedule {schedule!r} (use 'constant' or 'linear')")
 
 
@@ -165,7 +169,7 @@ def outer_loop(
     # stream separate from `rng` so enabling held-out eval cannot perturb
     # the scenario picks / inner seeds of the training run itself.
     heldout_eval_seeds = None
-    if eval_scenarios is not None:
+    if eval_scenarios:  # an empty list disables held-out eval, same as None
         heldout_rng = random.Random(seed if seed is None else seed + 200_003)
         heldout_eval_seeds = [heldout_rng.randint(0, 2**31) for _ in eval_scenarios]
 
@@ -206,7 +210,7 @@ def outer_loop(
                     "alpha": eval_agent.alpha,
                     "action_counts": action_counts,
                 }
-            if eval_scenarios is not None:
+            if heldout_eval_seeds is not None:
                 heldout = [
                     _evaluate(eval_agent, s, seed=es)[0]
                     for s, es in zip(eval_scenarios, heldout_eval_seeds)
