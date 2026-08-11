@@ -68,9 +68,25 @@ CSV_COLUMNS = [
     "final_eval_reward_mean", "final_eval_reward_std",
     "final_entropy", "final_alpha", "action_entropy_of_greedy_counts",
     "delta_vs_random_init",
-    # transparency extras (not part of the required schema, kept last):
-    "meta_adapt_mean", "random_adapt_mean", "outer_iterations",
+    # transparency + provenance extras (not part of the required schema, kept
+    # last). summarize_and_plot aggregates ONLY rows whose provenance columns
+    # match the current invocation and dedups on (schedule, meta_lr, seed) --
+    # append-mode reruns/crash-restarts must never double-count a seed
+    # (duplicates leave the IQM unchanged but silently tighten the bootstrap
+    # CI, which could flip the pre-registered judgment) nor mix runs made
+    # under different K / adaptation windows into one aggregate.
+    "meta_adapt_mean", "random_adapt_mean",
+    "outer_iterations", "inner_updates", "meta_scenarios", "adapt_episodes",
+    "scenario_source",
 ]
+
+PROVENANCE = {  # CSV column -> args attribute it must match
+    "outer_iterations": "outer",
+    "inner_updates": "inner",
+    "meta_scenarios": "scenarios",
+    "adapt_episodes": "adapt_episodes",
+    "scenario_source": "scenario_source",
+}
 
 
 def _action_entropy(counts):
@@ -111,14 +127,26 @@ def run_one(meta_lr, schedule, seed, args):
     test_scenario = sample_heldout_scenarios(
         1, pool + heldout, seed=seed + 424_243, source=args.scenario_source)[0]
 
+    # The random init comes from its OWN stream, drawn before the shared
+    # reseed below: if it were drawn between seed_everything and run_curve,
+    # the random arm would enter adaptation with its torch stream offset by
+    # one agent-init relative to the meta arm, unpairing every exploration
+    # draw the common-random-numbers design exists to pair.
+    seed_everything(seed + 700_003)
+    random_theta = SACAgent().get_params()
+
+    # curve seeds spaced 100k apart per sweep seed: run_curve consumes 2
+    # consecutive seeds per episode, so seed*2+1-style spacing would make
+    # different sweep seeds' env streams overlap almost entirely,
+    # correlating replicates the CI treats as independent
+    curve_seed = 1_000_000 + seed * 100_000
     tag = f"lr={meta_lr:g}/{schedule}/seed={seed}"
     seed_everything(seed + 500_009)
     meta_curve = run_curve(theta_star, test_scenario, args.adapt_episodes,
-                           args.inner, seed=seed * 2 + 1, label=f"meta {tag}")
+                           args.inner, seed=curve_seed, label=f"meta {tag}")
     seed_everything(seed + 500_009)
-    random_theta = SACAgent().get_params()
     random_curve = run_curve(random_theta, test_scenario, args.adapt_episodes,
-                             args.inner, seed=seed * 2 + 1, label=f"rand {tag}")
+                             args.inner, seed=curve_seed, label=f"rand {tag}")
 
     meta_mean = float(np.mean(meta_curve))
     random_mean = float(np.mean(random_curve))
@@ -136,6 +164,10 @@ def run_one(meta_lr, schedule, seed, args):
         "meta_adapt_mean": meta_mean,
         "random_adapt_mean": random_mean,
         "outer_iterations": args.outer,
+        "inner_updates": args.inner,
+        "meta_scenarios": args.scenarios,
+        "adapt_episodes": args.adapt_episodes,
+        "scenario_source": args.scenario_source,
     }
 
 
@@ -148,27 +180,53 @@ def append_row(csv_path, row):
         writer.writerow(row)
 
 
-def summarize_and_plot(csv_path, png_path):
+def summarize_and_plot(csv_path, png_path, args, smoke=False):
     """Aggregates the sweep CSV per (schedule, meta_lr) with IQM +
-    bootstrap 95% CI, renders the plot, and prints the H1 judgment."""
+    bootstrap 95% CI, renders the plot, and prints the H1 judgment.
+
+    Only rows whose provenance columns match the current invocation are
+    aggregated (rows from runs with a different K/N/M/adaptation window/
+    scenario source are counted and excluded, never silently mixed), and
+    (schedule, meta_lr, seed) is dedup'd keeping the LAST row, so
+    append-mode reruns cannot double-count a seed and tighten the CI.
+    """
     with open(csv_path, newline="") as f:
-        rows = list(csv.DictReader(f))
-    if not rows:
+        raw_rows = list(csv.DictReader(f))
+    if not raw_rows:
         print("No sweep rows to summarize.")
         return
 
-    groups = {}
-    for r in rows:
-        key = (r["schedule"], float(r["meta_lr"]))
-        groups.setdefault(key, []).append(float(r["delta_vs_random_init"]))
+    matching = [r for r in raw_rows
+                if all(r.get(col) == str(getattr(args, attr))
+                       for col, attr in PROVENANCE.items())]
+    excluded = len(raw_rows) - len(matching)
 
+    deduped = {}
+    for r in matching:  # later rows overwrite earlier ones -> keep-last
+        deduped[(r["schedule"], float(r["meta_lr"]), int(r["seed"]))] = r
+    duplicates = len(matching) - len(deduped)
+    if excluded or duplicates:
+        print(f"\nnote: excluded {excluded} row(s) from parameter-different runs and "
+              f"{duplicates} duplicate (schedule, meta_lr, seed) row(s); "
+              f"aggregating {len(deduped)}.")
+    if not deduped:
+        print("No rows match this invocation's parameters -- nothing to summarize.")
+        return
+
+    groups = {}
+    for (schedule, lr, _seed), r in sorted(deduped.items()):
+        groups.setdefault((schedule, lr), []).append(float(r["delta_vs_random_init"]))
+
+    n_configs = len(groups)
+    bonf_alpha = 0.05 / n_configs
     print("\n=== delta_vs_random_init per config (IQM [95% bootstrap CI], n seeds) ===")
     summary = {}
-    h1_supported = []
+    h1_supported, h1_supported_bonf, ci_below_zero = [], [], []
     for (schedule, lr), deltas in sorted(groups.items()):
         point = iqm(deltas)
         lo, hi = bootstrap_ci(deltas, statistic=iqm)
-        residual = float(next(r["residual_random_init"] for r in rows
+        blo, bhi = bootstrap_ci(deltas, statistic=iqm, alpha=bonf_alpha)
+        residual = float(next(r["residual_random_init"] for r in deduped.values()
                               if r["schedule"] == schedule and float(r["meta_lr"]) == lr))
         summary[(schedule, lr)] = (point, lo, hi)
         verdict = "CI > 0" if lo > 0 else ("CI < 0" if hi < 0 else "CI spans 0")
@@ -176,16 +234,44 @@ def summarize_and_plot(csv_path, png_path):
               f"delta={point:+.4f} [{lo:+.4f}, {hi:+.4f}] (n={len(deltas)}) -> {verdict}")
         if lo > 0:
             h1_supported.append((schedule, lr))
+            if blo > 0:
+                h1_supported_bonf.append((schedule, lr))
+        if hi < 0:
+            ci_below_zero.append((schedule, lr))
 
-    print("\n=== H1 judgment (rule fixed before the sweep ran) ===")
+    if smoke:
+        print("\n=== SMOKE RUN -- directional sanity check only ===")
+        print("Shrunken budget (fewer seeds, tiny K): the pre-registered H1 rule is "
+              "NOT being applied here. Run the full sweep for the real verdict.")
+        judgment_title = "what the rule WOULD say on this smoke data"
+    else:
+        judgment_title = "H1 judgment (rule fixed before the sweep ran)"
+
+    print(f"\n=== {judgment_title} ===")
     if h1_supported:
         cfgs = ", ".join(f"{s}/meta_lr={lr:g}" for s, lr in h1_supported)
         print(f"H1 SUPPORTED: meta-init beats random-init with CI clear of zero at: {cfgs}.")
         print("The README diagnosis 'M=10 scenarios is not much signal' is wrong for those "
               "configs -- the default meta_lr was the bottleneck. Update README (P1-4).")
     else:
-        print("H1 NOT SUPPORTED at any tested meta_lr: every config's 95% CI contains 0.")
+        print("H1 NOT SUPPORTED at any tested meta_lr: no config's 95% CI is entirely "
+              "above 0.")
+        if ci_below_zero:
+            cfgs = ", ".join(f"{s}/meta_lr={lr:g}" for s, lr in ci_below_zero)
+            print(f"Moreover, meta-init is credibly WORSE than random-init at: {cfgs} "
+                  f"(CI entirely below 0).")
         print("Formalize as a negative result together with Phase 2's multi-task control.")
+    # The pre-registered rule tests n_configs CIs and accepts on ANY success,
+    # which inflates the family-wise error rate; report the Bonferroni-corrected
+    # reading alongside so the README can carry both honestly.
+    if h1_supported:
+        if h1_supported_bonf:
+            cfgs = ", ".join(f"{s}/meta_lr={lr:g}" for s, lr in h1_supported_bonf)
+            print(f"Bonferroni check (alpha = 0.05/{n_configs}): still supported at {cfgs}.")
+        else:
+            print(f"Bonferroni check (alpha = 0.05/{n_configs}): NO config survives the "
+                  f"multiple-comparison correction -- treat the supported reading above "
+                  f"with caution.")
 
     # ---- plot: constant schedule as a line over meta_lr, linear as a point ----
     plt.figure(figsize=(8, 5), dpi=150)
@@ -259,6 +345,17 @@ def main():
             if not root.endswith("_smoke"):
                 setattr(args, attr, f"{root}_smoke{ext}")
 
+    if args.eval_scenarios < 1:
+        parser.error("--eval-scenarios must be >= 1 (the sweep's final_eval_* "
+                     "columns come from the held-out eval)")
+    if args.outer % args.eval_every != 0:
+        # run_one reads its final_* metrics from the LAST logged iteration;
+        # if eval_every doesn't divide K that row wouldn't be iteration K
+        # (and with eval_every > K there would be no row at all)
+        print(f"note: --eval-every {args.eval_every} does not divide K={args.outer}; "
+              f"using 1 so the final iteration is always evaluated")
+        args.eval_every = 1
+
     configs = [(lr, "constant") for lr in args.meta_lrs]
     if args.linear_start > 0:
         configs.append((args.linear_start, "linear"))
@@ -277,7 +374,7 @@ def main():
                   f"(meta {row['meta_adapt_mean']:.3f} vs random {row['random_adapt_mean']:.3f}), "
                   f"greedy action entropy={row['action_entropy_of_greedy_counts']:.3f}")
 
-    summarize_and_plot(args.out_csv, args.out_png)
+    summarize_and_plot(args.out_csv, args.out_png, args, smoke=args.smoke)
 
 
 if __name__ == "__main__":
