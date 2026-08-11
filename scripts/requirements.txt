@@ -1,5 +1,10 @@
+# Python dependencies for scripts/evaluate.py (result aggregation/plotting)
+# and scripts/tests/. Deliberately torch-free -- evaluate.py never trains or
+# serves a model, so these can go into the system python or any small venv.
+# The RL side (training, bridge) has its own heavier list: ReSACO/requirements.txt.
 numpy==2.5.1
 matplotlib==3.11.0
 pandas==3.0.3
 natsort==8.4.0
 scienceplots==2.2.2
+pytest==8.3.5

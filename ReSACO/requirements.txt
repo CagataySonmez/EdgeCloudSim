@@ -1,3 +1,16 @@
+# Python dependencies for the RL side of this repo: ReSACO/ itself plus the
+# shared mec_core/ and baselines/ packages it trains and serves (training
+# scripts, bridge/inference_server.py, and ReSACO/tests).
+#
+# Install into ReSACO's own venv (see "Requirements & Ubuntu VM Setup" in the
+# repo README). On Linux, install the CPU-only torch wheel FIRST -- plain
+# `pip install torch` on Linux pulls the CUDA build (~6 GB extra, useless in a
+# GPU-less VM):
+#
+#   pip install torch==2.13.0 --index-url https://download.pytorch.org/whl/cpu
+#   pip install -r requirements.txt
+#
+# On Windows/macOS the plain install below already gets the CPU wheel.
 torch==2.13.0
 numpy==2.5.1
 matplotlib==3.11.0

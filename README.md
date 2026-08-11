@@ -2,19 +2,70 @@
 
 EdgeCloudSim provides a simulation environment specific to Edge Computing scenarios where it is possible to conduct experiments that considers both computational and networking resources. EdgeCloudSim is based on CloudSim but adds considerable functionality so that it can be efficiently used for Edge Computing scenarios. EdgeCloudSim is an open source tool and any contributions are welcome. If you want to contribute EdgeCloudSim, please check below feature list and the [contributing guidelines](/CONTRIBUTING.md). If you want to use EdgeCloudSim in your research work, please cite our paper [[3]](https://onlinelibrary.wiley.com/doi/abs/10.1002/ett.3493).
 
-## Environment
-Ubuntu 20.0.4.6
+## Requirements & Ubuntu VM Setup
 
+### VM sizing
 
-## PREREQUISITE 
+Measured on a real run of this repo (peak working-set of each process;
+CloudSim sim at 2,000 devices peaked at ~221 MB under `-Xmx2g`, the
+Python bridge and meta-training each at ~280 MB -- individual processes
+are small, so RAM scales with how many simulations you run *in parallel*,
+not with the workload itself):
+
+| Resource | Minimum (single run) | Recommended (training + parallel sweeps) |
+|---|---|---|
+| vCPU | 2 | 4-8 (`run_scenarios.sh N` runs N sims in parallel; training/torch is CPU-bound) |
+| RAM | 4 GB | 8 GB (OS ~1 GB + bridge ~0.3 GB + ~0.25 GB per parallel sim + training ~0.3 GB) |
+| Storage | 25 GB | 40 GB (OS ~10 GB + repo clone ~3 GB + Python venv ~2 GB + simulation outputs) |
+
+**OS**: Ubuntu **24.04 LTS or newer**. This is a hard floor, not a
+preference: the pinned Python dependencies require **Python >= 3.12**
+(numpy 2.5's own minimum), which 24.04 ships natively; 22.04's Python
+3.10 will not resolve `ReSACO/requirements.txt`.
+
+### apt packages
+
 ```
 sudo apt-get update
+sudo apt-get install -y git openjdk-17-jdk-headless python3 python3-venv python3-pip
 ```
+
+JDK 17 is the version this repo is developed/verified against; no
+Maven/Gradle needed (plain `javac` via the `compile.sh`/`test.sh`
+scripts). Plotting is headless (matplotlib Agg + scienceplots' no-latex
+style), so no LaTeX or display packages are required.
+
+### Python packages (pip)
+
+Two requirement files, split by weight:
+
+- **`ReSACO/requirements.txt`** -- the RL side (training, bridge serving,
+  `ReSACO/tests/`); includes torch. Install into ReSACO's own venv.
+- **`scripts/requirements.txt`** -- `scripts/evaluate.py` + its tests
+  only; deliberately torch-free.
+
 ```
-sudo apt-get upgrade
+cd ReSACO
+python3 -m venv venv
+venv/bin/pip install torch==2.13.0 --index-url https://download.pytorch.org/whl/cpu
+venv/bin/pip install -r requirements.txt
+cd ..
+pip install -r scripts/requirements.txt
 ```
+
+Install the **CPU torch wheel first** (line 3): on Linux a plain
+`pip install torch` pulls the CUDA build, which adds ~6 GB of GPU
+libraries a GPU-less VM can never use. Everything in this repo trains
+and serves on CPU. (On Windows/macOS the plain install already gets the
+CPU wheel, so this line is unnecessary there.)
+
+### Verify the setup
+
 ```
-sudo apt install default-jre default-jdk maven
+cd ReSACO && venv/bin/python -m pytest tests/ -q && cd ..
+python3 -m pytest scripts/tests/ -q
+./test.sh
+cd scripts/ReSACO && ./compile.sh
 ```
 ## Discussion Forum
 
@@ -388,7 +439,7 @@ elsewhere needs to change.
 ### Tests
 
 ```
-cd scripts && pip install -r requirements.txt pytest && pytest tests/
+cd scripts && pip install -r requirements.txt && pytest tests/
 ```
 Covers the pure logic behind `--auto` (every selector returns "ALL"/latest
 without prompting, `--auto` without a choice errors, the menu dict shape).
