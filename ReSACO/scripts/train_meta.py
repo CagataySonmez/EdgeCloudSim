@@ -19,7 +19,7 @@ sys.path.insert(0, _RESACO_DIR)                      # ReSACO/  -> `resaco`, `br
 sys.path.insert(0, os.path.dirname(_RESACO_DIR))     # repo root -> `mec_core`, `baselines`
 
 from mec_core import config
-from resaco.reptile import outer_loop
+from resaco.reptile import outer_loop, sample_heldout_scenarios
 from mec_core.scenario import sample_scenario_pool
 from mec_core.seeding import seed_everything
 
@@ -41,6 +41,14 @@ def main():
                          help="run the metrics-logging eval rollout every N outer iterations "
                               "(pure logging overhead -- lower granularity trains faster; "
                               "1 evaluates every iteration like before)")
+    parser.add_argument("--eval-scenarios", type=int, default=0,
+                         help="N > 0 additionally evaluates theta on a FIXED held-out set of N "
+                              "scenarios (sampled disjoint from the training pool, from the same "
+                              "source/env restriction) at every logged iteration, adding "
+                              "eval_reward_mean/eval_reward_std columns to the metrics CSV. "
+                              "Separates learning progress from per-iteration scenario-difficulty "
+                              "variance; 0 (default) keeps the current train-scenario-only eval. "
+                              "Purely observational: theta* is bit-identical either way.")
     parser.add_argument("--env-profiles", type=str, default=None,
                          help="comma-separated ENV_PROFILES names to restrict the environment "
                               "pool (e.g. 'DEFAULT' for a paper-exact run where scenarios vary "
@@ -75,6 +83,14 @@ def main():
               f"vm_util(edge/cloud/mobile)={p.vm_utilization_on_edge:.1f}/"
               f"{p.vm_utilization_on_cloud:.2f}/{p.vm_utilization_on_mobile:.1f}")
 
+    eval_scenarios = None
+    if args.eval_scenarios > 0:
+        eval_scenarios = sample_heldout_scenarios(
+            args.eval_scenarios, scenarios, seed=args.seed,
+            source=args.scenario_source, env_names=env_names)
+        print(f"Sampled {len(eval_scenarios)} held-out evaluation scenarios "
+              f"(disjoint from the training pool).")
+
     print(f"\nRunning Outer Loop: K={args.outer} outer iterations, "
           f"N={args.inner} inner SAC updates per iteration...")
     metrics_log = []
@@ -87,6 +103,7 @@ def main():
         metrics_log=metrics_log,
         eval_every=max(1, args.eval_every),
         persist_buffers=args.persist_buffers,
+        eval_scenarios=eval_scenarios,
     )
 
     torch.save(theta_star, args.out)
@@ -95,20 +112,31 @@ def main():
     if metrics_log:
         metrics_path = os.path.join(os.path.dirname(args.out), "train_meta_metrics.csv")
         action_dim = len(metrics_log[0]["action_counts"])
+        # eval columns go last so the CSV without --eval-scenarios stays
+        # byte-identical to the pre-held-out-eval schema
+        has_eval = "eval_reward_mean" in metrics_log[0]
         with open(metrics_path, "w") as f:
             headers = ["iteration", "avg_reward", "policy_entropy", "alpha"]
             headers += [f"greedy_action_{a}_count" for a in range(action_dim)]
+            if has_eval:
+                headers += ["eval_reward_mean", "eval_reward_std"]
             f.write(",".join(headers) + "\n")
             for m in metrics_log:
                 row = [m["iteration"], f"{m['avg_reward']:.6f}",
                        f"{m['policy_entropy']:.6f}", f"{m['alpha']:.6f}"]
                 row += m["action_counts"]
+                if has_eval:
+                    row += [f"{m['eval_reward_mean']:.6f}", f"{m['eval_reward_std']:.6f}"]
                 f.write(",".join(str(v) for v in row) + "\n")
         print(f"Saved per-iteration training metrics -> {metrics_path}")
 
         first, last = metrics_log[0], metrics_log[-1]
         print(f"Reward trend (avg greedy reward per logged iter): "
               f"first={first['avg_reward']:.3f} last={last['avg_reward']:.3f}")
+        if has_eval:
+            print(f"Held-out eval trend ({args.eval_scenarios} fixed scenarios): "
+                  f"first={first['eval_reward_mean']:.3f}+-{first['eval_reward_std']:.3f} "
+                  f"last={last['eval_reward_mean']:.3f}+-{last['eval_reward_std']:.3f}")
         print(f"Policy entropy: first={first['policy_entropy']:.3f} "
               f"last={last['policy_entropy']:.3f} (uniform = ln({action_dim}) = "
               f"{math.log(action_dim):.3f}); final alpha={last['alpha']:.3f}")

@@ -10,6 +10,7 @@ from mec_core import config
 from mec_core.env import MECOffloadEnv
 from mec_core.normalize import normalize_state
 from mec_core.replay_buffer import ReplayBuffer
+from mec_core.scenario import sample_scenario
 from .sac import SACAgent
 
 
@@ -68,6 +69,7 @@ def outer_loop(
     metrics_log=None,
     eval_every: int = 1,
     persist_buffers: bool = False,
+    eval_scenarios=None,
 ):
     """Algorithm 1: repeatedly sample a scenario, refine a local copy via
     the Inner Loop, and shift the global meta-parameter theta towards it.
@@ -89,10 +91,31 @@ def outer_loop(
     per real update and more sample-diverse minibatches, at the cost of a
     documented deviation from the paper's procedure (off by default).
 
+    `eval_scenarios`: optional FIXED held-out evaluation set (see
+    sample_heldout_scenarios). Without it, each logged iteration evaluates
+    on the scenario that was just trained on, so the learning curve mixes
+    real progress with per-iteration scenario-difficulty variance. With it,
+    every logged iteration additionally evaluates theta on this same fixed
+    set (each scenario under a fixed eval seed drawn once up front), and
+    the metrics_log entry gains "eval_reward_mean"/"eval_reward_std". The
+    held-out evals draw nothing from the training RNG stream (greedy
+    rollouts on per-scenario seeds fixed up front), so given the same
+    logging settings, a run with eval_scenarios produces bit-identical
+    theta* to one without.
+
     Returns the final meta-learned parameter theta*.
     """
     agent_kwargs = agent_kwargs or {}
     rng = random.Random(seed)
+
+    # Eval seeds fixed once so iteration-to-iteration eval curves compare
+    # theta on identical episodes (not fresh eval noise), and drawn from a
+    # stream separate from `rng` so enabling held-out eval cannot perturb
+    # the scenario picks / inner seeds of the training run itself.
+    heldout_eval_seeds = None
+    if eval_scenarios is not None:
+        heldout_rng = random.Random(seed if seed is None else seed + 200_003)
+        heldout_eval_seeds = [heldout_rng.randint(0, 2**31) for _ in eval_scenarios]
 
     global_agent = SACAgent(**agent_kwargs)
     theta = global_agent.get_params()
@@ -119,22 +142,66 @@ def outer_loop(
             eval_agent.load_params(theta)
             avg_reward, action_counts, policy_entropy = _evaluate(
                 eval_agent, scenario, seed=rng.randint(0, 2**31))
-            if reward_log is not None:
-                reward_log.append(avg_reward)
+            heldout_msg = ""
+            entry = None
             if metrics_log is not None:
-                metrics_log.append({
+                entry = {
                     "iteration": k,
                     "avg_reward": avg_reward,
                     "policy_entropy": policy_entropy,
                     "alpha": eval_agent.alpha,
                     "action_counts": action_counts,
-                })
+                }
+            if eval_scenarios is not None:
+                heldout = [
+                    _evaluate(eval_agent, s, seed=es)[0]
+                    for s, es in zip(eval_scenarios, heldout_eval_seeds)
+                ]
+                eval_mean = float(np.mean(heldout))
+                eval_std = float(np.std(heldout))
+                heldout_msg = f" heldout_eval={eval_mean:.3f}+-{eval_std:.3f}"
+                if entry is not None:
+                    entry["eval_reward_mean"] = eval_mean
+                    entry["eval_reward_std"] = eval_std
+            if reward_log is not None:
+                reward_log.append(avg_reward)
+            if entry is not None:
+                metrics_log.append(entry)
             if progress_every and k % progress_every == 0:
                 print(f"[Outer Loop] iter {k}/{num_outer_iterations} "
                       f"avg_reward={avg_reward:.3f} entropy={policy_entropy:.3f} "
-                      f"alpha={eval_agent.alpha:.3f}")
+                      f"alpha={eval_agent.alpha:.3f}{heldout_msg}")
 
     return theta
+
+
+def sample_heldout_scenarios(num: int, training_scenarios, seed: int = None,
+                             source: str = "mixed", env_names=None):
+    """Samples a FIXED held-out evaluation set for outer_loop(eval_scenarios=...):
+    `num` scenarios from the same distribution as the training pool, rejected
+    until disjoint from every training scenario (and internally duplicate-free),
+    so the held-out curve measures generalization to genuinely unseen
+    scenarios rather than re-evaluation of trained ones.
+
+    Deterministic given `seed`, and drawn from a different stream than
+    sample_scenario_pool(seed) uses, so training pool and eval set never
+    share a sampling sequence even under the same seed.
+    """
+    rng = random.Random(seed if seed is None else seed + 100_003)
+    heldout = []
+    attempts = 0
+    while len(heldout) < num:
+        attempts += 1
+        if attempts > 1000 * max(1, num):
+            raise RuntimeError(
+                f"could not sample {num} scenarios disjoint from the training pool "
+                f"after {attempts} attempts -- scenario space too constrained "
+                f"(source={source!r}, env_names={env_names!r})")
+        s = sample_scenario(rng, source=source, env_names=env_names)
+        if s in training_scenarios or s in heldout:
+            continue
+        heldout.append(s)
+    return heldout
 
 
 def _evaluate(agent, scenario, num_steps: int = 50, seed=None):
