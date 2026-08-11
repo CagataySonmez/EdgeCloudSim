@@ -1,5 +1,7 @@
 """Hyperparameters and metadata ranges for ReSACO (Table II, Section V-A/V-B)."""
 
+from contextlib import contextmanager
+
 # ----------------------------------------------------------------------------
 # Device / Edge / Cloud tier configuration (Section V-A-2, matches
 # EdgeCloudSim's scripts/three_tier/config/default_config.properties and
@@ -187,3 +189,36 @@ DDPG_CRITIC_LR = 1e-3
 # LR is the typical choice for both (used here by both A2C and the A2CAgent
 # A3C's global model gets wrapped into).
 A2C_LR = 7e-4
+
+
+# ----------------------------------------------------------------------------
+# Temporary overrides (used by scripts/run_ablations.py)
+# ----------------------------------------------------------------------------
+@contextmanager
+def override_config(**overrides):
+    """Temporarily replace module-level constants; originals are restored
+    when the block exits, exception included.
+
+    Works because every consumer reads these values as `config.X` attribute
+    lookups at call time (never `from config import X` -- verified across
+    the repo), so a setattr on this module is immediately visible. One
+    caveat: values captured at object-construction time (e.g. SACAgent
+    reads AUTO_ENTROPY_TUNING/ENTROPY_TAU in __init__) reflect an override
+    only for objects constructed INSIDE the with-block.
+
+    Unknown names are rejected up front (before anything is modified) so a
+    typo can't silently ablate nothing.
+    """
+    import sys
+    module = sys.modules[__name__]
+    unknown = [k for k in overrides if not hasattr(module, k)]
+    if unknown:
+        raise AttributeError(f"override_config(): unknown config name(s) {unknown}")
+    saved = {k: getattr(module, k) for k in overrides}
+    try:
+        for k, v in overrides.items():
+            setattr(module, k, v)
+        yield
+    finally:
+        for k, v in saved.items():
+            setattr(module, k, v)
