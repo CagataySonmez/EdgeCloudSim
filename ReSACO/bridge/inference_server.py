@@ -47,7 +47,7 @@ Protocol (newline-delimited ASCII, one request per line):
       -> "PONG"
 
 <algo> is one of RESACO, SAC_BASELINE, DDPG_BASELINE, A2C_BASELINE,
-A3C_BASELINE. If that algorithm's checkpoint wasn't found at startup, ACT
+A3C_BASELINE, MULTITASK_BASELINE. If that algorithm's checkpoint wasn't found at startup, ACT
 returns "ERROR unknown algo ..." and the Java client falls back to its
 static heuristic for that decision -- same as if the whole bridge were
 unreachable.

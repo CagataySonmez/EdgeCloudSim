@@ -84,9 +84,12 @@ CSV_COLUMNS = [
     "axis", "setting", "seed",
     "eval_reward_mean", "eval_reward_std", "delta_vs_base",
     "final_entropy", "final_alpha", "action_entropy_of_greedy_counts",
-    # provenance -- the summary aggregates only rows matching the invocation
+    # provenance -- the summary aggregates only rows matching the invocation.
+    # eval_every belongs here because outer_loop draws its periodic-eval seed
+    # from the TRAINING rng, so a different eval cadence trains a different
+    # theta*, not just a different log.
     "outer_iterations", "inner_updates", "meta_scenarios", "eval_scenarios",
-    "meta_lr", "meta_lr_schedule", "base_source",
+    "eval_every", "meta_lr", "meta_lr_schedule", "base_source",
 ]
 
 PROVENANCE = {
@@ -94,6 +97,7 @@ PROVENANCE = {
     "inner_updates": "inner",
     "meta_scenarios": "scenarios",
     "eval_scenarios": "eval_scenarios",
+    "eval_every": "eval_every",
     "meta_lr": "meta_lr",
     "meta_lr_schedule": "meta_lr_schedule",
     "base_source": "base_source",
@@ -164,6 +168,7 @@ def run_variant(axis, setting, overrides, outer_kwargs, source, seed, args):
         "inner_updates": args.inner,
         "meta_scenarios": args.scenarios,
         "eval_scenarios": args.eval_scenarios,
+        "eval_every": args.eval_every,
         "meta_lr": args.meta_lr,
         "meta_lr_schedule": args.meta_lr_schedule,
         "base_source": args.base_source,
@@ -194,6 +199,15 @@ def summarize(csv_path, md_path, args):
         print(f"note: {skipped} row(s) excluded as parameter-different or duplicate; "
               f"aggregating {len(deduped)}.")
 
+    # Deltas are RECOMPUTED here from the surviving rows -- pairing each
+    # variant seed against the deduped BASE row of the same seed -- rather
+    # than trusting the delta_vs_base column, which on a rerun could still
+    # reference a BASE value the keep-last dedup has since discarded.
+    base_by_seed = {}
+    for (axis, _setting, seed), r in deduped.items():
+        if axis == "BASE":
+            base_by_seed[seed] = float(r["eval_reward_mean"])
+
     groups = {}
     for (axis, setting, _seed), r in sorted(deduped.items()):
         groups.setdefault((axis, setting), []).append(r)
@@ -222,7 +236,14 @@ def summarize(csv_path, md_path, args):
     for (axis, setting), rs in sorted(groups.items(), key=lambda kv: (kv[0][0] != "BASE", kv[0])):
         evals = [float(r["eval_reward_mean"]) for r in rs]
         e_pt, e_lo, e_hi = agg(evals)
-        deltas = [float(r["delta_vs_base"]) for r in rs if r["delta_vs_base"] != ""]
+        deltas, unpaired = [], 0
+        if axis != "BASE":
+            for r in rs:
+                s = int(r["seed"])
+                if s in base_by_seed:
+                    deltas.append(float(r["eval_reward_mean"]) - base_by_seed[s])
+                else:
+                    unpaired += 1
         if axis == "BASE" or not deltas:
             d_cell = "--"
             d_txt = ""
@@ -230,6 +251,8 @@ def summarize(csv_path, md_path, args):
             d_pt, d_lo, d_hi = agg(deltas)
             d_cell = f"{d_pt:+.3f} [{d_lo:+.3f}, {d_hi:+.3f}]"
             d_txt = f"  delta={d_cell}"
+        if unpaired:
+            d_txt += f"  ({unpaired} seed(s) had no BASE row and were left out of delta)"
         e_cell = f"{e_pt:.3f} [{e_lo:.3f}, {e_hi:.3f}]"
         print(f"  {axis:26s} {setting:20s} eval={e_cell}{d_txt} (n={len(rs)})")
         lines.append(f"| {axis} | {setting} | {e_cell} | {d_cell} | {len(rs)} |")

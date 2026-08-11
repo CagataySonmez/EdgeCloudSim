@@ -300,10 +300,15 @@ def main():
     print(f"Task profiles: {', '.join(p.name for p, _ in eval_profiles)} "
           f"x {args.iterations} iterations, adapt_steps={args.adapt_steps}")
 
-    # replicate master seeds spaced 1M apart: the per-run seed formula below
-    # spans well under 1M (device_count + 7919*it + 104729*p_idx), so
-    # replicates can never share an env/adaptation seed
-    seed_list = [args.seed + 1_000_000 * i for i in range(args.seeds)]
+    if args.seeds < 1:
+        parser.error("--seeds must be >= 1")
+    # replicate master seeds spaced past the per-run formula's actual span
+    # (master + device_count + 7919*it + 104729*p_idx + 1), computed from
+    # this invocation's real iteration/profile counts -- a fixed 1M would
+    # quietly collide once --iterations grows past ~88
+    span = DEVICE_COUNTS[-1] + 7919 * args.iterations + 104729 * len(eval_profiles) + 2
+    spacing = max(1_000_000, span)
+    seed_list = [args.seed + spacing * i for i in range(args.seeds)]
     all_rows = []
     for rep, master_seed in enumerate(seed_list):
         if rep > 0:

@@ -77,7 +77,7 @@ CSV_COLUMNS = [
     # under different K / adaptation windows into one aggregate.
     "meta_adapt_mean", "random_adapt_mean",
     "outer_iterations", "inner_updates", "meta_scenarios", "adapt_episodes",
-    "scenario_source",
+    "scenario_source", "eval_every",
 ]
 
 PROVENANCE = {  # CSV column -> args attribute it must match
@@ -86,6 +86,9 @@ PROVENANCE = {  # CSV column -> args attribute it must match
     "meta_scenarios": "scenarios",
     "adapt_episodes": "adapt_episodes",
     "scenario_source": "scenario_source",
+    # eval_every trains a DIFFERENT theta* (outer_loop draws its periodic-
+    # eval seed from the training rng), so it is provenance, not logging
+    "eval_every": "eval_every",
 }
 
 
@@ -168,6 +171,7 @@ def run_one(meta_lr, schedule, seed, args):
         "meta_scenarios": args.scenarios,
         "adapt_episodes": args.adapt_episodes,
         "scenario_source": args.scenario_source,
+        "eval_every": args.eval_every,
     }
 
 

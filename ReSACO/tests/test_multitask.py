@@ -46,6 +46,36 @@ def test_multitask_env_steps_equal_resaco(monkeypatch):
     assert reported == resaco_steps == K * (config.BATCH_SIZE + N)
 
 
+def test_multitask_persist_parity_matches_persist_buffers_meta(monkeypatch):
+    """train_meta --persist-buffers skips the warm-up on every scenario
+    revisit; the control must be able to match THAT budget too, or it
+    silently gets up to ~2.2x ReSACO's interactions (review finding)."""
+    calls = {"n": 0}
+    orig_step = MECOffloadEnv.step
+
+    def counting_step(self, action):
+        calls["n"] += 1
+        return orig_step(self, action)
+
+    monkeypatch.setattr(MECOffloadEnv, "step", counting_step)
+
+    scenarios = sample_scenario_pool(3, seed=33)
+    K, N = 6, 4
+
+    calls["n"] = 0
+    outer_loop(scenarios, num_outer_iterations=K, num_inner_updates=N,
+               seed=33, progress_every=0, persist_buffers=True)
+    resaco_steps = calls["n"]
+
+    calls["n"] = 0
+    _, reported = train_multitask(scenarios, num_outer_iterations=K,
+                                  num_inner_updates=N, seed=33,
+                                  progress_every=0, persist_buffers_parity=True)
+    assert reported == calls["n"] == resaco_steps
+    # warm-up paid once per visited scenario, so strictly under fresh parity
+    assert reported < K * (config.BATCH_SIZE + N)
+
+
 def test_multitask_checkpoint_roundtrips_into_sacagent(tmp_path):
     scenarios = sample_scenario_pool(1, seed=32)
     agent, _ = train_multitask(scenarios, num_outer_iterations=1,
