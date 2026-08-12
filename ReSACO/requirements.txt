@@ -18,3 +18,6 @@ pandas==3.0.3
 natsort==8.4.0
 scienceplots==2.2.2
 pytest==8.3.5
+# ONNX actor export + its equivalence test (scripts/export_onnx.py, P3-2)
+onnx==1.22.0
+onnxruntime==1.28.0

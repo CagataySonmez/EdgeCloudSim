@@ -928,6 +928,29 @@ RESET <algo>
                               the start of every simulation run.
 ```
 
+## ONNX export (bridge-free inference artifact)
+
+```
+python scripts/export_onnx.py            # theta_star.pt -> theta_star.onnx
+python scripts/export_onnx.py --checkpoint checkpoints/multitask.pt
+```
+
+Exports the trained actor as a single ONNX graph over the RAW 18-value
+wire state (the fixed normalization is baked in as a constant divide),
+returning pre-softmax logits -- argmax reproduces
+`select_action(greedy=True)` exactly. Every export ends with a built-in
+torch-vs-ONNX equivalence check (512 random raw states, |logit diff| <
+1e-5; measured 0.0 on CPU), also covered by `tests/test_onnx_export.py`.
+
+This is the model-artifact half of P3-2 (removing the per-decision TCP
+round trip from EdgeCloudSim runs). The Java half -- a `ReSACOLocalPolicy`
+loading this graph in-JVM behind an `orchestrator_backend={bridge,local}`
+switch -- additionally needs the ONNX Runtime Java jar (~100 MB of native
+libraries) added to `lib/`, a dependency decision deliberately left open;
+until then the TCP bridge remains the only serving path. Note an
+ONNX-served policy is necessarily FROZEN: Algorithm 4's online adaptation
+lives on the Python side.
+
 ## Online-learning persistence
 
 `DeploymentAgent` (ReSACO, SAC_BASELINE, DDPG_BASELINE -- the three
