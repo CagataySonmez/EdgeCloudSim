@@ -346,7 +346,12 @@ public class ReSACOMobileDeviceManager extends MobileDeviceManager {
 					SimLogger.getInstance().setUploadDelay(task.getCloudletId(), delay, delayType);
 				}
 
-				schedule(getId(), delay, nextEvent, task);
+				// The first hop starts only after the policy's own decision
+				// time has passed (0 by default -- the historical free-decision
+				// behavior). taskStarted() was stamped at submission above, so
+				// the latency lands in the logged service time on every tier,
+				// local execution included -- matching env.py's step().
+				schedule(getId(), delay + ReSACOStateBuilder.RESACO_DECISION_LATENCY_SECONDS, nextEvent, task);
 			} else {
 				SimLogger.getInstance().rejectedDueToVMCapacity(task.getCloudletId(), CloudSim.clock(), vmType.ordinal());
 				reportReSACOOutcome(task, false);

@@ -61,6 +61,18 @@ public class ReSACOBridgeClient {
 	private long lastFailureTimeMs = -1;
 	private boolean warnedOnce = false;
 
+	/**
+	 * Measured ACT round-trip times (write -> readLine, i.e. TCP + bridge
+	 * inference + any online-update work the bridge does inline), the real
+	 * per-decision cost that ReSACOStateBuilder.RESACO_DECISION_LATENCY_SECONDS
+	 * lets the simulation charge. ~8 bytes per decision; a 2,000-device run
+	 * makes a few tens of thousands of decisions, so keeping them all for
+	 * exact percentiles is cheap. Guarded by this client's own monitor
+	 * (selectAction is synchronized; printAndResetLatencyStats synchronizes
+	 * explicitly for the MainApp thread).
+	 */
+	private final java.util.ArrayList<Long> actLatencyNanos = new java.util.ArrayList<Long>();
+
 	private ReSACOBridgeClient() {
 		this(System.getProperty("resaco.host", "127.0.0.1"),
 				Integer.parseInt(System.getProperty("resaco.port", "8765")));
@@ -129,6 +141,7 @@ public class ReSACOBridgeClient {
 			for (double v : state) {
 				sb.append(' ').append(v);
 			}
+			long t0 = System.nanoTime();
 			out.write(sb.toString());
 			out.newLine();
 			out.flush();
@@ -136,6 +149,7 @@ public class ReSACOBridgeClient {
 			if (response == null) {
 				throw new IOException("connection closed by bridge");
 			}
+			actLatencyNanos.add(System.nanoTime() - t0);
 			response = response.trim();
 			if (response.startsWith("ERROR")) {
 				SimLogger.printLine("ReSACO bridge error: " + response);
@@ -200,6 +214,42 @@ public class ReSACOBridgeClient {
 		} catch (Exception e) {
 			closeQuietly();
 		}
+	}
+
+	/**
+	 * Prints mean/percentile stats of the measured ACT round-trip times and
+	 * clears them, so each scenario's print covers only its own decisions.
+	 * No-op when no decision went through the bridge (e.g. pure fallback
+	 * runs). This measured distribution is exactly what
+	 * RESACO_DECISION_LATENCY_SECONDS should be set from to stop treating
+	 * the policy as a zero-cost oracle.
+	 */
+	public synchronized void printAndResetLatencyStats() {
+		if (actLatencyNanos.isEmpty()) {
+			return;
+		}
+		long[] sorted = new long[actLatencyNanos.size()];
+		for (int i = 0; i < sorted.length; i++) {
+			sorted[i] = actLatencyNanos.get(i);
+		}
+		actLatencyNanos.clear();
+		java.util.Arrays.sort(sorted);
+		double sum = 0;
+		for (long v : sorted) {
+			sum += v;
+		}
+		SimLogger.printLine(String.format(
+				"ReSACO bridge ACT round-trip (%d decisions): mean=%.2fms p50=%.2fms "
+				+ "p95=%.2fms p99=%.2fms max=%.2fms -- consider setting "
+				+ "DECISION_LATENCY_SECONDS (+ its Java mirror) from these",
+				sorted.length, sum / sorted.length / 1e6, percentileMs(sorted, 50),
+				percentileMs(sorted, 95), percentileMs(sorted, 99),
+				sorted[sorted.length - 1] / 1e6));
+	}
+
+	private static double percentileMs(long[] sorted, int p) {
+		int idx = (int) Math.ceil(sorted.length * (p / 100.0)) - 1;
+		return sorted[Math.min(sorted.length - 1, Math.max(0, idx))] / 1e6;
 	}
 
 	private void closeQuietly() {

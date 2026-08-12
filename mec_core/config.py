@@ -43,6 +43,16 @@ BANDWIDTH_CONTENTION_PER_CLIENT = 0.02
 # Delay threshold used by the network failure indicator F_network (Eq. 2).
 TMAX_SECONDS = 5.0
 
+# Fixed per-decision inference latency (seconds) added to every task's
+# service time, in the toy env (env.step) and the real simulation alike --
+# the ACT round trip (TCP + torch forward + online update) that deployment
+# pays per decision but the simulation otherwise treats as a free oracle.
+# 0.0 (default) keeps the historical free-decision behavior. Mirrored by
+# ReSACOStateBuilder.RESACO_DECISION_LATENCY_SECONDS (change both);
+# ReSACOBridgeClient logs measured ACT round-trip stats per scenario so a
+# realistic value can be chosen from data instead of guessed.
+DECISION_LATENCY_SECONDS = 0.0
+
 # Reward weighting by app delay sensitivity: reward is scaled by
 # (DELAY_SENSITIVITY_BASE + delay_sensitivity), so a delay-sensitive app
 # (AR, 0.9 -> x1.4) penalizes slow service ~2.3x harder than an

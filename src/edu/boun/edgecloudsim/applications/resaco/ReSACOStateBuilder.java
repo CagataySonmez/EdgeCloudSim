@@ -39,6 +39,16 @@ public class ReSACOStateBuilder {
 	/** Must match resaco/config.py's TMAX_SECONDS (network failure delay threshold, Eq. 2/9). */
 	public static final double RESACO_TMAX_SECONDS = 5.0;
 	/**
+	 * Must match mec_core/config.py's DECISION_LATENCY_SECONDS: fixed
+	 * per-decision inference latency (seconds) charged to every task before
+	 * its first hop -- the ACT round trip (TCP + torch forward + online
+	 * update) the real deployment pays per decision but the simulation
+	 * otherwise treats as free. 0.0 keeps the historical free-decision
+	 * behavior; ReSACOBridgeClient prints the measured round-trip stats per
+	 * scenario so a realistic value can be chosen.
+	 */
+	public static final double RESACO_DECISION_LATENCY_SECONDS = 0.0;
+	/**
 	 * Must match resaco/config.py's DELAY_SENSITIVITY_BASE. Rewards reported to
 	 * the bridge are scaled by (base + the app's delay_sensitivity), same as the
 	 * training environment's reward -- online learning (Algorithm 4) would

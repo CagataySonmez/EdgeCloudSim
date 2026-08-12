@@ -317,3 +317,30 @@ def test_zero_background_devices_is_a_no_op():
         env.step(0)  # device tier never touches mu_edge/mu_cloud
     assert sum(env.mu_edge) == 0.0
     assert env.mu_cloud == 0.0
+
+
+def test_decision_latency_charged_into_service_time():
+    """config.DECISION_LATENCY_SECONDS lands in every delivered task's
+    service time (P3-1); 0.0 default means the historical behavior."""
+    import pytest
+
+    from mec_core import config as cfg
+    from mec_core.env import MECOffloadEnv
+    from mec_core.scenario import sample_scenario_pool
+
+    # DEFAULT env profile: mobility disabled, so the longer service time
+    # cannot flip a mobility-failure coin and hide the comparison
+    scenario = sample_scenario_pool(1, seed=51, env_names=["DEFAULT"])[0]
+
+    env = MECOffloadEnv(scenario, seed=7)
+    env.reset()
+    _, _, _, info_free = env.step(0)  # local execution: no network legs
+    assert not info_free["failed"]
+
+    with cfg.override_config(DECISION_LATENCY_SECONDS=0.5):
+        env = MECOffloadEnv(scenario, seed=7)
+        env.reset()
+        _, _, _, info_charged = env.step(0)
+
+    assert not info_charged["failed"]
+    assert info_charged["service_time"] == pytest.approx(info_free["service_time"] + 0.5)

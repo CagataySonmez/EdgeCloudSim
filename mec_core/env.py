@@ -281,7 +281,10 @@ class MECOffloadEnv:
             service_time = None
         else:
             process_time = task.length / mips  # T_process(i) ~= L_i / mu*  (paper Eq. after (1))
-            service_time = process_time + delay
+            # + the policy's own decision-making time (0 by default; see
+            # config.DECISION_LATENCY_SECONDS) -- charged on every tier,
+            # local execution included, since the decision precedes dispatch
+            service_time = process_time + delay + config.DECISION_LATENCY_SECONDS
             # Mobility failure (offloaded tiers only): the device leaves its
             # serving WLAN cell before the result comes back with probability
             # 1 - exp(-window/dwell) -- the exponential-dwell analogue of

@@ -283,3 +283,12 @@ def test_every_orchestrator_policy_is_served_by_the_bridge():
             assert policy in ALGO_REGISTRY, (
                 f"{name} lists orchestrator policy {policy!r} but the bridge's "
                 f"ALGO_REGISTRY has no such algorithm")
+
+
+def test_decision_latency_constant_mirrored():
+    """config.DECISION_LATENCY_SECONDS <-> ReSACOStateBuilder's Java mirror:
+    if they drift, the toy env and the real simulation charge different
+    per-decision costs and their results stop being comparable."""
+    source = _java_source("ReSACOStateBuilder.java")
+    assert float(_java_constant(source, "RESACO_DECISION_LATENCY_SECONDS")) == \
+        config.DECISION_LATENCY_SECONDS

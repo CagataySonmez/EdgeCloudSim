@@ -100,6 +100,11 @@ public class ReSACOMainApp {
 						System.exit(0);
 					}
 
+					// per-scenario ACT round-trip stats (no-op if this policy
+					// never reached the bridge) -- the measured basis for
+					// RESACO_DECISION_LATENCY_SECONDS
+					ReSACOBridgeClient.getInstance().printAndResetLatencyStats();
+
 					Date ScenarioEndDate = Calendar.getInstance().getTime();
 					now = df.format(ScenarioEndDate);
 					SimLogger.printLine("Scenario finished at " + now + ". It took " + SimUtils.getTimeDifference(ScenarioStartDate, ScenarioEndDate));
