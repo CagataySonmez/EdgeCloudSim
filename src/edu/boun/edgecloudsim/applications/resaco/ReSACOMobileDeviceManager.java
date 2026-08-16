@@ -50,6 +50,7 @@ public class ReSACOMobileDeviceManager extends MobileDeviceManager {
 	private static final int REQUEST_RECEIVED_BY_EDGE_DEVICE_TO_RELAY_NEIGHBOR = BASE + 6;
 	private static final int RESPONSE_RECEIVED_BY_MOBILE_DEVICE = BASE + 7;
 	private static final int RESPONSE_RECEIVED_BY_EDGE_DEVICE_TO_RELAY_MOBILE_DEVICE = BASE + 8;
+	private static final int DECISION_LATENCY_ELAPSED = BASE + 9;
 
 	private static final double MM1_QUEUE_MODEL_UPDATE_INTEVAL = 5; //seconds
 
@@ -199,6 +200,15 @@ public class ReSACOMobileDeviceManager extends MobileDeviceManager {
 				schedule(getId(), MM1_QUEUE_MODEL_UPDATE_INTEVAL, UPDATE_MM1_QUEUE_MODEL);
 				break;
 			}
+			case DECISION_LATENCY_ELAPSED: {
+				Task task = (Task) ev.getData();
+				// The decision wait is over -- start the first hop now.
+				// taskStarted() is back-dated to the original submission clock
+				// so the wait is charged into the logged service time.
+				startFirstHop(task, task.getAssociatedDatacenterId(),
+						CloudSim.clock() - ReSACOStateBuilder.RESACO_DECISION_LATENCY_SECONDS);
+				break;
+			}
 			case REQUEST_RECEIVED_BY_MOBILE_DEVICE: {
 				Task task = (Task) ev.getData();
 				submitTaskToVm(task, SimSettings.VM_TYPES.MOBILE_VM);
@@ -283,14 +293,6 @@ public class ReSACOMobileDeviceManager extends MobileDeviceManager {
 	}
 
 	public void submitTask(TaskProperty edgeTask) {
-		double delay = 0;
-		int nextEvent = 0;
-		int nextDeviceForNetworkModel = 0;
-		VM_TYPES vmType = null;
-		NETWORK_DELAY_TYPES delayType = null;
-
-		NetworkModel networkModel = SimManager.getInstance().getNetworkModel();
-
 		Task task = createTask(edgeTask);
 
 		Location currentLocation = SimManager.getInstance().getMobilityModel().
@@ -307,6 +309,46 @@ public class ReSACOMobileDeviceManager extends MobileDeviceManager {
 
 		int nextHopId = SimManager.getInstance().getEdgeOrchestrator().getDeviceToOffload(task);
 
+		if (nextHopId != SimSettings.CLOUD_DATACENTER_ID
+				&& nextHopId != SimSettings.GENERIC_EDGE_DEVICE_ID
+				&& nextHopId != SimSettings.MOBILE_DATACENTER_ID) {
+			SimLogger.printLine("Unknown nextHopId! Terminating simulation...");
+			System.exit(0);
+		}
+
+		// The first hop starts only after the policy's own decision time has
+		// passed (0 by default -- the historical free-decision behavior). The
+		// wait must elapse BEFORE uploadStarted()/the delay lookup, not be
+		// folded into the transfer event's delay: the device is thinking, not
+		// transmitting, so it must not hold a WLAN/WAN client slot -- and
+		// thereby inflate other devices' contention-table delays -- during the
+		// wait. mec_core/env.py likewise keeps DECISION_LATENCY_SECONDS out of
+		// bandwidth contention and charges it into service time only.
+		double decisionLatency = ReSACOStateBuilder.RESACO_DECISION_LATENCY_SECONDS;
+		if (decisionLatency > 0) {
+			task.setAssociatedDatacenterId(nextHopId); // carried to the delayed event
+			schedule(getId(), decisionLatency, DECISION_LATENCY_ELAPSED, task);
+		} else {
+			startFirstHop(task, nextHopId, CloudSim.clock());
+		}
+	}
+
+	/**
+	 * Starts the task's first hop toward nextHopId. submissionTime is the
+	 * clock at submitTask() time -- taskStarted() is stamped with it so the
+	 * decision latency (elapsed between submission and this call) lands in
+	 * the logged service time on every tier, local execution included,
+	 * matching env.py's step().
+	 */
+	private void startFirstHop(Task task, int nextHopId, double submissionTime) {
+		double delay = 0;
+		int nextEvent = 0;
+		int nextDeviceForNetworkModel = 0;
+		VM_TYPES vmType = null;
+		NETWORK_DELAY_TYPES delayType = null;
+
+		NetworkModel networkModel = SimManager.getInstance().getNetworkModel();
+
 		if (nextHopId == SimSettings.CLOUD_DATACENTER_ID) {
 			delay = networkModel.getUploadDelay(task.getMobileDeviceId(), SimSettings.CLOUD_DATACENTER_ID, task);
 			vmType = SimSettings.VM_TYPES.CLOUD_VM;
@@ -321,13 +363,9 @@ public class ReSACOMobileDeviceManager extends MobileDeviceManager {
 			delayType = NETWORK_DELAY_TYPES.WLAN_DELAY;
 			nextDeviceForNetworkModel = SimSettings.GENERIC_EDGE_DEVICE_ID;
 		}
-		else if (nextHopId == SimSettings.MOBILE_DATACENTER_ID) {
+		else {
 			vmType = VM_TYPES.MOBILE_VM;
 			nextEvent = REQUEST_RECEIVED_BY_MOBILE_DEVICE;
-		}
-		else {
-			SimLogger.printLine("Unknown nextHopId! Terminating simulation...");
-			System.exit(0);
 		}
 
 		if (delay > 0 || nextHopId == SimSettings.MOBILE_DATACENTER_ID) {
@@ -342,19 +380,14 @@ public class ReSACOMobileDeviceManager extends MobileDeviceManager {
 				getCloudletList().add(task);
 				bindCloudletToVm(task.getCloudletId(), selectedVM.getId());
 
-				SimLogger.getInstance().taskStarted(task.getCloudletId(), CloudSim.clock());
+				SimLogger.getInstance().taskStarted(task.getCloudletId(), submissionTime);
 
 				if (nextHopId != SimSettings.MOBILE_DATACENTER_ID) {
 					networkModel.uploadStarted(task.getSubmittedLocation(), nextDeviceForNetworkModel);
 					SimLogger.getInstance().setUploadDelay(task.getCloudletId(), delay, delayType);
 				}
 
-				// The first hop starts only after the policy's own decision
-				// time has passed (0 by default -- the historical free-decision
-				// behavior). taskStarted() was stamped at submission above, so
-				// the latency lands in the logged service time on every tier,
-				// local execution included -- matching env.py's step().
-				schedule(getId(), delay + ReSACOStateBuilder.RESACO_DECISION_LATENCY_SECONDS, nextEvent, task);
+				schedule(getId(), delay, nextEvent, task);
 			} else {
 				SimLogger.getInstance().rejectedDueToVMCapacity(task.getCloudletId(), CloudSim.clock(), vmType.ordinal());
 				reportReSACOOutcome(task, false);

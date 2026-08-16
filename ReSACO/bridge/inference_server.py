@@ -49,7 +49,7 @@ Protocol (newline-delimited ASCII, one request per line):
 
   STATS [<algo>]
       -> "<algo> acts=N outcomes=N ignored=N resets=N" for one algo, or
-         all six algos' counters ";"-joined on one line. Process-lifetime
+         all six algos' counters "; "-joined on one line. Process-lifetime
          counts of handled requests (outcomes = accepted OUTCOMEs, ignored
          = IGNORED ones, resets = RESET commands) -- purely observational,
          reading them changes nothing. For eyeballing whether every served
@@ -57,10 +57,12 @@ Protocol (newline-delimited ASCII, one request per line):
          `printf 'STATS\n' | nc 127.0.0.1 8765`.
 
 <algo> is one of RESACO, SAC_BASELINE, DDPG_BASELINE, A2C_BASELINE,
-A3C_BASELINE, MULTITASK_BASELINE. If that algorithm's checkpoint wasn't found at startup, ACT
-returns "ERROR unknown algo ..." and the Java client falls back to its
-static heuristic for that decision -- same as if the whole bridge were
-unreachable.
+A3C_BASELINE, MULTITASK_BASELINE. "ERROR unknown algo ..." is returned
+only for names outside that registry (the Java client then falls back to
+its static heuristic for the decision). A registry algo whose checkpoint
+file is missing is still served -- as a randomly-initialized (untrained)
+policy, announced by a startup WARNING -- so check that warning before
+trusting any algo's results.
 
 A missing/unreachable server should never crash the simulator: the Java
 client (ReSACOBridgeClient) falls back to a static policy on any I/O error.

@@ -150,12 +150,16 @@ public class ReSACOBridgeClient {
 			if (response == null) {
 				throw new IOException("connection closed by bridge");
 			}
-			actLatencyNanos.add(System.nanoTime() - t0);
 			response = response.trim();
 			if (response.startsWith("ERROR")) {
 				SimLogger.printLine("ReSACO bridge error: " + response);
 				return NO_ACTION;
 			}
+			// Recorded only for replies that carry a real decision: an ERROR
+			// reply involves no policy inference (and its task is routed by
+			// the fallback heuristic), so counting its fast round-trip would
+			// bias the DECISION_LATENCY_SECONDS calibration low.
+			actLatencyNanos.add(System.nanoTime() - t0);
 			return Integer.parseInt(response);
 		} catch (Exception e) {
 			closeQuietly();
@@ -248,7 +252,8 @@ public class ReSACOBridgeClient {
 				sorted[sorted.length - 1] / 1e6));
 	}
 
-	private static double percentileMs(long[] sorted, int p) {
+	// package-private so ReSACOBridgeClientTest can pin the nearest-rank math
+	static double percentileMs(long[] sorted, int p) {
 		int idx = (int) Math.ceil(sorted.length * (p / 100.0)) - 1;
 		return sorted[Math.min(sorted.length - 1, Math.max(0, idx))] / 1e6;
 	}

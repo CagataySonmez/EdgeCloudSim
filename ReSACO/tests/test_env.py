@@ -321,7 +321,8 @@ def test_zero_background_devices_is_a_no_op():
 
 def test_decision_latency_charged_into_service_time():
     """config.DECISION_LATENCY_SECONDS lands in every delivered task's
-    service time (P3-1); 0.0 default means the historical behavior."""
+    service time on EVERY tier (P3-1) and stays out of the network-delay /
+    Tmax-failure path; 0.0 default means the historical behavior."""
     import pytest
 
     from mec_core import config as cfg
@@ -332,15 +333,24 @@ def test_decision_latency_charged_into_service_time():
     # cannot flip a mobility-failure coin and hide the comparison
     scenario = sample_scenario_pool(1, seed=51, env_names=["DEFAULT"])[0]
 
-    env = MECOffloadEnv(scenario, seed=7)
-    env.reset()
-    _, _, _, info_free = env.step(0)  # local execution: no network legs
-    assert not info_free["failed"]
-
-    with cfg.override_config(DECISION_LATENCY_SECONDS=0.5):
+    # device tier, an edge server, and the cloud: a regression confined to
+    # the offloaded tiers -- or one that folds the latency into the network
+    # delay (double-charging Tmax classification) -- must fail here, not
+    # just the local-execution case
+    for action in (0, 1, cfg.NUM_EDGE_SERVERS + 1):
         env = MECOffloadEnv(scenario, seed=7)
         env.reset()
-        _, _, _, info_charged = env.step(0)
+        _, _, _, info_free = env.step(action)
+        assert not info_free["failed"]
 
-    assert not info_charged["failed"]
-    assert info_charged["service_time"] == pytest.approx(info_free["service_time"] + 0.5)
+        with cfg.override_config(DECISION_LATENCY_SECONDS=0.5):
+            env = MECOffloadEnv(scenario, seed=7)
+            env.reset()
+            _, _, _, info_charged = env.step(action)
+
+        assert not info_charged["failed"]
+        assert info_charged["service_time"] == pytest.approx(
+            info_free["service_time"] + 0.5)
+        # charged into service time ONLY: the network delay -- and with it
+        # the delay > TMAX_SECONDS failure classification -- is untouched
+        assert info_charged["delay"] == pytest.approx(info_free["delay"])

@@ -162,6 +162,11 @@ def test_stats_without_algo_reports_all_six_on_one_line(tmp_path):
     assert "\n" not in out
     for algo in srv.ALGO_REGISTRY:
         assert f"{algo} acts=" in out
+    # pin the documented wire format: entries are "; "-joined, so a client
+    # splitting on the separator gets clean algo names back
+    entries = out.split("; ")
+    assert len(entries) == len(srv.ALGO_REGISTRY)
+    assert entries[1].startswith("SAC_BASELINE ")
 
 
 def test_stats_unknown_algo_reports_error():

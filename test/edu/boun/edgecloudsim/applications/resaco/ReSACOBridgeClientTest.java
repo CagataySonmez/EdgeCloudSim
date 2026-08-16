@@ -181,6 +181,76 @@ class ReSACOBridgeClientTest {
 	}
 
 	@Test
+	void latencyStats_countOnlyRealDecisions_andClearOnPrint() throws Exception {
+		serverSocket = new ServerSocket(0);
+		ReSACOBridgeClient client = clientFor(serverSocket);
+		exec = Executors.newSingleThreadExecutor();
+
+		// one connection serving four ACTs: three real decisions + one ERROR
+		exec.submit(() -> {
+			try (Socket s = serverSocket.accept();
+					BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
+					BufferedWriter out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()))) {
+				String[] responses = { "3", "0", "ERROR unknown algo BOGUS", "7" };
+				for (String response : responses) {
+					in.readLine();
+					out.write(response);
+					out.newLine();
+					out.flush();
+				}
+			} catch (IOException ignored) {
+				// nothing to do
+			}
+		});
+
+		client.selectAction("RESACO", "req-1", new double[] { 1.0 });
+		client.selectAction("RESACO", "req-2", new double[] { 1.0 });
+		client.selectAction("BOGUS", "req-3", new double[] { 1.0 });
+		client.selectAction("RESACO", "req-4", new double[] { 1.0 });
+
+		java.io.PrintStream originalOut = System.out;
+		java.io.ByteArrayOutputStream captured = new java.io.ByteArrayOutputStream();
+		edu.boun.edgecloudsim.utils.SimLogger.enablePrintLog();
+		System.setOut(new java.io.PrintStream(captured, true));
+		try {
+			client.printAndResetLatencyStats();
+			String firstPrint = captured.toString();
+			// ERROR replies carry no policy inference, so only the three real
+			// decisions may be counted -- a fast error round-trip in the stats
+			// would bias the DECISION_LATENCY_SECONDS calibration low.
+			assertTrue(firstPrint.contains("(3 decisions)"),
+					"expected 3 counted decisions, got: " + firstPrint);
+
+			captured.reset();
+			client.printAndResetLatencyStats(); // stats were cleared -> silent no-op
+			assertEquals("", captured.toString(),
+					"second print must be empty: the first one clears the samples");
+		} finally {
+			System.setOut(originalOut);
+		}
+	}
+
+	@Test
+	void percentileMs_nearestRankMath() {
+		long[] one = { 10_000_000L }; // 10 ms
+		assertEquals(10.0, ReSACOBridgeClient.percentileMs(one, 50), 1e-9);
+		assertEquals(10.0, ReSACOBridgeClient.percentileMs(one, 99), 1e-9);
+
+		long[] four = { 1_000_000L, 2_000_000L, 3_000_000L, 4_000_000L }; // 1..4 ms
+		assertEquals(2.0, ReSACOBridgeClient.percentileMs(four, 50), 1e-9); // ceil(4*.50)=2nd
+		assertEquals(4.0, ReSACOBridgeClient.percentileMs(four, 95), 1e-9); // ceil(4*.95)=4th
+		assertEquals(4.0, ReSACOBridgeClient.percentileMs(four, 99), 1e-9);
+
+		long[] hundred = new long[100]; // 1..100 ms
+		for (int i = 0; i < 100; i++) {
+			hundred[i] = (i + 1) * 1_000_000L;
+		}
+		assertEquals(50.0, ReSACOBridgeClient.percentileMs(hundred, 50), 1e-9);
+		assertEquals(95.0, ReSACOBridgeClient.percentileMs(hundred, 95), 1e-9);
+		assertEquals(99.0, ReSACOBridgeClient.percentileMs(hundred, 99), 1e-9);
+	}
+
+	@Test
 	@Timeout(15)
 	void selectAction_hungBridge_timesOutInsteadOfBlockingForever() throws Exception {
 		serverSocket = new ServerSocket(0);
