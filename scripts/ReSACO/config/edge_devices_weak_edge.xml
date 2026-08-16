@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!-- "weak edge" variant of edge_devices.xml: every edge host at a quarter
      of the default MIPS (host 80000 -> 20000, VM 10000 -> 2500). Used by
-     weak_edge.properties via simulation.list; mirrors resaco/scenario.py
+     weak_edge.properties via simulation.list; mirrors mec_core/scenario.py
      ENV_PROFILES WEAK_EDGE. -->
 <edge_devices>
 	<datacenter arch="x86" os="Linux" vmm="Xen">

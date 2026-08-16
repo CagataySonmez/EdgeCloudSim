@@ -3,7 +3,7 @@
      datacenters (one host x 8 VMs each) at HALF the paper MIPS (host
      40000, VM 5000) - thin rural roadside infrastructure. Used by
      sdv_rural_road.properties via simulation.list; mirrors
-     resaco/scenario.py ENV_PROFILES SDV_RURAL_ROAD. -->
+     mec_core/scenario.py ENV_PROFILES SDV_RURAL_ROAD. -->
 <edge_devices>
 	<datacenter arch="x86" os="Linux" vmm="Xen">
 		<costPerBw>0.1</costPerBw>

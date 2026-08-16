@@ -14,21 +14,25 @@ It has three parts:
    1-2), and the Deployment Phase (Algorithm 4), plus the four baselines
    the paper compares against (SAC without meta-init, DDPG, A2C, A3C).
 2. **`bridge/inference_server.py`** -- a small TCP server that serves all
-   five trained policies (ReSACO + the four baselines) for live offloading
-   decisions, keyed by name, and keeps the off-policy ones (ReSACO, SAC,
-   DDPG) learning online from real outcomes (Algorithm 4 in production),
-   periodically flushing that online adaptation back to disk so it survives
-   a bridge restart (see "Online-learning persistence" below).
+   six trained policies (ReSACO, the four paper baselines, and the
+   MULTITASK joint-pretraining control) for live offloading decisions,
+   keyed by name, and keeps the off-policy ones (ReSACO, SAC, DDPG,
+   MULTITASK) learning online from real outcomes (Algorithm 4 in
+   production), periodically flushing that online adaptation back to disk
+   so it survives a bridge restart (see "Online-learning persistence"
+   below).
 3. Integration with **EdgeCloudSim**: `../EdgeCloudSim/src/edu/boun/edgecloudsim/applications/resaco/`
    is a full EdgeCloudSim application (its own `ReSACOMainApp`,
    `ReSACOEdgeOrchestrator`, etc., mirroring the existing `three_tier` app)
    whose orchestrator calls into this bridge for every offloading decision.
    `three_tier` itself is untouched -- `resaco` only *reuses* its generic,
    unmodified `ThreeTierNetworkModel` / `ThreeTierMobileServerManager`.
-   Listing all five algorithms as `orchestrator_policies` runs all five
+   Listing algorithms as `orchestrator_policies` runs each of them
    through the *real* CloudSim discrete-event simulation in the same
-   EdgeCloudSim experiment -- a much more meaningful comparison than
-   `compare_algorithms.py`'s lightweight toy environment (see below).
+   EdgeCloudSim experiment (the default preset lists all six; the other
+   environment presets keep the paper's five) -- a much more meaningful
+   comparison than `compare_algorithms.py`'s lightweight toy environment
+   (see below).
 
 ## Quick start
 
@@ -37,7 +41,7 @@ python -m venv venv
 venv/bin/pip install -r requirements.txt        # Linux/Mac; use venv\Scripts\pip on Windows
 
 venv/bin/python scripts/train_meta.py            # -> checkpoints/theta_star.pt (ReSACO)
-venv/bin/python scripts/train_baselines.py       # -> checkpoints/{sac_no_meta,ddpg,a2c,a3c}.pt
+venv/bin/python scripts/train_baselines.py       # -> checkpoints/{sac_no_meta,ddpg,a2c,a3c,multitask}.pt
 
 venv/bin/python bridge/inference_server.py       # leave running in its own terminal
 
@@ -47,11 +51,11 @@ cd ../EdgeCloudSim/scripts/ReSACO
 ./run_scenarios.sh 4 1                           # 4 parallel processes, 1 iteration
 ```
 
-That's ReSACO and all four paper baselines trained, served, and run
-through the real EdgeCloudSim/CloudSim simulation end to end. See
-"Compare" and "Serve to EdgeCloudSim" below for what each piece is
-actually doing, and the Known limitations section before treating the
-numbers as validated results.
+That's ReSACO, the four paper baselines, and the multi-task control
+trained, served, and run through the real EdgeCloudSim/CloudSim
+simulation end to end. See "Compare" and "Serve to EdgeCloudSim" below
+for what each piece is actually doing, and the Known limitations section
+before treating the numbers as validated results.
 
 ## Layout
 
@@ -84,14 +88,19 @@ bridge/
 
 scripts/
   train_meta.py          run Algorithm 1 -> checkpoints/theta_star.pt
-  train_baselines.py     train SAC(no meta-init)/DDPG/A2C/A3C with the same step budget as ReSACO
+  train_baselines.py     train SAC(no meta-init)/DDPG/A2C/A3C with ReSACO's K*N step budget, plus
+                         MULTITASK (joint pretraining) at ReSACO's full env-interaction budget incl. warm-ups
   compare_algorithms.py  Section V-C style comparison across MD counts -> checkpoints/comparison.csv
   plot_convergence.py    Section V-B / Fig. 5 style meta-init vs. random-init convergence plot
+  sweep_meta_lr.py       the H1 meta-lr sweep with paired random-init controls (see "Convergence" below)
+  run_ablations.py       one-factor-at-a-time ablation grid -> checkpoints/ablations.md
+  stats.py               IQM + percentile-bootstrap-CI helpers shared by the comparison/sweep scripts
+  export_onnx.py         export the trained actor as an ONNX graph (see "ONNX export" below)
 
 tests/                  pytest suite -- see "Tests" below
 
 checkpoints/  (gitignored) trained weights + training/comparison/convergence logs and plots
-              theta_star.pt/sac_no_meta.pt/ddpg.pt never change after training;
+              theta_star.pt/sac_no_meta.pt/ddpg.pt/multitask.pt never change after training;
               online adaptation instead accumulates in a sibling
               "<name>_adapted.pt" file written by the bridge (see below)
 ```
@@ -116,11 +125,12 @@ python -m pytest tests/          # from inside ReSACO/, with venv active
 ```
 
 Also runs automatically on every push/PR via
-`../.github/workflows/tests.yml` (a separate CI job runs
-`scripts/tests/` too), so a regression here shows up without anyone
-having to remember to run `pytest` locally.
+`../.github/workflows/tests.yml` (separate CI jobs run
+`scripts/tests/` and the Java suite via `./test.sh` too), so a
+regression here shows up without anyone having to remember to run
+`pytest` locally.
 
-127 tests, ~8 seconds, no GPU/network/trained-checkpoint dependency
+154 tests, ~15 seconds, no GPU/network/trained-checkpoint dependency
 (agents are freshly constructed per test; `test_bridge.py` writes throwaway
 fake checkpoints to `tmp_path` rather than touching `checkpoints/`).
 Coverage is weighted toward regression protection for the bugs found and
@@ -158,8 +168,17 @@ hypothetical:
 - `test_scenario.py` -- the four real app profiles are present and match
   `applications.xml`, and `sample_scenario_pool`'s app-type mix roughly
   tracks each profile's `usage_percentage` (see "Scenarios" below).
+- `test_stats.py` -- the IQM + percentile-bootstrap-CI helpers behind
+  the multi-seed result tables.
+- `test_override_config.py` -- the `config.override_config` context
+  manager swaps constants inside the block and restores them on exit.
+- `test_multitask.py` -- the MULTITASK control's env-interaction budget
+  parity with meta-training, and its checkpoint round-trip.
+- `test_onnx_export.py` -- the exported ONNX actor's logits match the
+  torch actor's (skipped automatically if `onnxruntime` isn't installed).
 
-Not covered: the Java side, the TCP wire protocol end-to-end (covered
+Not covered here: the Java side (it has its own JUnit suite, run by
+`./test.sh` in CI), the TCP wire protocol end-to-end (covered
 manually -- see this file's protocol section -- not by an automated
 socket test), and anything requiring a trained checkpoint (convergence
 quality, actual tier-selection behavior) -- those are evaluated by
@@ -168,8 +187,9 @@ actually running `train_meta.py`/`plot_convergence.py`/
 
 ## Scenarios
 
-Every meta-training scenario samples its task profile from one of two
-**scenario sources** (`train_meta.py --scenario-source`, default `mixed`):
+Every meta-training scenario samples its task profile from one of four
+**scenario sources** (`train_meta.py --scenario-source`, default `mixed`
+-- a weighted blend of all four):
 
 - **`table2`** -- the paper's own metadata construction (Section V-A-1):
   every Table II parameter is randomized within its published interval
@@ -189,9 +209,13 @@ Every meta-training scenario samples its task profile from one of two
   covers the exact conditions the deployment simulation generates,
   including `HEAVY_COMP_APP`'s task_length=45000, which Table II's own
   range (max 10000) never reaches.
-- **`mixed`** (default) -- 50/50 per scenario
-  (`scenario.py`'s `SCENARIO_SOURCE_WEIGHTS`): paper-faithful continuous
-  diversity plus guaranteed real-workload coverage.
+- **`nextgen`** / **`sdv`** -- the next-generation edge workloads
+  (`NEXTGEN_APP_PROFILES`) and the software-defined-vehicle fleet mix
+  (`SDV_APP_PROFILES`); see "Next-generation workloads" and "SDV
+  workloads" below.
+- **`mixed`** (default) -- 35% table2, 35% apps, 15% nextgen, 15% sdv
+  per scenario (`scenario.py`'s `SCENARIO_SOURCE_WEIGHTS`): paper-faithful
+  continuous diversity plus guaranteed real-workload coverage.
 
 `env.py`'s `_sample_task()` draws task length / upload / download size
 from an exponential distribution around the profile's mean, exactly like
@@ -251,7 +275,7 @@ Alongside the classic four applications, `scenario.py`'s
 `NEXTGEN_APP_PROFILES` (mirroring
 `../scripts/ReSACO/config/applications_nextgen.xml`) model current edge
 trends, available as scenario source `nextgen` (part of the default
-`mixed` training diet at 20%, and runnable in the real simulator via the
+`mixed` training diet at 15%, and runnable in the real simulator via the
 `nextgen_apps`/`mmwave_5g`/`ntn_backhaul`/`gpu_edge` simulation.list
 rows):
 
@@ -294,7 +318,7 @@ condition no config file fixes.
 
 ```
 python scripts/train_meta.py          # ReSACO meta-training (Algorithm 1); ~1-2 min at paper defaults (M=10, K=300, N=50)
-python scripts/train_baselines.py     # SAC(no meta-init)/DDPG/A2C/A3C, same total env-step budget (K*N)
+python scripts/train_baselines.py     # SAC(no meta-init)/DDPG/A2C/A3C at ReSACO's K*N step budget, plus MULTITASK at its full env-interaction budget
 ```
 
 Both scripts accept `--help` for scaled-down smoke-test runs (fewer
@@ -302,7 +326,7 @@ scenarios/iterations).
 
 `train_meta.py` training-speed/fidelity flags:
 
-- `--scenario-source {mixed,table2,apps}` -- see "Scenarios" above.
+- `--scenario-source {mixed,table2,apps,nextgen,sdv}` -- see "Scenarios" above.
 - `--eval-every N` (default 5) -- the per-iteration metrics eval is pure
   logging overhead (~a third of all env interactions at 1); thinning it
   speeds up wall-clock training without touching the training math.
@@ -496,12 +520,12 @@ tier choices instead of one-size-fits-all. The Java side mirrors the same
 weighting in `ReSACOMobileDeviceManager.reportReSACOOutcome()` (via
 `ReSACOStateBuilder.delaySensitivityWeight()`), so the bridge's
 online-learning rewards (Algorithm 4) stay on the training scale --
-change `DELAY_SENSITIVITY_BASE` in both `resaco/config.py` and
+change `DELAY_SENSITIVITY_BASE` in both `mec_core/config.py` and
 `ReSACOStateBuilder.java` or neither.
 
 ## Reproducibility
 
-Every script's `--seed` now actually pins the run: `resaco/seeding.py`'s
+Every script's `--seed` now actually pins the run: `mec_core/seeding.py`'s
 `seed_everything()` seeds Python's global `random`, numpy, and torch at
 startup.
 
@@ -683,8 +707,8 @@ budgets has not been measured yet.
 
 **Fixed this pass** (previously the training pipeline was silently
 producing an untrained network no matter how long you ran it -- see
-`resaco/sac.py`, `resaco/env.py`, `resaco/normalize.py`,
-`resaco/config.py`):
+`resaco/sac.py`, `mec_core/env.py`, `mec_core/normalize.py`,
+`mec_core/config.py`):
 - `sac_update_loop`'s inner-loop transition count (N=50, Algorithm 2) was
   smaller than `BATCH_SIZE` (64), so `update()` silently never fired
   during Reptile's Inner Loop -- every outer iteration's `theta_k` came
@@ -696,7 +720,7 @@ producing an untrained network no matter how long you ran it -- see
   length ~1500-10000, utilization 0-150%, bandwidth 0-200 Mbps) with no
   normalization, feeding straight into a plain MLP -- in practice this
   caused the actor to collapse onto one or two fixed actions almost
-  independent of the actual state. Fixed via `resaco/normalize.py`, a
+  independent of the actual state. Fixed via `mec_core/normalize.py`, a
   small fixed (not learned) per-feature scale applied identically at
   train and serve time. Isolated before/after test on one fixed
   high-contention scenario: 34.2% task failure rate before
@@ -807,29 +831,32 @@ per-host-routing axis is listed there as a manual experiment).
 ## Compare (real CloudSim simulation, via EdgeCloudSim)
 
 ```
-python bridge/inference_server.py          # loads all 5 checkpoints from checkpoints/
+python bridge/inference_server.py          # loads all 6 checkpoints from checkpoints/
 ```
 
 Then, from `EdgeCloudSim/scripts/ReSACO/`, run the ReSACO application
 (see `EdgeCloudSim/README.md`'s "ReSACO" section) with
-`orchestrator_policies=RESACO,SAC_BASELINE,DDPG_BASELINE,A2C_BASELINE,A3C_BASELINE`
-(the default). EdgeCloudSim runs each policy as its own scenario over the
-real CloudSim discrete-event engine, so this drives all five algorithms
-through identical device/edge/cloud topologies, network models and task
-workloads -- a far more faithful comparison than the toy `env.py` sweep
-above. Results land as regular EdgeCloudSim per-policy log/CSV files
-(`scripts/ReSACO/output/...`), one directory per policy.
+`orchestrator_policies=RESACO,SAC_BASELINE,DDPG_BASELINE,A2C_BASELINE,A3C_BASELINE,MULTITASK_BASELINE`
+(the default -- the non-default scenario presets intentionally keep the
+paper's original five). EdgeCloudSim runs each policy as its own scenario
+over the real CloudSim discrete-event engine, so this drives all six
+algorithms through identical device/edge/cloud topologies, network
+models and task workloads -- a far more faithful comparison than the
+toy `env.py` sweep above. Results land as regular EdgeCloudSim
+per-policy log/CSV files (`scripts/ReSACO/output/...`), one directory
+per policy.
 
 **Fixed this pass:** `ReSACOStateBuilder.build()` (Java side) was sending
 `b_wlan`/`b_man`/`b_wan` straight from `SimSettings.getWlanBandwidth()` and
 friends -- whose JavaDoc claims "Mbps unit" but which actually return the
 config file's Mbps value pre-multiplied by 1000 for internal Kbps-based
-delay math. `resaco/config.py` and everything trained against it
-(including `normalize.py`'s fixed scale factors) are in Mbps, so this real
-EdgeCloudSim-integrated path -- the one this whole project exists to
-enable -- was feeding the served policy bandwidth values ~1000x anything
-it ever saw during training, on 3 of its 18 state dimensions, on every
-single decision. Fixed by dividing by 1000 in `ReSACOStateBuilder.java`.
+delay math. `mec_core/config.py` and everything trained against it
+(including `mec_core/normalize.py`'s fixed scale factors) are in Mbps,
+so this real EdgeCloudSim-integrated path -- the one this whole project
+exists to enable -- was feeding the served policy bandwidth values
+~1000x anything it ever saw during training, on 3 of its 18 state
+dimensions, on every single decision. Fixed by dividing by 1000 in
+`ReSACOStateBuilder.java`.
 Verified both that it compiles and, by running a real scenario against a
 logging stand-in bridge, that the wire values now read `200.0 0.0 15.0`
 (Mbps) instead of `200000.0 0.0 15000.0` (Kbps).
@@ -871,12 +898,13 @@ static config value would be the natural next step.
 
 ## Serve to EdgeCloudSim (Deployment Phase / Algorithm 4)
 
-`bridge/inference_server.py` loads whichever of the five checkpoints exist
+`bridge/inference_server.py` loads whichever of the six checkpoints exist
 under `checkpoints/` (`theta_star.pt`, `sac_no_meta.pt`, `ddpg.pt`,
-`a2c.pt`, `a3c.pt`) and serves them all simultaneously, selected per
-request by an `<algo>` name (`RESACO`, `SAC_BASELINE`, `DDPG_BASELINE`,
-`A2C_BASELINE`, `A3C_BASELINE`) that EdgeCloudSim's `ReSACOEdgeOrchestrator`
-fills in from its own `orchestrator_policies` config value -- so one bridge
+`a2c.pt`, `a3c.pt`, `multitask.pt`) and serves them all simultaneously,
+selected per request by an `<algo>` name (`RESACO`, `SAC_BASELINE`,
+`DDPG_BASELINE`, `A2C_BASELINE`, `A3C_BASELINE`, `MULTITASK_BASELINE`)
+that EdgeCloudSim's `ReSACOEdgeOrchestrator` fills in from its own
+`orchestrator_policies` config value -- so one bridge
 process backs every policy in a single EdgeCloudSim run. Missing
 checkpoints are served as randomly-initialized (untrained) policies rather
 than refused, so the simulation stays runnable even before every baseline
@@ -884,9 +912,10 @@ is trained.
 
 Every task's offloading decision is sent to the bridge over TCP (`ACT`),
 and every task's real outcome is reported back (`OUTCOME`). For the
-off-policy algorithms (ReSACO, SAC, DDPG) this triggers an incremental
-online update (Algorithm 4); the on-policy baselines (A2C, A3C) don't have
-a well-defined single-transition update rule, so they're served frozen --
+off-policy algorithms (ReSACO, SAC, DDPG, MULTITASK) this triggers an
+incremental online update (Algorithm 4); the on-policy baselines (A2C,
+A3C) don't have a well-defined single-transition update rule, so
+they're served frozen --
 exactly the policy `train_baselines.py` produced. If the bridge or the
 requested algorithm's checkpoint is unavailable, EdgeCloudSim falls back to
 a static EDGE_PRIORITY-style heuristic instead of crashing the simulation.
@@ -896,9 +925,10 @@ was already handled) can't block the simulation forever either -- a
 timed-out request is treated the same as any other connection failure.
 
 The bridge server itself locks per-algo, not with one lock shared across
-all five -- RESACO/SAC_BASELINE/DDPG_BASELINE/A2C_BASELINE/A3C_BASELINE
-each have completely independent state (own networks, own replay buffer),
-so there was never a reason for e.g. RESACO's training step or its
+all six -- RESACO/SAC_BASELINE/DDPG_BASELINE/A2C_BASELINE/A3C_BASELINE/
+MULTITASK_BASELINE each have completely independent state (own networks,
+own replay buffer), so there was never a reason for e.g. RESACO's
+training step or its
 autosave's blocking `torch.save()` to hold up a concurrent `ACT`/`OUTCOME`
 for a different algo. A single global lock did exactly that; each algo
 now only ever waits on its own lock.
@@ -908,7 +938,7 @@ Protocol (newline-delimited, one request per line):
 ```
 ACT <algo> <request_id> <L> <U> <D> <mu_d> <mu_e1> ... <mu_eN> <mu_c> <bwlan> <bman> <bwan>
     -> "<action_int>"        0=device, 1..N=edge server, N+1=cloud
-                              <algo> in {RESACO, SAC_BASELINE, DDPG_BASELINE, A2C_BASELINE, A3C_BASELINE}
+                              <algo> in {RESACO, SAC_BASELINE, DDPG_BASELINE, A2C_BASELINE, A3C_BASELINE, MULTITASK_BASELINE}
 
 OUTCOME <algo> <request_id> <reward> <done:0|1> <next_state...>
     -> "OK" | "IGNORED"      IGNORED means request_id was never seen by ACT for this algo
@@ -953,9 +983,10 @@ lives on the Python side.
 
 ## Online-learning persistence
 
-`DeploymentAgent` (ReSACO, SAC_BASELINE, DDPG_BASELINE -- the three
-off-policy algorithms) keeps adapting `theta_adapt` in memory from every
-`OUTCOME` the bridge receives. Without saving that anywhere, all of it
+`DeploymentAgent` (ReSACO, SAC_BASELINE, DDPG_BASELINE,
+MULTITASK_BASELINE -- the four off-policy algorithms) keeps adapting
+`theta_adapt` in memory from every `OUTCOME` the bridge receives.
+Without saving that anywhere, all of it
 would be lost the moment the bridge process restarts, which would make
 Algorithm 4's "online" adaptation pointless in practice. Instead:
 
@@ -1013,6 +1044,6 @@ python bridge/inference_server.py --autosave-every 50   # default; lower it for 
 - The EdgeCloudSim bridge (`ReSACOBridgeClient`) and the Python
   `DeploymentAgent._pending` dict accumulate a handful of orphaned entries
   for tasks still in-flight when a scenario's simulation clock is cut off
-  before they complete; negligible over a normal experiment run, but if
-  the bridge process is kept alive across many long-running experiments,
-  consider restarting it periodically.
+  before they complete; these linger only until the next run's automatic
+  `RESET` clears the in-flight state, and the pending maps are size-capped
+  (20k entries) regardless, so no periodic bridge restart is needed.

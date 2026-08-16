@@ -5,7 +5,8 @@ online-update rule.
 
 These wrap the object the Java-side inference bridge
 (bridge/inference_server.py) uses at runtime -- one instance per served
-algorithm (ReSACO, SAC baseline, DDPG baseline, A2C baseline, A3C baseline).
+algorithm (ReSACO, SAC baseline, DDPG baseline, A2C baseline, A3C
+baseline, MULTITASK baseline).
 """
 
 import copy

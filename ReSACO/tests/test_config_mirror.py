@@ -3,7 +3,7 @@ and the Java/EdgeCloudSim simulation side.
 
 Several values exist in two (sometimes three) places on purpose -- the
 Python trainer can't read EdgeCloudSim's XML at runtime, and the Java
-orchestrator can't import resaco/config.py -- so they are kept in sync by
+orchestrator can't import mec_core/config.py -- so they are kept in sync by
 hand, with "if you change one, change both" comments. Comments don't fail
 a build; these tests do:
 

@@ -173,7 +173,7 @@ def main():
 
     os.makedirs(args.out_dir, exist_ok=True)
 
-    seed_everything(args.seed)  # see resaco/seeding.py
+    seed_everything(args.seed)  # see mec_core/seeding.py
     env_names = args.env_profiles.split(",") if args.env_profiles else None
     scenarios = sample_scenario_pool(args.scenarios, seed=args.seed,
                                      source=args.scenario_source, env_names=env_names)

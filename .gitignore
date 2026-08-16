@@ -49,6 +49,9 @@ venv
 #vscode
 .vscode
 
+#claude code local settings
+.claude/
+
 #bak files
 *bak
 

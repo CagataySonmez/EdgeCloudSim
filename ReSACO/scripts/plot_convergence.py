@@ -83,7 +83,7 @@ def main():
 
     import torch
 
-    seed_everything(args.seed)  # see resaco/seeding.py
+    seed_everything(args.seed)  # see mec_core/seeding.py
 
     if not os.path.exists(args.theta):
         print(f"ERROR: {args.theta} not found. Run scripts/train_meta.py first.")

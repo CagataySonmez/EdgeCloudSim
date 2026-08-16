@@ -4,8 +4,11 @@
  * Description:
  * Same task lifecycle as ThreeTierMobileDeviceManager (creates tasks,
  * submits them to the VM chosen by the orchestrator, reacts to
- * completion/failure events), plus: whenever a task's real outcome
- * becomes known, it is reported back to the ReSACO bridge
+ * completion/failure events), plus: (1) every task's first hop is delayed
+ * by ReSACOStateBuilder.RESACO_DECISION_LATENCY_SECONDS, charging the
+ * policy's per-decision inference cost (0 by default, i.e. the historical
+ * free-decision behavior); (2) whenever a task's real outcome becomes
+ * known, it is reported back to the ReSACO bridge
  * (ReSACOBridgeClient.reportOutcome) so the served policy's online
  * update (Algorithm 3/4, where applicable) can learn from it.
  *
@@ -87,7 +90,7 @@ public class ReSACOMobileDeviceManager extends MobileDeviceManager {
 		// leak one map entry per failed task for the life of the process.
 		double serviceTime = ReSACOBridgeClient.getInstance().elapsedSince(requestId);
 		// Same delay-sensitivity reward weighting as the training env
-		// (resaco/env.py step()): w = base + this app type's delay_sensitivity,
+		// (mec_core/env.py step()): w = base + this app type's delay_sensitivity,
 		// applied to both the success and the failure branch.
 		double weight = ReSACOStateBuilder.delaySensitivityWeight(task);
 		double reward;

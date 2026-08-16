@@ -275,7 +275,7 @@ Skip this if `ReSACO/checkpoints/*.pt` already exist.
 cd ReSACO
 python -m venv venv && venv/Scripts/pip install -r requirements.txt   # first time only
 venv/Scripts/python scripts/train_meta.py          # -> checkpoints/theta_star.pt (ReSACO)
-venv/Scripts/python scripts/train_baselines.py     # -> checkpoints/{sac_no_meta,ddpg,a2c,a3c}.pt
+venv/Scripts/python scripts/train_baselines.py     # -> checkpoints/{sac_no_meta,ddpg,a2c,a3c,multitask}.pt
 ```
 
 ### 2. Start the policy bridge (leave this running in its own terminal)
@@ -290,8 +290,9 @@ warning rather than refused, so it's fine to start this before every
 baseline is trained -- just re-run `train_baselines.py` and restart the
 bridge later to pick up the real weights.
 
-RESACO/SAC_BASELINE/DDPG_BASELINE keep adapting online from every task's
-real outcome (Algorithm 4) and periodically save that progress to
+RESACO/SAC_BASELINE/DDPG_BASELINE/MULTITASK_BASELINE keep adapting
+online from every task's real outcome (Algorithm 4) and periodically
+save that progress to
 `checkpoints/<name>_adapted.pt` (default: every 50 updates, tunable via
 `--autosave-every`, plus once more on a clean Ctrl+C shutdown) without
 ever overwriting the original trained checkpoint. The next time the
@@ -316,8 +317,10 @@ java -classpath '../../bin:../../lib/cloudsim-4.0.jar:../../lib/commons-math3-3.
   config/default_config.properties config/edge_devices.xml config/applications.xml output/test 1
 ```
 
-For the full experiment sweep (all 5 policies x every device count in the
-config, run in parallel, matching `three_tier`'s workflow):
+For the full experiment sweep (every policy in each preset's
+`orchestrator_policies` -- six in `default_config`, five in the other
+presets -- x every device count in the config, run in parallel, matching
+`three_tier`'s workflow):
 ```
 ./run_scenarios.sh {# of parallel processes} {# of iterations}
 tail -f output/<date>/ite_1.log
@@ -346,14 +349,15 @@ driving environments:
 | `sdv_rural_road`| WLAN 100 / WAN 8 Mbps, `edge_devices_sdv_rural.xml`: edge MIPS / 2, dwell 60/45/30s | thin rural roadside infrastructure |
 | `sdv_urban`     | WLAN 400 Mbps, `edge_devices_sdv_urban.xml`: edge MIPS x 2, dwell 35/25/15s | stop-and-go traffic under dense city MEC |
 
-These mirror the Python training side's `resaco/scenario.py`
+These mirror the Python training side's `mec_core/scenario.py`
 `ENV_PROFILES`/`NEXTGEN_APP_PROFILES` (same names, same knobs), which
 meta-training now samples across -- so the served policies have actually
 trained on these conditions. If you change a preset on one side, change
 the other.
 
-Note: the RL-backed policies (RESACO/SAC/DDPG/A2C/A3C) are noticeably
-slower wall-clock than static heuristics like EDGE_PRIORITY, since every
+Note: the RL-backed policies (RESACO/SAC/DDPG/A2C/A3C/MULTITASK) are
+noticeably slower wall-clock than static heuristics like EDGE_PRIORITY,
+since every
 single task decision is a real blocking TCP round-trip to the Python
 bridge (plus a PyTorch inference, and for the off-policy algorithms a
 training step). Budget accordingly for the full device-count sweep.
@@ -378,8 +382,9 @@ timeout (that last one takes ~10s to run, by design -- it's asserting the
 timeout actually fires rather than mocking it away). ReSACO's own Python
 side has its own, separate suite (`ReSACO/tests/`, see
 [ReSACO/README.md](ReSACO/README.md)); `test/` here only covers this
-repo's Java code, and isn't wired into CI yet (Python's is, via
-`.github/workflows/tests.yml`).
+repo's Java code, and runs in CI alongside the Python suites -- the
+java-applications job in `.github/workflows/tests.yml` runs `./test.sh`
+after compiling every application.
 
 # evaluate.py
 

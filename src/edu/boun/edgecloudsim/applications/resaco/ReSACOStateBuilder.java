@@ -6,14 +6,14 @@
  * b_wlan, b_man, b_wan) described in Section IV-A-2 of the ReSACO paper,
  * so it can be sent to the Python inference/online-learning bridge
  * (ReSACO/bridge/inference_server.py). Edge slot e holds edge host e's own
- * average VM utilization (matching resaco/env.py's per-server mu_e state,
+ * average VM utilization (matching mec_core/env.py's per-server mu_e state,
  * so the trained policy's per-server action choice actually means
  * something at deployment time); if edge_devices.xml defines fewer hosts
  * than RESACO_NUM_EDGE_SLOTS, the leftover slots fall back to the
  * network-wide average (an in-distribution filler; hosts beyond the slot
  * count are invisible to the policy but still reachable through
  * ReSACOEdgeOrchestrator's least-loaded fallback). RESACO_NUM_EDGE_SLOTS
- * must match resaco/config.py's NUM_EDGE_SERVERS for the state vector
+ * must match mec_core/config.py's NUM_EDGE_SERVERS for the state vector
  * length to line up with the trained network.
  *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
@@ -36,7 +36,7 @@ import edu.boun.edgecloudsim.network.NetworkModel;
 
 public class ReSACOStateBuilder {
 	public static final int RESACO_NUM_EDGE_SLOTS = 10;
-	/** Must match resaco/config.py's TMAX_SECONDS (network failure delay threshold, Eq. 2/9). */
+	/** Must match mec_core/config.py's TMAX_SECONDS (network failure delay threshold, Eq. 2/9). */
 	public static final double RESACO_TMAX_SECONDS = 5.0;
 	/**
 	 * Must match mec_core/config.py's DECISION_LATENCY_SECONDS: fixed
@@ -49,7 +49,7 @@ public class ReSACOStateBuilder {
 	 */
 	public static final double RESACO_DECISION_LATENCY_SECONDS = 0.0;
 	/**
-	 * Must match resaco/config.py's DELAY_SENSITIVITY_BASE. Rewards reported to
+	 * Must match mec_core/config.py's DELAY_SENSITIVITY_BASE. Rewards reported to
 	 * the bridge are scaled by (base + the app's delay_sensitivity), same as the
 	 * training environment's reward -- online learning (Algorithm 4) would
 	 * otherwise adapt the policy against rewards on a different scale than the
@@ -57,7 +57,7 @@ public class ReSACOStateBuilder {
 	 */
 	public static final double RESACO_DELAY_SENSITIVITY_BASE = 0.5;
 	/**
-	 * Must match resaco/config.py's DELAY_SENSITIVITY_REWARD. false recovers the
+	 * Must match mec_core/config.py's DELAY_SENSITIVITY_REWARD. false recovers the
 	 * paper's Eq. (9) exactly (unweighted -T / -(Tmax+1)); flip both sides
 	 * together and retrain -- a policy trained on one reward scale must not be
 	 * online-adapted against the other.
@@ -72,7 +72,7 @@ public class ReSACOStateBuilder {
 
 	/*
 	 * Industry-direction reward objectives -- every constant below must match
-	 * its resaco/config.py counterpart (same names minus the RESACO_ prefix):
+	 * its mec_core/config.py counterpart (same names minus the RESACO_ prefix):
 	 * the bridge's OUTCOME rewards feed Algorithm 4's online updates, which
 	 * must be on the same scale the policy was trained on. Change both sides
 	 * or neither, then retrain.
@@ -94,7 +94,7 @@ public class ReSACOStateBuilder {
 	/**
 	 * Seconds-equivalent penalty for the industry-direction objectives
 	 * (energy, monetary cost, SLA deadline), subtracted from a successful
-	 * task's reward -- mirrors resaco/env.py's _task_energy/_task_cost/
+	 * task's reward -- mirrors mec_core/env.py's _task_energy/_task_cost/
 	 * sla_violated terms. Java-side approximations, documented and accepted:
 	 * process time is derived as cloudlet length / the tier's live VM MIPS
 	 * (deterministic in both simulators), the whole serviceTime remainder is
@@ -233,7 +233,7 @@ public class ReSACOStateBuilder {
 	/**
 	 * Edge host `hostIndex`'s average VM CPU utilization (0-100) -- the
 	 * per-host analogue of EdgeServerManager.getAvgUtilization(), matching
-	 * resaco/env.py's per-server mu_e state feature. The manager and clock
+	 * mec_core/env.py's per-server mu_e state feature. The manager and clock
 	 * are passed in because this runs once per edge slot (10x) per state
 	 * build, twice per simulated task.
 	 */
@@ -304,13 +304,13 @@ public class ReSACOStateBuilder {
 			}
 		}
 		state[i++] = cloudUtilization;
-		// SimSettings.getXxxBandwidth()'s JavaDoc claims "Mbps unit" but that's
-		// stale -- the underlying BANDWITH_XXX fields are the config file's Mbps
-		// value pre-multiplied by 1000 for internal Kbps-based delay math (see
-		// SimSettings.java's loadSimulationParameters() and
-		// ThreeTierNetworkModel.calculateMM1()'s explicit /*Kbps*/ comment).
-		// resaco/config.py's *_BANDWIDTH_MBPS constants (and everything trained
-		// against them, including resaco/normalize.py's fixed scale factors) are
+		// SimSettings.getXxxBandwidth() returns Kbps -- the underlying
+		// BANDWITH_XXX fields are the config file's Mbps value pre-multiplied
+		// by 1000 for internal Kbps-based delay math (see SimSettings.java's
+		// loadSimulationParameters() and ThreeTierNetworkModel.calculateMM1()'s
+		// explicit /*Kbps*/ comment).
+		// mec_core/config.py's *_BANDWIDTH_MBPS constants (and everything trained
+		// against them, including mec_core/normalize.py's fixed scale factors) are
 		// in Mbps, so the static caps below divide by 1000; the live values are
 		// probed from the network model's MM1 state (see liveBandwidthMbps).
 		double wlanCap = settings.getWlanBandwidth() / 1000.0;

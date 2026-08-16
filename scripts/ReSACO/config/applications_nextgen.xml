@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!-- Next-generation edge workloads (2025-era trends), used by the
      nextgen_apps / mmwave_5g / ntn_backhaul / gpu_edge simulation.list
-     rows. Mirrored exactly by resaco/scenario.py's NEXTGEN_APP_PROFILES
+     rows. Mirrored exactly by mec_core/scenario.py's NEXTGEN_APP_PROFILES
      (same keep-in-sync-by-hand contract as applications.xml <->
      APP_PROFILES): if you change one, change both. -->
 <applications>

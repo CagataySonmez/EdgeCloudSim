@@ -19,8 +19,9 @@ seeds uses IQM + percentile-bootstrap 95% CIs (stats.py, Agarwal et al.
 
 Judgment rule (fixed in the plan before running):
   - If ANY config's delta CI lower bound is > 0  -> H1 SUPPORTED: the
-    default meta_lr was the bottleneck; README's "M=10 is not much signal"
-    diagnosis must be corrected.
+    default meta_lr was the bottleneck, not "M=10 is not much signal"
+    (the README's "Why: meta_lr, not scenario count" section now carries
+    that corrected diagnosis).
   - If EVERY config's CI contains 0              -> H1 REJECTED: formalize
     as a negative result ("Reptile initialization does not help in this
     problem setting"), together with Phase 2's multi-task control.
@@ -255,8 +256,9 @@ def summarize_and_plot(csv_path, png_path, args, smoke=False):
     if h1_supported:
         cfgs = ", ".join(f"{s}/meta_lr={lr:g}" for s, lr in h1_supported)
         print(f"H1 SUPPORTED: meta-init beats random-init with CI clear of zero at: {cfgs}.")
-        print("The README diagnosis 'M=10 scenarios is not much signal' is wrong for those "
-              "configs -- the default meta_lr was the bottleneck. Update README (P1-4).")
+        print("For those configs the default meta_lr was the bottleneck, not 'M=10 "
+              "scenarios is not much signal' -- confirming the corrected diagnosis "
+              "recorded in README's 'Why: meta_lr, not scenario count' section.")
     else:
         print("H1 NOT SUPPORTED at any tested meta_lr: no config's 95% CI is entirely "
               "above 0.")

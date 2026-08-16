@@ -9,12 +9,13 @@
  * ReSACOMobileDeviceManager later reports the task's real outcome
  * (OUTCOME) so the served policy keeps adapting online (where applicable).
  *
- * The bridge serves five algorithms at once (RESACO, SAC_BASELINE,
- * DDPG_BASELINE, A2C_BASELINE, A3C_BASELINE, matching Section V-C of the
- * paper) selected per-request by the "algo" parameter -- callers pass the
- * current orchestrator policy string straight through, so running
- * scripts/ReSACO with all five as orchestrator_policies drives all five
- * through the real CloudSim simulation, not just ReSACO.
+ * The bridge serves six algorithms at once (RESACO, SAC_BASELINE,
+ * DDPG_BASELINE, A2C_BASELINE, A3C_BASELINE -- Section V-C of the paper --
+ * plus the MULTITASK_BASELINE joint-pretraining control) selected
+ * per-request by the "algo" parameter -- callers pass the current
+ * orchestrator policy string straight through, so listing them as
+ * orchestrator_policies (default_config.properties lists all six) drives
+ * each one through the real CloudSim simulation, not just ReSACO.
  *
  * If the bridge process isn't running, every call fails fast (after a short
  * reconnect backoff) and returns a sentinel so callers can fall back to a
@@ -124,9 +125,9 @@ public class ReSACOBridgeClient {
 	/**
 	 * Requests an offloading decision for the given task/state from the
 	 * named algorithm's served policy (RESACO, SAC_BASELINE, DDPG_BASELINE,
-	 * A2C_BASELINE or A3C_BASELINE). Also records the current simulation
-	 * clock so {@link #elapsedSince(String)} can later compute the task's
-	 * service time for the reward signal (Eq. 9).
+	 * A2C_BASELINE, A3C_BASELINE or MULTITASK_BASELINE). Also records the
+	 * current simulation clock so {@link #elapsedSince(String)} can later
+	 * compute the task's service time for the reward signal (Eq. 9).
 	 *
 	 * @return action in {0..N+1} (0=device, 1..N=edge, N+1=cloud), or
 	 *         {@link #NO_ACTION} if the bridge or that algorithm is unavailable.

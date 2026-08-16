@@ -7,12 +7,13 @@
  * ReSACOBridgeClient. Which policy is up to the "policy" (orchestrator
  * policy) string passed in from the config file -- RESACO (the
  * Reptile-meta-trained SAC, Deployment Phase / Algorithm 4),
- * SAC_BASELINE, DDPG_BASELINE, A2C_BASELINE or A3C_BASELINE (see
- * ReSACO/scripts/train_baselines.py) -- so listing all five as
- * orchestrator_policies runs all five through the same real CloudSim
- * simulation for a like-for-like comparison. The bridge's action space is
- * {0=device, 1..N=edge, N+1=cloud}; an edge action e routes to edge host
- * e-1 specifically (matching resaco/env.py's per-server semantics -- the
+ * SAC_BASELINE, DDPG_BASELINE, A2C_BASELINE, A3C_BASELINE or
+ * MULTITASK_BASELINE (see ReSACO/scripts/train_baselines.py) -- so
+ * listing them all as orchestrator_policies runs every algorithm through
+ * the same real CloudSim simulation for a like-for-like comparison. The
+ * bridge's action space is {0=device, 1..N=edge, N+1=cloud}; an edge
+ * action e routes to edge host e-1 specifically (matching
+ * mec_core/env.py's per-server semantics -- the
  * per-slot utilizations ReSACOStateBuilder now sends make that choice
  * informed), with getVmToOffload() preferring the chosen host's
  * least-loaded VM and only widening to the global least-loaded search if

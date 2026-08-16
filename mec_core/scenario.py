@@ -370,12 +370,14 @@ SCENARIO_SOURCE_WEIGHTS = {"table2": 35, "apps": 35, "nextgen": 15, "sdv": 15}
 
 @dataclass
 class Scenario:
-    """A single deployment condition sampled for the Outer Loop: which of
-    the four real app types this simulated device runs (app_profile), how
-    many other devices (number_of_mobile_devices) are contending for the
-    same shared edge/cloud pools (see env.py's background-load injection),
-    and which physical environment (env_profile: network quality, tier
-    hardware, device mobility) it all runs in. Note the env_profile is
+    """A single deployment condition sampled for the Outer Loop: which
+    task profile this simulated device runs (app_profile: one of the
+    real/nextgen/SDV app types or a Table II synthetic, per the scenario
+    source), how many other devices (number_of_mobile_devices) are
+    contending for the same shared edge/cloud pools (see env.py's
+    background-load injection), and which physical environment
+    (env_profile: network quality, tier hardware, device mobility) it all
+    runs in. Note the env_profile is
     deliberately NOT part of the agent's state vector -- it's a
     scenario-level latent condition, exactly the kind of environmental
     variation Reptile is supposed to meta-learn across and Algorithm 4's

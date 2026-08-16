@@ -3,7 +3,7 @@
      datacenters (one host x 8 VMs each) at 2x the paper MIPS (host
      160000, VM 20000) - well-provisioned dense-urban infrastructure.
      Used by sdv_urban.properties via simulation.list; mirrors
-     resaco/scenario.py ENV_PROFILES SDV_URBAN. -->
+     mec_core/scenario.py ENV_PROFILES SDV_URBAN. -->
 <edge_devices>
 	<datacenter arch="x86" os="Linux" vmm="Xen">
 		<costPerBw>0.1</costPerBw>

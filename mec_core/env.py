@@ -13,9 +13,11 @@ which mirrors one config preset under scripts/ReSACO/config/.
 
 State:  s_t = (L, U, D, mu_d, mu_e1..mu_eN, mu_c, b_wlan, b_man, b_wan)
 Action: a_t in {0..N+1}: 0 = device, 1..N = edge servers, N+1 = cloud
-Reward: r_t = -w*T on success (Eq. 9), -w*(Tmax+1) on failure, where
-        w = DELAY_SENSITIVITY_BASE + the app's delay_sensitivity -- see
-        the weighting comment in step().
+Reward: r_t = -w*T minus energy/cost/SLA-overshoot penalties on success
+        (Eq. 9 plus the industry-direction objectives in config.py, each
+        with its own off switch -- -w*T alone is the paper-exact case),
+        -w*(Tmax+1) on failure, where w = DELAY_SENSITIVITY_BASE + the
+        app's delay_sensitivity -- see the weighting comment in step().
 """
 
 import math
@@ -85,12 +87,11 @@ class MECOffloadEnv:
         # Background contention: the scenario's other (number_of_mobile_devices - 1)
         # devices also send tasks into the same shared edge/cloud utilization
         # pools this env's single agent-controlled stream targets. Without
-        # this, number_of_mobile_devices would only ever affect training
-        # through the poisson_interarrival scaling scripts/compare_algorithms.py
-        # applies (which just polls the agent faster -- it never actually
-        # raises shared-pool utilization on its own), so a low- and a
-        # high-device-count scenario would look almost identical to the
-        # agent. Injected every step as a Poisson-sampled batch of admitted
+        # this, number_of_mobile_devices would be invisible to the agent --
+        # nothing else in the env or the comparison sweep converts device
+        # count into contention -- so a low- and a high-device-count
+        # scenario would look almost identical to the agent. Injected
+        # every step as a Poisson-sampled batch of admitted
         # background tasks (see _inject_background_load), so mu_edge/mu_cloud
         # -- which the agent does observe in its state -- rise with device
         # count exactly the way real contention would.

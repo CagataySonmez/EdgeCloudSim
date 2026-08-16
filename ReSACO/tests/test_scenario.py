@@ -160,8 +160,8 @@ def test_nextgen_scenario_source():
 
 
 def test_scenario_env_profile_defaults_to_default_profile():
-    # Backward compat: everything that builds a Scenario without naming an
-    # env profile (tests, compare_algorithms' replace()) gets DEFAULT.
+    # Backward compat: anything that builds a Scenario without naming an
+    # env profile (e.g. tests) gets DEFAULT.
     scenario = Scenario(app_profile=APP_PROFILES[0], number_of_mobile_devices=500)
     assert scenario.env_profile is DEFAULT_ENV_PROFILE
 

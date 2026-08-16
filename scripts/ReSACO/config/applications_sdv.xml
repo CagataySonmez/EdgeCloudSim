@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!-- SDV (software-defined vehicle) workloads, used by the sdv_highway /
      sdv_rural_road / sdv_urban simulation.list rows. Mirrored exactly by
-     resaco/scenario.py's SDV_APP_PROFILES (same keep-in-sync-by-hand
+     mec_core/scenario.py's SDV_APP_PROFILES (same keep-in-sync-by-hand
      contract as applications.xml <-> APP_PROFILES): if you change one,
      change both. usage_percentage is the fleet mix. -->
 <applications>

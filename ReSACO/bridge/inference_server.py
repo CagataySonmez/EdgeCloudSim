@@ -9,9 +9,9 @@ as separate `orchestrator_policies` in the *same* real CloudSim
 simulation (scripts/ReSACO), instead of only the toy env used by
 scripts/compare_algorithms.py.
 
-Online-learning persistence: RESACO/SAC_BASELINE/DDPG_BASELINE keep
-adapting theta_adapt from every reported outcome (Algorithm 4). Without
-saving that back to disk, all of it is lost the instant this process
+Online-learning persistence: RESACO/SAC_BASELINE/DDPG_BASELINE/
+MULTITASK_BASELINE keep adapting theta_adapt from every reported
+outcome (Algorithm 4). Without saving that back to disk, all of it is lost the instant this process
 restarts -- so instead of overwriting the original meta-trained checkpoint
 (theta_star.pt etc, which stays untouched as a stable fallback), each
 adapting agent periodically flushes its live parameters to a separate
@@ -31,9 +31,10 @@ Protocol (newline-delimited ASCII, one request per line):
       -> "OK" | "IGNORED"
          IGNORED means request_id was never seen by ACT for this algo (e.g.
          the bridge was unreachable/restarted at decision time). ReSACO/SAC/
-         DDPG (off-policy) turn this into an online SAC-Update/DDPG-update
-         step (Algorithm 4); A2C/A3C (on-policy) just discard it -- their
-         served policy is exactly what scripts/train_baselines.py produced.
+         DDPG/MULTITASK (off-policy) turn this into an online SAC-Update/
+         DDPG-update step (Algorithm 4); A2C/A3C (on-policy) just discard
+         it -- their served policy is exactly what
+         scripts/train_baselines.py produced.
 
   RESET <algo>
       -> "OK" | "ERROR ..."
@@ -271,8 +272,8 @@ def main():
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--autosave-every", type=int, default=50,
                          help="Flush online-adapted checkpoints to disk every N successful "
-                              "updates (RESACO/SAC_BASELINE/DDPG_BASELINE only). Also saved "
-                              "once more on a clean shutdown.")
+                              "updates (RESACO/SAC_BASELINE/DDPG_BASELINE/MULTITASK_BASELINE "
+                              "only). Also saved once more on a clean shutdown.")
     args = parser.parse_args()
 
     loaded, resumed, missing = load_agents(args.checkpoints_dir, autosave_every=args.autosave_every)

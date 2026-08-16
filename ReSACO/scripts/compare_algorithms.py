@@ -1,6 +1,7 @@
 """Reproduce the Section V-C style comparison: ReSACO vs. SAC (no
-meta-init), DDPG, A2C, A3C as the number of mobile devices increases from
-200 to 2,000 in steps of 200 (Fig. 6/7 and Table III of the paper).
+meta-init), DDPG, A2C, A3C, plus the MULTITASK joint-pretraining control
+(P2-1), as the number of mobile devices increases from 200 to 2,000 in
+steps of 200 (Fig. 6/7 and Table III of the paper).
 
 Evaluation protocol (matching Section V-C):
 - every device count is tested --iterations times (paper: 10) with
@@ -8,18 +9,18 @@ Evaluation protocol (matching Section V-C):
 - with the default --scenario-source apps, each condition runs all four
   real application profiles and combines their metrics weighted by
   usage_percentage -- the paper's "four representative applications";
-- before each measurement, the off-policy algorithms (ReSACO/SAC/DDPG)
-  first run --adapt-steps online updates on the condition (Algorithm 4's
-  Deployment Phase, the very mechanism the paper credits for ReSACO's
-  advantage); A2C/A3C are evaluated frozen, exactly as the bridge serves
-  them.
+- before each measurement, the off-policy algorithms (ReSACO/SAC/DDPG/
+  MULTITASK) first run --adapt-steps online updates on the condition
+  (Algorithm 4's Deployment Phase, the very mechanism the paper credits
+  for ReSACO's advantage); A2C/A3C are evaluated frozen, exactly as the
+  bridge serves them.
 
-resaco/env.py models a single agent-controlled MD's task stream, but the
+mec_core/env.py models a single agent-controlled MD's task stream, but the
 other (devices - 1) MDs' contention is real, not just approximated: every
 step, env._inject_background_load admits a Poisson-sampled batch of
 background tasks straight into the shared edge/cloud pools, scaled by
-device count -- so bumping device_count here (scenario_for_device_count)
-just updates number_of_mobile_devices and env.py's own background-load
+device count -- so the Scenario built per condition in run_sweep just
+sets number_of_mobile_devices and env.py's own background-load
 injection does the rest, without requiring a full multi-agent simulator.
 
 Usage:
@@ -241,8 +242,8 @@ def main():
                               "raw rows in the CSV")
     parser.add_argument("--adapt-steps", type=int, default=config.NUM_INNER_SAC_UPDATES,
                          help="Algorithm-4 online-adaptation updates each off-policy agent "
-                              "(ReSACO/SAC/DDPG) runs on the condition before measurement; "
-                              "0 evaluates everything frozen")
+                              "(ReSACO/SAC/DDPG/MULTITASK) runs on the condition before "
+                              "measurement; 0 evaluates everything frozen")
     parser.add_argument("--seed", type=int, default=123)
     parser.add_argument("--checkpoints-dir", type=str, default=os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "checkpoints"))
@@ -251,7 +252,7 @@ def main():
     parser.add_argument("--env-profile", type=str, default="DEFAULT",
                          choices=[e.name for e in ENV_PROFILES],
                          help="environment preset to sweep under (network quality, tier "
-                              "hardware, device mobility -- see resaco/scenario.py's "
+                              "hardware, device mobility -- see mec_core/scenario.py's "
                               "ENV_PROFILES). Defaults to DEFAULT so runs stay comparable "
                               "across invocations instead of inheriting whichever profile "
                               "the seeded base-scenario sample happened to draw.")
@@ -265,7 +266,7 @@ def main():
                               "'table2' = one seeded paper-style synthetic profile.")
     args = parser.parse_args()
 
-    seed_everything(args.seed)  # see resaco/seeding.py
+    seed_everything(args.seed)  # see mec_core/seeding.py
 
     loaders = {}  # name -> (loader, trained params): a FRESH agent per condition
     for name, (filename, loader) in ALGORITHMS.items():

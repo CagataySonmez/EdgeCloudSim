@@ -2,7 +2,7 @@
 <!-- "GPU edge" variant of edge_devices.xml: ten edge datacenters (one host
      x 8 VMs each) with every edge VM at 4x the paper MIPS (host 320000, VM
      40000) - AI-first micro-datacenters. Used by gpu_edge.properties via
-     simulation.list; mirrors resaco/scenario.py ENV_PROFILES GPU_EDGE. -->
+     simulation.list; mirrors mec_core/scenario.py ENV_PROFILES GPU_EDGE. -->
 <edge_devices>
 	<datacenter arch="x86" os="Linux" vmm="Xen">
 		<costPerBw>0.1</costPerBw>

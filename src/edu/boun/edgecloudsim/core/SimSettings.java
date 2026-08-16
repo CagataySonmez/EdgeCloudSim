@@ -305,7 +305,7 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns WLAN bandwidth (in Mbps unit) from properties file
+	 * returns WLAN bandwidth in Kbps (the properties file's Mbps value * 1000)
 	 */
 	public int getWlanBandwidth()
 	{
@@ -313,7 +313,7 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns MAN bandwidth (in Mbps unit) from properties file
+	 * returns MAN bandwidth in Kbps (the properties file's Mbps value * 1000)
 	 */
 	public int getManBandwidth()
 	{
@@ -321,7 +321,7 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns WAN bandwidth (in Mbps unit) from properties file
+	 * returns WAN bandwidth in Kbps (the properties file's Mbps value * 1000)
 	 */
 	public int getWanBandwidth()
 	{
@@ -329,7 +329,7 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns GSM bandwidth (in Mbps unit) from properties file
+	 * returns GSM bandwidth in Kbps (the properties file's Mbps value * 1000)
 	 */
 	public int getGsmBandwidth()
 	{

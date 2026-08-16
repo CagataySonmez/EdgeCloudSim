@@ -13,7 +13,7 @@ ReSACO/README.md's Known limitations).
 
 Every agent (SACAgent, DDPGAgent, A2CAgent/A3C) calls normalize_state()
 right before constructing a network input tensor, whether the raw state
-came from resaco/env.py during training or from the Java bridge
+came from mec_core/env.py during training or from the Java bridge
 (bridge/inference_server.py) during serving -- the scale factors are fixed
 constants derived from Table II's metadata ranges and the physical tier
 parameters, not fit from data, so behavior is identical and stateless
@@ -26,10 +26,10 @@ import numpy as np
 from . import config
 
 # Divides each feature down to a roughly comparable O(1) range. Not tight
-# bounds (e.g. task.length can jitter up to 1.3x its Table II max, and
-# background-saturated mu_edge/mu_cloud can reach env._SATURATION_CEILING
-# = 150) -- normalization only needs comparable *scale*, not a strict
-# [0, 1] clamp.
+# bounds (e.g. task.length is exponentially distributed around its profile
+# mean and can exceed its Table II max, and background-saturated
+# mu_edge/mu_cloud can reach env._SATURATION_CEILING = 150) --
+# normalization only needs comparable *scale*, not a strict [0, 1] clamp.
 _SCALE = np.array(
     [10000.0, 2500.0, 2500.0, 100.0]        # L, U, D, mu_d
     + [100.0] * config.NUM_EDGE_SERVERS      # mu_e1..mu_eN

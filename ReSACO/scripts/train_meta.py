@@ -75,7 +75,7 @@ def main():
 
     # without this the replay buffer's global-RNG sampling and torch's
     # network init stay unseeded, so --seed alone never made a run
-    # reproducible (see resaco/seeding.py)
+    # reproducible (see mec_core/seeding.py)
     seed_everything(args.seed)
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
