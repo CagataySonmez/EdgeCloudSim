@@ -47,6 +47,15 @@ Protocol (newline-delimited ASCII, one request per line):
   PING
       -> "PONG"
 
+  STATS [<algo>]
+      -> "<algo> acts=N outcomes=N ignored=N resets=N" for one algo, or
+         all six algos' counters ";"-joined on one line. Process-lifetime
+         counts of handled requests (outcomes = accepted OUTCOMEs, ignored
+         = IGNORED ones, resets = RESET commands) -- purely observational,
+         reading them changes nothing. For eyeballing whether every served
+         policy is actually receiving live traffic, e.g. via
+         `printf 'STATS\n' | nc 127.0.0.1 8765`.
+
 <algo> is one of RESACO, SAC_BASELINE, DDPG_BASELINE, A2C_BASELINE,
 A3C_BASELINE, MULTITASK_BASELINE. If that algorithm's checkpoint wasn't found at startup, ACT
 returns "ERROR unknown algo ..." and the Java client falls back to its
@@ -104,6 +113,20 @@ _agents = {}  # algo name -> DeploymentAgent | FrozenPolicyAgent
 # SAC_BASELINE has no reason to wait on that.
 _locks = {algo: threading.Lock() for algo in ALGO_REGISTRY}
 
+# Process-lifetime request counters per algo, for the STATS command.
+# Incremented under the algo's own lock (the increments piggyback on the
+# critical sections ACT/OUTCOME/RESET already hold); STATS reads them
+# without locking -- an int read can't tear in CPython, and a counter
+# being off by an in-flight request is fine for an observability command.
+_stats = {algo: {"acts": 0, "outcomes": 0, "ignored": 0, "resets": 0}
+          for algo in ALGO_REGISTRY}
+
+
+def _format_stats(algo: str) -> str:
+    s = _stats[algo]
+    return (f"{algo} acts={s['acts']} outcomes={s['outcomes']} "
+            f"ignored={s['ignored']} resets={s['resets']}")
+
 
 def _parse_floats(tokens):
     return [float(t) for t in tokens]
@@ -147,6 +170,7 @@ class Handler(socketserver.StreamRequestHandler):
                 return f"ERROR expected {config.STATE_DIM} state values, got {len(state)}"
             with _locks[algo]:
                 action = agent.select_action(state, request_id=request_id)
+                _stats[algo]["acts"] += 1
             return str(action)
 
         if cmd == "OUTCOME":
@@ -159,6 +183,7 @@ class Handler(socketserver.StreamRequestHandler):
             next_state = _parse_floats(parts[5:])
             with _locks[algo]:
                 result = agent.report_outcome(request_id, reward, next_state, done)
+                _stats[algo]["outcomes" if result is not None else "ignored"] += 1
             # result is None only when request_id was never seen by select_action
             # (e.g. the bridge was unreachable/restarted at decision time).
             return "OK" if result is not None else "IGNORED"
@@ -172,11 +197,20 @@ class Handler(socketserver.StreamRequestHandler):
                 return f"ERROR unknown algo {algo}"
             with _locks[algo]:
                 ok = agent.reset()
+                _stats[algo]["resets"] += 1
             # Algorithm 4 line 1 for a new scenario S_new: theta_adapt is
             # re-copied from the originally loaded parameter and the replay
             # buffer/pending state dropped, so each simulation run adapts
             # from theta* instead of inheriting the previous run's drift.
             return "OK" if ok else "ERROR nothing to reset (no checkpoint was loaded for this algo)"
+
+        if cmd == "STATS":
+            algo = parts[1] if len(parts) > 1 else None
+            if algo is not None:
+                if algo not in _stats:
+                    return f"ERROR unknown algo {algo}"
+                return _format_stats(algo)
+            return "; ".join(_format_stats(a) for a in ALGO_REGISTRY)
 
         if cmd == "SAVE":
             algo = parts[1] if len(parts) > 1 else None

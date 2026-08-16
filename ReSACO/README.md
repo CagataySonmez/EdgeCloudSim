@@ -956,6 +956,12 @@ RESET <algo>
                               loaded checkpoint into theta_adapt, clear the replay buffer and
                               in-flight state. Sent automatically by ReSACOEdgeOrchestrator at
                               the start of every simulation run.
+
+STATS [<algo>]
+    -> "<algo> acts=N outcomes=N ignored=N resets=N"   (or all six, ";"-joined)
+                              process-lifetime request counters per algo, purely observational.
+                              Handy for checking every served policy actually receives live
+                              traffic:  printf 'STATS\n' | nc 127.0.0.1 8765
 ```
 
 ## ONNX export (bridge-free inference artifact)

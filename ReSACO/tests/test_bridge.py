@@ -1,6 +1,7 @@
 """Tests for bridge/inference_server.py's checkpoint loading and
 online-learning persistence: resume-from-adapted-checkpoint preference,
-missing-checkpoint fallback, and save_all_agents()."""
+missing-checkpoint fallback, save_all_agents(), and the STATS protocol
+counters."""
 
 import torch
 
@@ -120,3 +121,48 @@ def test_locking_one_algo_does_not_block_another():
         acquired = other_lock.acquire(blocking=False)
     assert acquired, "SAC_BASELINE's lock was blocked by RESACO holding its own lock"
     other_lock.release()
+
+
+def _dispatch(line):
+    # Handler only touches module globals in _dispatch, so it can be
+    # exercised without a real socket (mirrors how the Java client's
+    # one-line-per-request protocol hits it).
+    return srv.Handler.__new__(srv.Handler)._dispatch(line)
+
+
+def test_stats_command_counts_acts_outcomes_ignored_and_resets(tmp_path):
+    _write_fake_checkpoints(tmp_path)
+    srv.load_agents(str(tmp_path))
+    before = {k: dict(v) for k, v in srv._stats.items()}
+    state = " ".join(["0.5"] * 18)
+
+    assert _dispatch(f"ACT RESACO stats-rid-1 {state}").isdigit()
+    assert _dispatch(f"OUTCOME RESACO stats-rid-1 -1.0 0 {state}") == "OK"
+    assert _dispatch(f"OUTCOME RESACO stats-never-seen -1.0 0 {state}") == "IGNORED"
+    assert _dispatch("RESET RESACO") == "OK"
+
+    # counters are process-lifetime, so assert deltas, not absolutes
+    after = srv._stats["RESACO"]
+    assert after["acts"] == before["RESACO"]["acts"] + 1
+    assert after["outcomes"] == before["RESACO"]["outcomes"] + 1
+    assert after["ignored"] == before["RESACO"]["ignored"] + 1
+    assert after["resets"] == before["RESACO"]["resets"] + 1
+    assert srv._stats["SAC_BASELINE"] == before["SAC_BASELINE"]  # untouched algo
+
+    line = _dispatch("STATS RESACO")
+    assert line == (f"RESACO acts={after['acts']} outcomes={after['outcomes']} "
+                    f"ignored={after['ignored']} resets={after['resets']}")
+
+
+def test_stats_without_algo_reports_all_six_on_one_line(tmp_path):
+    _write_fake_checkpoints(tmp_path)
+    srv.load_agents(str(tmp_path))
+
+    out = _dispatch("STATS")
+    assert "\n" not in out
+    for algo in srv.ALGO_REGISTRY:
+        assert f"{algo} acts=" in out
+
+
+def test_stats_unknown_algo_reports_error():
+    assert _dispatch("STATS NOPE").startswith("ERROR unknown algo")
