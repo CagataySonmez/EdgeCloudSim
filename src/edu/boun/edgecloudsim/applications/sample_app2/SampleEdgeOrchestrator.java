@@ -1,12 +1,13 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Edge Orchestrator
- * 
- * Description: 
+ *
+ * Description:
  * SampleEdgeOrchestrator offloads tasks to proper server
  * by considering WAN bandwidth and edge server utilization.
  * After the target server is decided, the least loaded VM is selected.
  * If the target server is a remote edge server, MAN is used.
- * 
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -32,11 +33,11 @@ import edu.boun.edgecloudsim.utils.SimLogger;
 
 /**
  * Sample edge orchestrator for multi-tier edge-cloud computing scenarios.
- * Implements intelligent offloading decisions based on WAN bandwidth, edge server utilization,
+ * Selects an offloading tier based on WAN bandwidth, edge-server utilization,
  * and hybrid policies. Supports both SINGLE_TIER and TWO_TIER_WITH_EO deployment models.
  */
 public class SampleEdgeOrchestrator extends EdgeOrchestrator {
-	
+
 	/** Number of edge hosts for load balancing calculations */
 	private int numberOfHost;
 
@@ -60,34 +61,34 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 	/**
 	 * Determines the target device for task offloading based on orchestration policy and scenario.
 	 * The edge orchestrator runs in a distributed manner on edge devices for real-time decisions.
-	 * 
+	 *
 	 * @param task The task to be offloaded
 	 * @return Device ID: CLOUD_DATACENTER_ID for cloud, GENERIC_EDGE_DEVICE_ID for edge
 	 */
 	@Override
 	public int getDeviceToOffload(Task task) {
 		int result = 0;
-		
+
 		// Scenario-based offloading decision logic
 		if(simScenario.equals("SINGLE_TIER")){
 			// Single-tier scenario: all tasks go to edge servers only
 			result = SimSettings.GENERIC_EDGE_DEVICE_ID;
 		}
 		else if(simScenario.equals("TWO_TIER_WITH_EO")){
-			// Two-tier scenario: intelligent decision between edge and cloud based on policy
-			
+			// Two-tier scenario: select edge or cloud according to the configured policy.
+
 			// Create dummy task (1 Mbit = 128 KB) to probe current WAN bandwidth
 			Task dummyTask = new Task(0, 0, 0, 0, 128, 128, new UtilizationModelFull(), new UtilizationModelFull(), new UtilizationModelFull());
-			
+
 			// Calculate current WAN bandwidth availability
 			double wanDelay = SimManager.getInstance().getNetworkModel().getUploadDelay(task.getMobileDeviceId(),
 					SimSettings.CLOUD_DATACENTER_ID, dummyTask);
-			
+
 			double wanBW = (wanDelay == 0) ? 0 : (1 / wanDelay); // Convert delay to bandwidth (Mbps)
-			
+
 			// Get current edge server utilization percentage
 			double edgeUtilization = SimManager.getInstance().getEdgeServerManager().getAvgUtilization();
-			
+
 			// Policy-based offloading decision making
 			if(policy.equals("NETWORK_BASED")){
 				// Network-based policy: offload to cloud if WAN bandwidth is sufficient (> 6 Mbps)
@@ -115,12 +116,12 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 			}
 			else {
 				SimLogger.printLine("Unknown edge orchestrator policy! Terminating simulation...");
-				System.exit(0);
+				edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 			}
 		}
 		else {
 			SimLogger.printLine("Unknown simulation scenario! Terminating simulation...");
-			System.exit(0);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		}
 		return result;
 	}
@@ -128,7 +129,7 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 	/**
 	 * Selects specific VM for task execution using Least Loaded algorithm.
 	 * Finds the VM with highest available capacity that can handle the task requirements.
-	 * 
+	 *
 	 * @param task The task to be executed
 	 * @param deviceId Target device ID (cloud or edge)
 	 * @return Selected VM instance or null if no suitable VM found
@@ -136,7 +137,7 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 	@Override
 	public Vm getVmToOffload(Task task, int deviceId) {
 		Vm selectedVM = null;
-		
+
 		if(deviceId == SimSettings.CLOUD_DATACENTER_ID){
 			// Select VM on cloud servers using Least Loaded algorithm
 			double selectedVmCapacity = 0; // Start with minimum value for comparison
@@ -146,7 +147,7 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 				for(int vmIndex=0; vmIndex<vmArray.size(); vmIndex++){
 					double requiredCapacity = ((CpuUtilizationModel_Custom)task.getUtilizationModelCpu()).predictUtilization(vmArray.get(vmIndex).getVmType());
 					double targetVmCapacity = (double)100 - vmArray.get(vmIndex).getCloudletScheduler().getTotalUtilizationOfCpu(CloudSim.clock());
-					
+
 					// Select VM with highest available capacity that can handle the task
 					if(requiredCapacity <= targetVmCapacity && targetVmCapacity > selectedVmCapacity){
 						selectedVM = vmArray.get(vmIndex);
@@ -163,7 +164,7 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 				for(int vmIndex=0; vmIndex<vmArray.size(); vmIndex++){
 					double requiredCapacity = ((CpuUtilizationModel_Custom)task.getUtilizationModelCpu()).predictUtilization(vmArray.get(vmIndex).getVmType());
 					double targetVmCapacity = (double)100 - vmArray.get(vmIndex).getCloudletScheduler().getTotalUtilizationOfCpu(CloudSim.clock());
-					
+
 					// Select VM with highest available capacity that can handle the task
 					if(requiredCapacity <= targetVmCapacity && targetVmCapacity > selectedVmCapacity){
 						selectedVM = vmArray.get(vmIndex);
@@ -174,25 +175,25 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 		}
 		else{
 			SimLogger.printLine("Unknown device id! The simulation has been terminated.");
-			System.exit(0);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		}
-		
+
 		return selectedVM;
 	}
 
 	@Override
 	public void processEvent(SimEvent arg0) {
-		// Nothing to do!
+		// No action is required for this event.
 	}
 
 	@Override
 	public void shutdownEntity() {
-		// Nothing to do!
+		// No action is required for this event.
 	}
 
 	@Override
 	public void startEntity() {
-		// Nothing to do!
+		// No action is required for this event.
 	}
 
 }

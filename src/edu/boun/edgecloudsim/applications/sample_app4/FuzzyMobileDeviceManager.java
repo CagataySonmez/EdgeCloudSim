@@ -1,19 +1,12 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Fuzzy Mobile Device Manager
- * 
- * Description: 
- * FuzzyMobileDeviceManager extends the default mobile device manager with
- * advanced fuzzy logic-based task orchestration and experimental network modeling.
- * This manager implements sophisticated task routing decisions based on:
- * - Real-time network conditions and load balancing
- * - Mobility-aware response handling with handoff management
- * - Multi-tier architecture supporting cloud, edge, and MAN communications
- * - Adaptive M/M/1 queuing model updates for realistic network behavior
- * - Experimental WLAN performance data integration for accurate delay modeling
- * 
- * The class handles complex scenarios including neighbor edge server communication
- * through MAN networks and mobility-induced task failures.
- * 
+ *
+ * Description:
+ * Handles the event flow used by the fuzzy-orchestration sample, including
+ * cloud, local-edge, remote-edge, WLAN, and MAN transfers. It also schedules
+ * periodic updates of the network model's queue parameters.
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -40,27 +33,11 @@ import edu.boun.edgecloudsim.utils.TaskProperty;
 import edu.boun.edgecloudsim.utils.Location;
 import edu.boun.edgecloudsim.utils.SimLogger;
 
-/**
- * FuzzyMobileDeviceManager implements advanced mobile device management with fuzzy logic
- * and experimental network modeling capabilities. This class extends the base MobileDeviceManager
- * to provide sophisticated task orchestration, mobility-aware communication, and adaptive
- * network performance modeling.
- * 
- * Key Features:
- * - Fuzzy logic-based task routing and load balancing
- * - Experimental WLAN performance data integration
- * - Multi-tier architecture (Cloud, Edge, MAN) support
- * - Adaptive M/M/1 queuing model with real-time parameter updates
- * - Mobility-aware response handling with handoff management
- * - Neighbor edge server communication through MAN networks
- * 
- * The manager uses event-driven architecture for efficient task processing and
- * network delay modeling based on empirical measurements and analytical models.
- */
+/** Coordinates task submission and response delivery for the fuzzy sample. */
 public class FuzzyMobileDeviceManager extends MobileDeviceManager {
 	/** Base value for custom event tags to avoid conflicts with CloudSim tags */
 	private static final int BASE = 100000;
-	
+
 	/** Event tag for periodic M/M/1 queue model parameter updates */
 	private static final int UPDATE_MM1_QUEUE_MODEL = BASE + 1;
 	/** Event tag for task request received by cloud datacenter */
@@ -78,42 +55,35 @@ public class FuzzyMobileDeviceManager extends MobileDeviceManager {
 
 	/** Update interval for M/M/1 queue model parameter recalculation (seconds) */
 	private static final double MM1_QUEUE_MODEL_UPDATE_INTEVAL = 5;
-	
-	/** Counter for generating unique task IDs */
+
 	/** Counter for generating unique task IDs */
 	private int taskIdCounter=0;
-	
+
 	/**
-	 * Constructor for FuzzyMobileDeviceManager.
-	 * Initializes the fuzzy logic-based mobile device manager with experimental
-	 * network modeling capabilities and adaptive queue management.
-	 * 
+	 * Creates the mobile-device manager.
+	 *
 	 * @throws Exception if initialization fails
 	 */
 	public FuzzyMobileDeviceManager() throws Exception{
 	}
 
 	/**
-	 * Initializes the fuzzy mobile device manager.
-	 * Sets up necessary components for advanced task orchestration and
-	 * experimental network modeling functionality.
+	 * Performs scenario-specific initialization. No additional state is required.
 	 */
 	@Override
 	public void initialize() {
 	}
-	
+
 	/**
-	 * Returns the CPU utilization model for task execution.
-	 * Uses custom CPU utilization model that provides realistic resource
-	 * consumption patterns based on task characteristics.
-	 * 
-	 * @return CpuUtilizationModel_Custom instance for realistic CPU modeling
+	 * Returns the CPU utilization model used by submitted tasks.
+	 *
+	 * @return a new application-table-based utilization model
 	 */
 	@Override
 	public UtilizationModel getCpuUtilizationModel() {
 		return new CpuUtilizationModel_Custom();
 	}
-	
+
 	/**
 	 * Starts the entity and schedules periodic M/M/1 queue model updates.
 	 * This method initializes the adaptive network modeling system that
@@ -125,31 +95,31 @@ public class FuzzyMobileDeviceManager extends MobileDeviceManager {
 		schedule(getId(), SimSettings.CLIENT_ACTIVITY_START_TIME +
 				MM1_QUEUE_MODEL_UPDATE_INTEVAL, UPDATE_MM1_QUEUE_MODEL);
 	}
-	
+
 	/**
 	 * Submit cloudlets to the created VMs.
 	 * Note: This method intentionally does nothing as task submission
 	 * is handled through the event-driven architecture via submitTask() method.
-	 * 
-	 * @pre None
-	 * @post None
+	 *
+	 * <p><b>Precondition:</b> None</p>
+	 * <p><b>Postcondition:</b> None</p>
 	 */
 	protected void submitCloudlets() {
 		// Task submission handled through event processing rather than direct cloudlet submission
 	}
-	
+
 	/**
 	 * Process a cloudlet return event after task execution completion.
 	 * Handles response delivery with network delays and mobility considerations.
-	 * 
+	 *
 	 * @param ev SimEvent containing the completed task
-	 * @pre ev != null
-	 * @post Task response is scheduled for delivery or marked as failed
+	 * <p><b>Precondition:</b> {@code ev != null}</p>
+	 * <p><b>Postcondition:</b> Task response is scheduled for delivery or marked as failed</p>
 	 */
 	protected void processCloudletReturn(SimEvent ev) {
 		NetworkModel networkModel = SimManager.getInstance().getNetworkModel();
 		Task task = (Task) ev.getData();
-		
+
 		// Log task execution completion
 		SimLogger.getInstance().taskExecuted(task.getCloudletId());
 
@@ -187,14 +157,14 @@ public class FuzzyMobileDeviceManager extends MobileDeviceManager {
 			int nextDeviceForNetworkModel = SimSettings.GENERIC_EDGE_DEVICE_ID;
 			NETWORK_DELAY_TYPES delayType = NETWORK_DELAY_TYPES.WLAN_DELAY;
 			double delay = networkModel.getDownloadDelay(task.getAssociatedHostId(), task.getMobileDeviceId(), task);
-			
+
 			// Get the edge host that executed the task
 			EdgeHost host = (EdgeHost)(SimManager.
 					getInstance().
 					getEdgeServerManager().
 					getDatacenterList().get(task.getAssociatedHostId()).
 					getHostList().get(0));
-			
+
 			// Check if task was executed on a neighbor edge device (different WLAN)
 			if(host.getLocation().getServingWlanId() != task.getSubmittedLocation().getServingWlanId())
 			{
@@ -204,7 +174,7 @@ public class FuzzyMobileDeviceManager extends MobileDeviceManager {
 				nextDeviceForNetworkModel = SimSettings.GENERIC_EDGE_DEVICE_ID + 1;
 				delayType = NETWORK_DELAY_TYPES.MAN_DELAY;
 			}
-			
+
 			if(delay > 0)
 			{
 				Location currentLocation = SimManager.getInstance().getMobilityModel().getLocation(task.getMobileDeviceId(),CloudSim.clock()+delay);
@@ -212,7 +182,7 @@ public class FuzzyMobileDeviceManager extends MobileDeviceManager {
 				{
 					networkModel.downloadStarted(currentLocation, nextDeviceForNetworkModel);
 					SimLogger.getInstance().setDownloadDelay(task.getCloudletId(), delay, delayType);
-					
+
 					schedule(getId(), delay, nextEvent, task);
 				}
 				else
@@ -226,34 +196,34 @@ public class FuzzyMobileDeviceManager extends MobileDeviceManager {
 			}
 		}
 	}
-	
+
 	/**
 	 * Processes custom events specific to fuzzy mobile device management.
 	 * This method handles various network events including M/M/1 queue updates,
 	 * task routing between different tiers (cloud, edge, MAN), and response relay
 	 * operations with mobility and bandwidth considerations.
-	 * 
+	 *
 	 * @param ev The simulation event to process
-	 * @pre ev != null
-	 * @post Event is processed according to its type with appropriate network actions
+	 * <p><b>Precondition:</b> {@code ev != null}</p>
+	 * <p><b>Postcondition:</b> Event is processed according to its type with appropriate network actions</p>
 	 */
 	protected void processOtherEvent(SimEvent ev) {
 		if (ev == null) {
 			SimLogger.printLine(getName() + ".processOtherEvent(): " + "Error - an event is null! Terminating simulation...");
-			System.exit(0);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 			return;
 		}
-		
+
 		NetworkModel networkModel = SimManager.getInstance().getNetworkModel();
-		
+
 		switch (ev.getTag()) {
 			case UPDATE_MM1_QUEUE_MODEL:
 			{
 				// Update M/M/1 queue model parameters based on recent traffic patterns
-				((FuzzyExperimentalNetworkModel)networkModel).updateMM1QueeuModel();
+				((FuzzyExperimentalNetworkModel)networkModel).updateMM1QueueModel();
 				// Schedule next update for continuous adaptation
 				schedule(getId(), MM1_QUEUE_MODEL_UPDATE_INTEVAL, UPDATE_MM1_QUEUE_MODEL);
-	
+
 				break;
 			}
 			case REQUEST_RECEIVED_BY_CLOUD:
@@ -278,7 +248,7 @@ public class FuzzyMobileDeviceManager extends MobileDeviceManager {
 				Task task = (Task) ev.getData();
 				networkModel.uploadFinished(task.getSubmittedLocation(), SimSettings.GENERIC_EDGE_DEVICE_ID+1);
 				submitTaskToVm(task, SimSettings.VM_TYPES.EDGE_VM);
-				
+
 				break;
 			}
 			case REQUEST_RECEIVED_BY_EDGE_DEVICE_TO_RELAY_NEIGHBOR:
@@ -286,7 +256,7 @@ public class FuzzyMobileDeviceManager extends MobileDeviceManager {
 				// Handle task relay from local edge to neighbor edge via MAN
 				Task task = (Task) ev.getData();
 				networkModel.uploadFinished(task.getSubmittedLocation(), SimSettings.GENERIC_EDGE_DEVICE_ID);
-				
+
 				// Calculate MAN delay for neighbor edge server communication
 				double manDelay =  networkModel.getUploadDelay(SimSettings.GENERIC_EDGE_DEVICE_ID, SimSettings.GENERIC_EDGE_DEVICE_ID, task);
 				if(manDelay>0){
@@ -304,7 +274,7 @@ public class FuzzyMobileDeviceManager extends MobileDeviceManager {
 							SimSettings.VM_TYPES.EDGE_VM.ordinal(),
 							NETWORK_DELAY_TYPES.MAN_DELAY);
 				}
-				
+
 				break;
 			}
 			case RESPONSE_RECEIVED_BY_EDGE_DEVICE_TO_RELAY_MOBILE_DEVICE:
@@ -312,10 +282,10 @@ public class FuzzyMobileDeviceManager extends MobileDeviceManager {
 				// Handle response relay from remote edge device to mobile device
 				Task task = (Task) ev.getData();
 				networkModel.downloadFinished(task.getSubmittedLocation(), SimSettings.GENERIC_EDGE_DEVICE_ID+1);
-				
+
 				// Calculate WLAN delay for final delivery to mobile device
 				double delay = networkModel.getDownloadDelay(task.getAssociatedHostId(), task.getMobileDeviceId(), task);
-				
+
 				if(delay > 0)
 				{
 					// Check mobility: ensure mobile device is still in same WLAN coverage
@@ -338,20 +308,20 @@ public class FuzzyMobileDeviceManager extends MobileDeviceManager {
 					// Insufficient WLAN bandwidth for response delivery
 					SimLogger.getInstance().failedDueToBandwidth(task.getCloudletId(), CloudSim.clock(), NETWORK_DELAY_TYPES.WLAN_DELAY);
 				}
-				
+
 				break;
 			}
 			case RESPONSE_RECEIVED_BY_MOBILE_DEVICE:
 			{
 				// Handle final task response delivery to mobile device
 				Task task = (Task) ev.getData();
-				
+
 				// Update network model state based on response source
 				if(task.getAssociatedDatacenterId() == SimSettings.CLOUD_DATACENTER_ID)
 					networkModel.downloadFinished(task.getSubmittedLocation(), SimSettings.CLOUD_DATACENTER_ID);
 				else if(task.getAssociatedDatacenterId() != SimSettings.MOBILE_DATACENTER_ID)
 					networkModel.downloadFinished(task.getSubmittedLocation(), SimSettings.GENERIC_EDGE_DEVICE_ID);
-				
+
 				// Log successful task completion with end time
 				SimLogger.getInstance().taskEnded(task.getCloudletId(), CloudSim.clock());
 				break;
@@ -359,15 +329,15 @@ public class FuzzyMobileDeviceManager extends MobileDeviceManager {
 			default:
 				// Handle unknown event types with error termination
 				SimLogger.printLine(getName() + ".processOtherEvent(): " + "Error - event unknown by this DatacenterBroker. Terminating simulation...");
-				System.exit(0);
+				edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 				break;
 		}
 	}
 
 	/**
 	 * Submits a task for offloading using fuzzy logic-based orchestration.
-	 * Determines optimal execution location and handles network delay modeling.
-	 * 
+	 * Selects an execution location and schedules the corresponding transfer events.
+	 *
 	 * @param edgeTask Task properties to be submitted for execution
 	 */
 	public void submitTask(TaskProperty edgeTask) {
@@ -377,16 +347,16 @@ public class FuzzyMobileDeviceManager extends MobileDeviceManager {
 		int nextDeviceForNetworkModel;
 		NETWORK_DELAY_TYPES delayType;
 		double delay=0;
-		
+
 		NetworkModel networkModel = SimManager.getInstance().getNetworkModel();
-		
+
 		// Create CloudSim task from EdgeCloudSim task properties
 		Task task = createTask(edgeTask);
-		
+
 		// Get current location of the mobile device for network modeling
 		Location currentLocation = SimManager.getInstance().getMobilityModel().
 				getLocation(task.getMobileDeviceId(), CloudSim.clock());
-		
+
 		// Record submission location for mobility tracking during execution
 		task.setSubmittedLocation(currentLocation);
 
@@ -398,9 +368,9 @@ public class FuzzyMobileDeviceManager extends MobileDeviceManager {
 				(int)task.getCloudletFileSize(),
 				(int)task.getCloudletOutputSize());
 
-		// Use fuzzy orchestrator to determine optimal execution location
+		// Ask the fuzzy orchestrator to select an execution location.
 		int nextHopId = SimManager.getInstance().getEdgeOrchestrator().getDeviceToOffload(task);
-		
+
 		// Configure network parameters based on fuzzy orchestration decision
 		if(nextHopId == SimSettings.CLOUD_DATACENTER_ID){
 			// Task offloaded to cloud: configure WAN network parameters
@@ -418,31 +388,31 @@ public class FuzzyMobileDeviceManager extends MobileDeviceManager {
 			delayType = NETWORK_DELAY_TYPES.WLAN_DELAY;
 			nextDeviceForNetworkModel = SimSettings.GENERIC_EDGE_DEVICE_ID;
 		}
-		
+
 		if(delay>0){
 			// Network delay calculation successful, proceed with VM selection
 			Vm selectedVM = SimManager.getInstance().getEdgeOrchestrator().getVmToOffload(task, nextHopId);
-			
+
 			if(selectedVM != null){
 				// Configure task association with selected infrastructure components
 				task.setAssociatedDatacenterId(nextHopId);
 				task.setAssociatedHostId(selectedVM.getHost().getId());
 				task.setAssociatedVmId(selectedVM.getId());
-				
+
 				// Register task in CloudSim framework
 				getCloudletList().add(task);
 				bindCloudletToVm(task.getCloudletId(), selectedVM.getId());
-				
+
 				// Check if task requires neighbor edge server communication via MAN
 				if(selectedVM instanceof EdgeVM){
 					EdgeHost host = (EdgeHost)(selectedVM.getHost());
-					
+
 					// If selected edge server is in different WLAN area, use MAN relay
 					if(host.getLocation().getServingWlanId() != task.getSubmittedLocation().getServingWlanId()){
 						nextEvent = REQUEST_RECEIVED_BY_EDGE_DEVICE_TO_RELAY_NEIGHBOR;
 					}
 				}
-				
+
 				// Start network transmission and logging
 				networkModel.uploadStarted(currentLocation, nextDeviceForNetworkModel);
 				SimLogger.getInstance().taskStarted(task.getCloudletId(), CloudSim.clock());
@@ -462,16 +432,16 @@ public class FuzzyMobileDeviceManager extends MobileDeviceManager {
 			SimLogger.getInstance().rejectedDueToBandwidth(task.getCloudletId(), CloudSim.clock(), vmType, delayType);
 		}
 	}
-	
+
 	/**
 	 * Submits a task to the assigned virtual machine for execution.
 	 * This method handles the final step of task orchestration by delivering
 	 * the task to the selected VM and logging assignment details for performance analysis.
-	 * 
+	 *
 	 * @param task The task to be executed on the VM
 	 * @param vmType Type of VM (cloud or edge) for logging purposes
-	 * @pre task != null && task has valid VM assignment
-	 * @post Task is submitted to CloudSim for execution
+	 * <p><b>Precondition:</b> {@code task != null} with a valid VM assignment</p>
+	 * <p><b>Postcondition:</b> Task is submitted to CloudSim for execution</p>
 	 */
 	private void submitTaskToVm(Task task, SimSettings.VM_TYPES vmType) {
 		// Submit task to CloudSim scheduler for immediate execution
@@ -484,19 +454,19 @@ public class FuzzyMobileDeviceManager extends MobileDeviceManager {
 				task.getAssociatedVmId(),
 				vmType.ordinal());
 	}
-	
+
 	/**
 	 * Creates a CloudSim task from EdgeCloudSim task properties.
 	 * This method converts high-level task specifications into CloudSim-compatible
 	 * task objects with appropriate resource utilization models and unique identifiers.
-	 * 
+	 *
 	 * @param edgeTask EdgeCloudSim task properties containing task specifications
 	 * @return CloudSim Task object ready for execution and network modeling
-	 * @pre edgeTask != null && contains valid task parameters
-	 * @post Returns initialized Task with unique ID and resource models
+	 * <p><b>Precondition:</b> {@code edgeTask != null} with valid task parameters</p>
+	 * <p><b>Postcondition:</b> Returns initialized Task with unique ID and resource models</p>
 	 */
 	private Task createTask(TaskProperty edgeTask){
-		// Configure resource utilization models for realistic resource consumption
+		// Configure the task's resource-utilization models.
 		UtilizationModel utilizationModel = new UtilizationModelFull(); // Memory/Storage: full utilization
 		UtilizationModel utilizationModelCPU = getCpuUtilizationModel();   // CPU: custom model
 
@@ -505,16 +475,16 @@ public class FuzzyMobileDeviceManager extends MobileDeviceManager {
 				edgeTask.getLength(), edgeTask.getPesNumber(),
 				edgeTask.getInputFileSize(), edgeTask.getOutputFileSize(),
 				utilizationModelCPU, utilizationModel, utilizationModel);
-		
+
 		// Configure task ownership and classification
 		task.setUserId(this.getId());                    // Set mobile device manager as owner
 		task.setTaskType(edgeTask.getTaskType());        // Set application-specific task type
-		
+
 		// Initialize custom CPU utilization model with task context
 		if (utilizationModelCPU instanceof CpuUtilizationModel_Custom) {
 			((CpuUtilizationModel_Custom)utilizationModelCPU).setTask(task);
 		}
-		
+
 		return task;
 	}
 }

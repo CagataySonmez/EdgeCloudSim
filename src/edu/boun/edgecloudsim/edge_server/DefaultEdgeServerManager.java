@@ -1,11 +1,12 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Edge Server Manager
- * 
- * Description: 
+ *
+ * Description:
  * DefaultEdgeServerManager is responsible for creating datacenters, hosts and VMs.
  * It also provides the list of VMs running on the hosts.
  * This information is critical for the edge orchestrator.
- * 
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -39,18 +40,18 @@ import edu.boun.edgecloudsim.utils.Location;
 
 /**
  * Default implementation of EdgeServerManager for standard edge computing scenarios.
- * 
+ *
  * This class provides a concrete implementation of edge infrastructure management
  * based on XML configuration files. It creates CloudSim datacenters, hosts, and VMs
  * according to specifications defined in the edge devices configuration file.
- * 
+ *
  * Key features:
  * - XML-based datacenter configuration parsing
  * - Automatic host and VM creation from configuration specifications
  * - Location-aware edge server deployment with attractiveness modeling
  * - Custom VM allocation policy integration for edge-specific requirements
  * - Resource utilization monitoring across distributed edge infrastructure
- * 
+ *
  * The implementation supports multi-datacenter edge deployments with
  * geographically distributed hosts and configurable resource characteristics.
  */
@@ -76,7 +77,7 @@ public class DefaultEdgeServerManager extends EdgeServerManager{
 	 * Creates a custom VM allocation policy for edge datacenters.
 	 * Returns an edge-specific allocation policy that considers edge computing
 	 * requirements such as proximity, load balancing, and resource constraints.
-	 * 
+	 *
 	 * @param hostList List of hosts available in the target datacenter
 	 * @param dataCenterIndex Index of the datacenter requiring allocation policy
 	 * @return Custom edge VM allocation policy instance
@@ -85,12 +86,12 @@ public class DefaultEdgeServerManager extends EdgeServerManager{
 	public VmAllocationPolicy getVmAllocationPolicy(List<? extends Host> hostList, int dataCenterIndex) {
 		return new EdgeVmAllocationPolicy_Custom(hostList,dataCenterIndex);
 	}
-	
+
 	/**
 	 * Starts all edge datacenters by parsing XML configuration and creating CloudSim entities.
 	 * Reads the edge devices configuration document and creates a datacenter for each
 	 * datacenter element defined in the XML, including hosts, VMs, and location information.
-	 * 
+	 *
 	 * @throws Exception if XML parsing fails or datacenter creation encounters errors
 	 */
 	public void startDatacenters() throws Exception{
@@ -114,7 +115,7 @@ public class DefaultEdgeServerManager extends EdgeServerManager{
 	public void createVmList(int brokerId){
 		int hostCounter=0;
 		int vmCounter=0;
-		
+
 		// Create VMs for each host based on XML configuration
 		Document doc = SimSettings.getInstance().getEdgeDevicesDocument();
 		NodeList datacenterList = doc.getElementsByTagName("datacenter");
@@ -123,15 +124,15 @@ public class DefaultEdgeServerManager extends EdgeServerManager{
 			Element datacenterElement = (Element) datacenterNode;
 			NodeList hostNodeList = datacenterElement.getElementsByTagName("host");
 			for (int j = 0; j < hostNodeList.getLength(); j++) {
-				
+
 				// Initialize VM list for current host
 				vmList.add(hostCounter, new ArrayList<EdgeVM>());
-				
+
 				Node hostNode = hostNodeList.item(j);
 				Element hostElement = (Element) hostNode;
 				NodeList vmNodeList = hostElement.getElementsByTagName("VM");
 				for (int k = 0; k < vmNodeList.getLength(); k++) {
-					Node vmNode = vmNodeList.item(k);					
+					Node vmNode = vmNodeList.item(k);
 					Element vmElement = (Element) vmNode;
 
 					// Extract VM configuration parameters from XML
@@ -142,7 +143,7 @@ public class DefaultEdgeServerManager extends EdgeServerManager{
 					long storage = Long.parseLong(vmElement.getElementsByTagName("storage").item(0).getTextContent());
 					// Calculate proportional bandwidth sharing across hosts and VMs
 					long bandwidth = SimSettings.getInstance().getWlanBandwidth() / (hostNodeList.getLength()+vmNodeList.getLength());
-					
+
 					// Create EdgeVM with time-shared cloudlet scheduler
 					EdgeVM vm = new EdgeVM(vmCounter, brokerId, mips, numOfCores, ram, bandwidth, storage, vmm, new CloudletSchedulerTimeShared());
 					vmList.get(hostCounter).add(vm);
@@ -153,7 +154,7 @@ public class DefaultEdgeServerManager extends EdgeServerManager{
 			}
 		}
 	}
-	
+
 	/**
 	 * Terminates all edge datacenters and shuts down their entities.
 	 * Properly closes all datacenter instances to clean up simulation resources.
@@ -168,13 +169,13 @@ public class DefaultEdgeServerManager extends EdgeServerManager{
 	 * Calculates the average CPU utilization across all edge VMs.
 	 * Iterates through all datacenters, hosts, and VMs to compute
 	 * the overall resource usage across the edge infrastructure.
-	 * 
+	 *
 	 * @return Average utilization percentage (0-100) across all edge VMs
 	 */
 	public double getAvgUtilization(){
 		double totalUtilization = 0;
 		double vmCounter = 0;
-		
+
 		// Iterate through each datacenter in the edge infrastructure
 		for(int i= 0; i<localDatacenters.size(); i++) {
 			List<? extends Host> list = localDatacenters.get(i).getHostList();
@@ -196,7 +197,7 @@ public class DefaultEdgeServerManager extends EdgeServerManager{
 	 * Creates a CloudSim datacenter from XML configuration element.
 	 * Extracts datacenter characteristics, creates hosts, and assembles
 	 * a complete datacenter entity with proper cost modeling and allocation policies.
-	 * 
+	 *
 	 * @param index Unique index for datacenter naming
 	 * @param datacenterElement XML element containing datacenter configuration
 	 * @return Configured CloudSim Datacenter instance
@@ -211,10 +212,10 @@ public class DefaultEdgeServerManager extends EdgeServerManager{
 		double costPerSec = Double.parseDouble(datacenterElement.getElementsByTagName("costPerSec").item(0).getTextContent());
 		double costPerMem = Double.parseDouble(datacenterElement.getElementsByTagName("costPerMem").item(0).getTextContent());
 		double costPerStorage = Double.parseDouble(datacenterElement.getElementsByTagName("costPerStorage").item(0).getTextContent());
-		
+
 		// Create hosts for this datacenter based on XML specification
 		List<EdgeHost> hostList=createHosts(datacenterElement);
-		
+
 		// Configure datacenter basic properties
 		String name = "Datacenter_" + Integer.toString(index);
 		double time_zone = 3.0;         // Time zone for this edge datacenter location
@@ -227,18 +228,18 @@ public class DefaultEdgeServerManager extends EdgeServerManager{
 
 		// Create the datacenter entity with custom VM allocation policy
 		Datacenter datacenter = null;
-	
+
 		VmAllocationPolicy vm_policy = getVmAllocationPolicy(hostList,index);
 		datacenter = new Datacenter(name, characteristics, vm_policy, storageList, 0);
-		
+
 		return datacenter;
 	}
-	
+
 	/**
 	 * Creates edge hosts from XML datacenter configuration element.
 	 * Extracts location information and host specifications to create
 	 * EdgeHost instances with proper geographic placement and resource configuration.
-	 * 
+	 *
 	 * @param datacenterElement XML element containing datacenter and host definitions
 	 * @return List of configured EdgeHost instances for the datacenter
 	 */
@@ -246,7 +247,7 @@ public class DefaultEdgeServerManager extends EdgeServerManager{
 
 		// Initialize list to store edge hosts for this datacenter
 		List<EdgeHost> hostList = new ArrayList<EdgeHost>();
-		
+
 		// Extract location information for geographic placement
 		Element location = (Element)datacenterElement.getElementsByTagName("location").item(0);
 		String attractiveness = location.getElementsByTagName("attractiveness").item(0).getTextContent();
@@ -259,7 +260,7 @@ public class DefaultEdgeServerManager extends EdgeServerManager{
 		NodeList hostNodeList = datacenterElement.getElementsByTagName("host");
 		for (int j = 0; j < hostNodeList.getLength(); j++) {
 			Node hostNode = hostNodeList.item(j);
-			
+
 			// Extract host resource specifications from XML
 			Element hostElement = (Element) hostNode;
 			int numOfCores = Integer.parseInt(hostElement.getElementsByTagName("core").item(0).getTextContent());
@@ -268,7 +269,7 @@ public class DefaultEdgeServerManager extends EdgeServerManager{
 			long storage = Long.parseLong(hostElement.getElementsByTagName("storage").item(0).getTextContent());
 			// Calculate proportional bandwidth sharing across hosts
 			long bandwidth = SimSettings.getInstance().getWlanBandwidth() / hostNodeList.getLength();
-			
+
 			// Create processing elements (PEs) for the host based on core count
 			List<Pe> peList = new ArrayList<Pe>();
 
@@ -276,7 +277,7 @@ public class DefaultEdgeServerManager extends EdgeServerManager{
 			for(int i=0; i<numOfCores; i++){
 				peList.add(new Pe(i, new PeProvisionerSimple(mips))); // PE with unique ID and MIPS rating
 			}
-			
+
 			// Create EdgeHost with resource provisioners and space-shared VM scheduling
 			EdgeHost host = new EdgeHost(
 					hostIdCounter,
@@ -286,7 +287,7 @@ public class DefaultEdgeServerManager extends EdgeServerManager{
 					peList,                               // List of processing elements
 					new VmSchedulerSpaceShared(peList)    // Space-shared VM scheduling policy
 				);
-			
+
 			// Set geographic location for edge-aware placement decisions
 			host.setPlace(new Location(placeTypeIndex, wlan_id, x_pos, y_pos));
 			hostList.add(host);

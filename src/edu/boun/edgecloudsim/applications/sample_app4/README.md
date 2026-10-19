@@ -6,7 +6,7 @@ You can find the presentation of this work on our YouTube channel. Click [here](
 
 ## Fuzzy Logic Based Workload Orchestrator
 
-In this application we introduce a fuzzy logic based workload orchestrator. In our design, two stage fuzzy logic system is used as shown in Figure 1. In the first stage, the most convenient edge server in the edge layer is found. In the second stage, the candidate edge server and the cloud server are compared. As a result of these operations, the proposed fuzzy logic based workload orchestrator finds a target server which can be the local edge server, remote edge server or the cloud server.
+In this application we introduce a fuzzy logic based workload orchestrator. In our design, two-stage fuzzy logic system is used as shown in Figure 1. In the first stage, the most convenient edge server in the edge layer is found. In the second stage, the candidate edge server and the cloud server are compared. As a result of these operations, the proposed fuzzy logic based workload orchestrator finds a target server which can be the local edge server, remote edge server or the cloud server.
 
 <p align="center">
   <img src="/doc/images/sample_app4/fls.png" width="50%">
@@ -17,11 +17,11 @@ In this application we introduce a fuzzy logic based workload orchestrator. In o
 
 ## Why Fuzzy Logic
 
-* Computation offloading is NP-Hard with many inputs and output variables
+* Computation offloading is NP-hard with many inputs and output variables
 * Fuzzy logic easily handles multi-constraint optimization process
 * There is no simple decision model for offloading
 * Fuzzy logic lets us handle the uncertainty with simple if-then rules
-* Fuzzy logic abstracts complex operational details in a high level human understandable format
+* Fuzzy logic abstracts complex operational details in a high-level, human-understandable format
 
 ## Simulated Environment
 

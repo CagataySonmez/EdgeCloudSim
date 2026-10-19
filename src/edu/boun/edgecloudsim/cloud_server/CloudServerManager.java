@@ -1,15 +1,15 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - CloudServerManager
- * 
- * Description: 
+ *
+ * Description:
  * CloudServerManager is responsible for creating and terminating
  * the cloud datacenters which operates the hosts and VMs.
  * It also provides the list of VMs running on the hosts and
  * the average utilization of all VMs.
  *
- * Please note that, EdgeCloudSim is built on top of CloudSim
- * Therefore, all the computational units are handled by CloudSim
- * 
+ * EdgeCloudSim delegates computational-resource simulation to CloudSim.
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -28,7 +28,9 @@ import org.cloudbus.cloudsim.VmAllocationPolicy;
  * Handles cloud datacenter operations, VM allocation, and resource management.
  */
 public abstract class CloudServerManager {
+	/** Cloud datacenter managed by this component. */
 	protected Datacenter localDatacenter;
+	/** Cloud VMs grouped by host. */
 	protected List<List<CloudVM>> vmList;
 
 	/**
@@ -46,7 +48,7 @@ public abstract class CloudServerManager {
 	public List<CloudVM> getVmList(int hostId){
 		return vmList.get(hostId);
 	}
-	
+
 	/**
 	 * Gets the cloud datacenter managed by this manager.
 	 * @return The cloud Datacenter instance
@@ -54,7 +56,7 @@ public abstract class CloudServerManager {
 	public Datacenter getDatacenter(){
 		return localDatacenter;
 	}
-	
+
 	/**
 	 * Initializes the cloud server manager with required configurations.
 	 * Called before datacenter operations begin.
@@ -64,7 +66,7 @@ public abstract class CloudServerManager {
 	/**
 	 * Provides VM allocation policy for cloud datacenters.
 	 * Determines how VMs are assigned to physical hosts.
-	 * 
+	 *
 	 * @param list List of available hosts in the datacenter
 	 * @param dataCenterIndex Index identifier of the datacenter
 	 * @return VmAllocationPolicy instance for VM placement decisions
@@ -76,19 +78,19 @@ public abstract class CloudServerManager {
 	 * @throws Exception if datacenter initialization fails
 	 */
 	public abstract void startDatacenters() throws Exception;
-	
+
 	/**
 	 * Terminates all cloud datacenters and releases their resources.
 	 * Called during simulation cleanup.
 	 */
 	public abstract void terminateDatacenters();
-	
+
 	/**
 	 * Creates the list of VMs for all cloud hosts.
 	 * @param brokerId The broker ID that will manage these VMs
 	 */
 	public abstract void createVmList(int brokerId);
-	
+
 	/**
 	 * Calculates and returns the average CPU utilization across all cloud VMs.
 	 * @return Average utilization percentage (0.0 to 1.0)

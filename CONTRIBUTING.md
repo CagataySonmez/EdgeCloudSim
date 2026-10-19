@@ -43,7 +43,7 @@ A clear and concise description of what the bug is.
 
 **Environment**
 - OS: [e.g. Ubuntu 20.04, Windows 10]
-- Java Version: [e.g. OpenJDK 11]
+- Java Version: [e.g. OpenJDK 21]
 - EdgeCloudSim Version: [e.g. v4.0]
 
 **Steps to Reproduce**
@@ -76,7 +76,7 @@ We welcome feature requests! Please:
 ## Development Setup
 
 ### Prerequisites
-- Java 8 or higher
+- Java 21 or higher (required by the bundled CloudSim 7.0.0-alpha binary)
 - Eclipse IDE (recommended) or any Java IDE
 - Git
 
@@ -104,31 +104,29 @@ We welcome feature requests! Please:
 
 ## Pull Request Process
 
-### ⚠️ IMPORTANT: All pull requests MUST target the `development` branch
+### ⚠️ IMPORTANT: All pull requests MUST target the `develop` branch
 
 ### Workflow Overview
 
-### Workflow Overview
-
-1. **Create a feature branch** from `development`
+1. **Create a feature branch** from `develop`
 2. **Make your changes** with clear commits
 3. **Test thoroughly** before submitting
-4. **Submit a pull request** to `development` branch
+4. **Submit a pull request** to `develop` branch
 5. **Respond to review feedback** if needed
 
 ### Detailed Steps
 
 #### 1. Sync with Upstream Development Branch
 ```bash
-git checkout development
-git pull upstream development
-git push origin development
+git checkout develop
+git pull upstream develop
+git push origin develop
 ```
 
 #### 2. Create a Feature Branch
 Use descriptive branch names with prefixes:
 - `feature/` for new features
-- `bugfix/` for bug fixes  
+- `bugfix/` for bug fixes
 - `docs/` for documentation
 - `test/` for testing improvements
 
@@ -163,12 +161,18 @@ Before submitting:
 - [ ] New functionality has been tested
 - [ ] Documentation updated if needed
 
+Run the complete local quality gate from the repository root:
+
+```bash
+./scripts/quality_check.sh
+```
+
 #### 5. Submit Pull Request
 
-**Target Branch:** Always select `development` as the base branch
+**Target Branch:** Always select `develop` as the base branch
 
 **PR Checklist:**
-- [ ] Branch is up-to-date with `development`
+- [ ] Branch is up-to-date with `develop`
 - [ ] All tests pass
 - [ ] Code follows project conventions
 - [ ] Documentation updated
@@ -204,7 +208,7 @@ Closes #(issue number)
 
 - ❌ **Direct pushes to `master`** are not allowed
 - ❌ **Pull requests to `master`** will be rejected
-- ✅ **All changes must go through `development`** branch
+- ✅ **All changes must go through `develop`** branch
 - ✅ **Code review is required** before merging
 
 ## Questions?

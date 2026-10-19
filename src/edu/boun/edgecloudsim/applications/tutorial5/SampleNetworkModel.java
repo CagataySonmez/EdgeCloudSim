@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 package edu.boun.edgecloudsim.applications.tutorial5;
 
 import edu.boun.edgecloudsim.core.SimSettings;
 import edu.boun.edgecloudsim.edge_client.Task;
 import edu.boun.edgecloudsim.network.NetworkModel;
-import edu.boun.edgecloudsim.utils.Location;;
+import edu.boun.edgecloudsim.utils.Location;
 
 // Simplified analytical network model for tutorial5:
 // - Uses closed-form M/M/1 (single server) or M/M/2 (two parallel servers) queueing delay
@@ -12,18 +13,25 @@ import edu.boun.edgecloudsim.utils.Location;;
 // - Input parameters (mean inter-arrival and average task sizes) are derived as
 //   weighted averages from task lookup table usage percentages.
 // - Device population per datacenter approximates offered load: λ_total = (1/poissonMean) * (#mobiles / #datacenters)
-// - Stability not explicitly guarded; if system utilization ρ approaches 1,
-//   formulas can explode (would be a place to clamp or return 0 to indicate congestion).
+// - Unstable queues and invalid parameters return zero to signal that the transfer
+//   cannot be served by the analytical model.
 
+/** Estimates tutorial 5 transfer delay with M/M/1 or M/M/2 queueing models. */
 public class SampleNetworkModel extends NetworkModel {
 	private double poissonMean;        // Mean inter-arrival time (seconds) per task type (weighted)
 	private double avgTaskInputSize;   // Average input size (KB) used for modeling (after weighting)
 	private double avgTaskOutputSize;  // Average output size (KB) used for modeling (after weighting)
-	
+
+	/**
+	 * Creates the tutorial network model.
+	 *
+	 * @param _numberOfMobileDevices number of simulated mobile devices
+	 * @param _simScenario simulation-scenario identifier
+	 */
 	public SampleNetworkModel(int _numberOfMobileDevices, String _simScenario) {
 		super(_numberOfMobileDevices, _simScenario);
 	}
-	
+
 	@Override
 	public void initialize() {
 		poissonMean=0;
@@ -32,7 +40,6 @@ public class SampleNetworkModel extends NetworkModel {
 
 		// Aggregate weighted metrics across task types (skip zero-weight entries)
 		// weight = usagePercentage / 100
-		double numOfTaskType = 0;
 		SimSettings SS = SimSettings.getInstance();
 		for (int i=0; i<SimSettings.getInstance().getTaskLookUpTable().length; i++) {
 			double weight = SS.getTaskLookUpTable()[i][0]/(double)100;
@@ -41,46 +48,52 @@ public class SampleNetworkModel extends NetworkModel {
 				poissonMean += (SS.getTaskLookUpTable()[i][2])*weight;
 				avgTaskInputSize += SS.getTaskLookUpTable()[i][5]*weight;
 				avgTaskOutputSize += SS.getTaskLookUpTable()[i][6]*weight;
-				numOfTaskType++;
 			}
 		}
-
-		// Normalize by number of contributing task types
-		poissonMean = poissonMean/numOfTaskType;
-		avgTaskInputSize = avgTaskInputSize/numOfTaskType;
-		avgTaskOutputSize = avgTaskOutputSize/numOfTaskType;
 	}
-	
+
 	// M/M/1 expected system time: 1 / (μ - λ) + propagation.
 	// λ = (1/PoissonMean)*deviceCount  (tasks/s)
 	// μ = linkCapacity(Bps) / avgTaskSize(Bytes)
 	// Units:
 	//   bandwidth Kbps -> Bps
 	//   avgTaskSize KB -> Bytes
-	// NOTE: No explicit check for μ <= λ; a negative/large result would imply instability.
 	private double calculateMM1(double propagationDelay, int bandwidth /*Kbps*/, double PoissonMean, double avgTaskSize /*KB*/, int deviceCount){
-		double Bps=0, mu=0, lamda=0;
+		if (propagationDelay < 0 || bandwidth <= 0 || PoissonMean <= 0
+				|| avgTaskSize <= 0 || deviceCount < 0) {
+			return 0;
+		}
 		avgTaskSize = avgTaskSize * (double)1000; // KB -> Bytes
-		Bps = bandwidth * (double)1000 / (double)8; // Kbps -> Bytes/sec
-		lamda = ((double)1/(double)PoissonMean)*(double)deviceCount;
-		mu = Bps / avgTaskSize;
-		double result = (double)1 / (mu-lamda);
+		double bytesPerSecond = bandwidth * (double)1000 / (double)8;
+		double arrivalRate = (1.0 / PoissonMean) * deviceCount;
+		double serviceRate = bytesPerSecond / avgTaskSize;
+		if (arrivalRate >= serviceRate) {
+			return 0;
+		}
+		double result = 1.0 / (serviceRate - arrivalRate);
 		result += propagationDelay;
-		return result;
+		return Double.isFinite(result) ? result : 0;
 	}
-	
+
 	// M/M/2 expected system time: 4μ / ((2μ - λ)(2μ + λ)) + propagation.
 	// Same unit conversions and caveats apply as M/M/1.
 	private double calculateMM2(double propagationDelay, int bandwidth /*Kbps*/, double PoissonMean, double avgTaskSize /*KB*/, int deviceCount){
-		double Bps=0, mu=0, lamda=0;
+		if (propagationDelay < 0 || bandwidth <= 0 || PoissonMean <= 0
+				|| avgTaskSize <= 0 || deviceCount < 0) {
+			return 0;
+		}
 		double four = 4, two = 2;
 		avgTaskSize = avgTaskSize * (double)1000; // KB -> Bytes
-		Bps = bandwidth * (double)1000 / (double)8; // Kbps -> Bytes/sec
-		lamda = ((double)1/(double)PoissonMean)*(double)deviceCount;
-		mu = Bps / avgTaskSize;
-		double result = (four*mu) / ((two*mu-lamda) * (two*mu+lamda));
+		double bytesPerSecond = bandwidth * (double)1000 / (double)8;
+		double arrivalRate = (1.0 / PoissonMean) * deviceCount;
+		double serviceRate = bytesPerSecond / avgTaskSize;
+		if (arrivalRate >= two * serviceRate) {
+			return 0;
+		}
+		double result = (four * serviceRate)
+				/ ((two * serviceRate - arrivalRate) * (two * serviceRate + arrivalRate));
 		result += propagationDelay;
-		return result;
+		return Double.isFinite(result) ? result : 0;
 	}
 
 	@Override

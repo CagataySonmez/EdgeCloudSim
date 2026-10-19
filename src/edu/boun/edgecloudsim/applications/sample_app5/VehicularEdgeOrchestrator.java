@@ -1,10 +1,11 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Edge Orchestrator implementation
- * 
- * Description: 
+ *
+ * Description:
  * VehicularEdgeOrchestrator decides which tier (mobile, edge or cloud)
  * to offload and picks proper VM to execute incoming tasks
- *               
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -25,12 +26,16 @@ import edu.boun.edgecloudsim.edge_client.Task;
 import edu.boun.edgecloudsim.utils.SimLogger;
 import edu.boun.edgecloudsim.utils.SimUtils;
 
+/** Selects an execution tier and VM for tasks in the vehicular sample. */
 public class VehicularEdgeOrchestrator extends EdgeOrchestrator {
-	private static final int BASE = 100000; //start from base in order not to conflict cloudsim tag!
+	private static final int BASE = 100000; // Offset custom tags from CloudSim's reserved range.
 	private static final int UPDATE_PREDICTION_WINDOW = BASE+1;
 
+	/** Cloud tier reached through the cellular link. */
 	public static final int CLOUD_DATACENTER_VIA_GSM = 1;
+	/** Cloud tier reached through the roadside unit. */
 	public static final int CLOUD_DATACENTER_VIA_RSU = 2;
+	/** Edge-computing tier. */
 	public static final int EDGE_DATACENTER = 3;
 
 	private int cloudVmCounter;
@@ -107,7 +112,7 @@ public class VehicularEdgeOrchestrator extends EdgeOrchestrator {
 				CLOUD_DATACENTER_VIA_GSM
 		};
 
-		// Handle zero delays for AI-based and advanced algorithms
+		// Substitute configured bounds when a path has no usable delay estimate.
 		// Replace zero delays with maximum values to indicate unavailability
 		if(policy.startsWith("AI_") || policy.equals("MAB") || policy.equals("GAME_THEORY")) {
 			if(wanUploadDelay == 0)
@@ -185,7 +190,7 @@ public class VehicularEdgeOrchestrator extends EdgeOrchestrator {
 
 				if(!resultFound) {
 					SimLogger.printLine("Unexpected probability calculation! Terminating simulation...");
-					System.exit(1);
+					edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 				}
 			}
 			// Select option with minimum predicted service time
@@ -196,8 +201,8 @@ public class VehicularEdgeOrchestrator extends EdgeOrchestrator {
 			else if(predictedServiceTimeForCloudViaGSM <= Math.min(predictedServiceTimeForEdge, predictedServiceTimeForCloudViaRSU))
 				result = CLOUD_DATACENTER_VIA_GSM;
 			else{
-				SimLogger.printLine("Impossible occurred in AI based algorithm! Terminating simulation...");
-				System.exit(1);
+				SimLogger.printLine("The AI-based algorithm produced no valid target. Terminating simulation...");
+				edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 			}
 
 			// Update offload statistics for future predictions
@@ -235,7 +240,7 @@ public class VehicularEdgeOrchestrator extends EdgeOrchestrator {
 
 			if(!resultFound) {
 				SimLogger.printLine("Unexpected probability calculation for AI based orchestrator! Terminating simulation...");
-				System.exit(1);
+				edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 			}
 		}
 		// RANDOM: Uniform random selection among all options (baseline)
@@ -256,7 +261,7 @@ public class VehicularEdgeOrchestrator extends EdgeOrchestrator {
 
 			if(!resultFound) {
 				SimLogger.printLine("Unexpected probability calculation for random orchestrator! Terminating simulation...");
-				System.exit(1);
+				edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 			}
 		}
 		// MAB: Multi-Armed Bandit with Upper Confidence Bound algorithm
@@ -292,7 +297,7 @@ public class VehicularEdgeOrchestrator extends EdgeOrchestrator {
 			// Adjust for queueing delay based on utilization (M/M/1 queue approximation)
 			expectedProcessingDealyOnEdge *= 100 / (100 - avgEdgeUtilization);
 
-			double expectedEdgeDelay = expectedProcessingDealyOnEdge + 
+			double expectedEdgeDelay = expectedProcessingDealyOnEdge +
 					wlanUploadDelay + wlanDownloadDelay;
 
 			// Calculate expected processing delay on cloud considering utilization
@@ -303,7 +308,7 @@ public class VehicularEdgeOrchestrator extends EdgeOrchestrator {
 
 			// Randomly choose between GSM and RSU for cloud access
 			boolean isGsmFaster = SimUtils.getRandomDoubleNumber(0, 1) < 0.5;
-			double expectedCloudDelay = expectedProcessingDealyOnCloud +	
+			double expectedCloudDelay = expectedProcessingDealyOnCloud +
 					(isGsmFaster ? gsmUploadDelay : wanUploadDelay) +
 					(isGsmFaster ? gsmDownloadDelay : wanDownloadDelay);
 
@@ -323,7 +328,7 @@ public class VehicularEdgeOrchestrator extends EdgeOrchestrator {
 				result = (isGsmFaster ? CLOUD_DATACENTER_VIA_GSM : CLOUD_DATACENTER_VIA_RSU);
 		}
 		// PREDICTIVE: Adaptive algorithm based on historical performance statistics
-		else if (policy.equals("PREDICTIVE")) {		
+		else if (policy.equals("PREDICTIVE")) {
 			// Initial uniform probability distribution
 			double probabilities[] = {0.34, 0.33, 0.33};
 
@@ -331,16 +336,16 @@ public class VehicularEdgeOrchestrator extends EdgeOrchestrator {
 			if(CloudSim.clock() > SimSettings.getInstance().getWarmUpPeriod()) {
 				// Calculate failure rates for each option
 				double failureRates[] = {
-						statisticLogger.getFailureRate(options[0]),
-						statisticLogger.getFailureRate(options[1]),
-						statisticLogger.getFailureRate(options[2])
+						statisticLogger.getWeightedAverageFailureRate(options[0]),
+						statisticLogger.getWeightedAverageFailureRate(options[1]),
+						statisticLogger.getWeightedAverageFailureRate(options[2])
 				};
 
 				// Calculate average service times for each option
 				double serviceTimes[] = {
-						statisticLogger.getServiceTime(options[0]),
-						statisticLogger.getServiceTime(options[1]),
-						statisticLogger.getServiceTime(options[2])
+						statisticLogger.getWeightedAverageServiceTime(options[0]),
+						statisticLogger.getWeightedAverageServiceTime(options[1]),
+						statisticLogger.getWeightedAverageServiceTime(options[2])
 				};
 
 				double failureRateScores[] = {0, 0, 0};
@@ -354,37 +359,36 @@ public class VehicularEdgeOrchestrator extends EdgeOrchestrator {
 					serviceTimeScores[i] = DoubleStream.of(serviceTimes).sum() / serviceTimes[i];
 				}
 
-				// Adapt probabilities based on performance metrics
+				double averageFailureRate = DoubleStream.of(failureRates).average().orElse(0);
+				// Adapt probabilities based on performance metrics.
 				for(int i=0; i<probabilities.length; i++) {
 					// Prioritize failure rate if overall failure rate is high (>30%)
-					if(DoubleStream.of(failureRates).sum() > 0.3)
+					if(averageFailureRate > 30.0)
 						probabilities[i] = failureRateScores[i] / DoubleStream.of(failureRateScores).sum();
 					else
 						// Otherwise prioritize service time optimization
-						probabilities[i] = serviceTimeScores[i] / DoubleStream.of(serviceTimeScores).sum(); 
+						probabilities[i] = serviceTimeScores[i] / DoubleStream.of(serviceTimeScores).sum();
 				}
 			}
 
-			double randomNumber = SimUtils.getRandomDoubleNumber(0.01, 0.99);
-			double lastPercentagte = 0;
+			double randomNumber = SimUtils.getRandomDoubleNumber(0, 1);
+			double cumulativeProbability = 0;
 			boolean resultFound = false;
 			for(int i=0; i<probabilities.length; i++) {
-				if(randomNumber <= probabilities[i] + lastPercentagte) {
+				cumulativeProbability += probabilities[i];
+				if(randomNumber < cumulativeProbability || i == probabilities.length - 1) {
 					result = options[i];
 					resultFound = true;
 					break;
 				}
-				lastPercentagte += probabilities[i];
 			}
 
 			if(!resultFound) {
-				SimLogger.printLine("Unexpected probability calculation for predictive orchestrator! Terminating simulation...");
-				System.exit(1);
+				throw new IllegalStateException("Predictive orchestrator produced invalid probabilities");
 			}
 		}
 		else {
-			SimLogger.printLine("Unknow edge orchestrator policy! Terminating simulation...");
-			System.exit(1);
+			throw new IllegalArgumentException("Unknown edge orchestrator policy: " + policy);
 		}
 
 		return result;
@@ -402,37 +406,59 @@ public class VehicularEdgeOrchestrator extends EdgeOrchestrator {
 
 		// Cloud VM selection (both GSM and RSU use same cloud infrastructure)
 		if (deviceId == CLOUD_DATACENTER_VIA_GSM || deviceId == CLOUD_DATACENTER_VIA_RSU) {
-			int numOfCloudHosts = SimSettings.getInstance().getNumOfCloudHost();
-			int hostIndex = (cloudVmCounter / numOfCloudHosts) % numOfCloudHosts;
-			int vmIndex = cloudVmCounter % SimSettings.getInstance().getNumOfCloudVMsPerHost();;
-
-			selectedVM = SimManager.getInstance().getCloudServerManager().getVmList(hostIndex).get(vmIndex);
-
-			// Round-robin cloud VM counter
-			cloudVmCounter++;
-			cloudVmCounter = cloudVmCounter % SimSettings.getInstance().getNumOfCloudVMs();
+			selectedVM = selectCloudVmRoundRobin();
 
 		}
 		// Edge VM selection
 		else if (deviceId == EDGE_DATACENTER) {
-			int numOfEdgeVMs = SimSettings.getInstance().getNumOfEdgeVMs();
-			int numOfEdgeHosts = SimSettings.getInstance().getNumOfEdgeHosts();
-			int vmPerHost = numOfEdgeVMs / numOfEdgeHosts;
-
-			int hostIndex = (edgeVmCounter / vmPerHost) % numOfEdgeHosts;
-			int vmIndex = edgeVmCounter % vmPerHost;
-
-			selectedVM = SimManager.getInstance().getEdgeServerManager().getVmList(hostIndex).get(vmIndex);
-
-			// Round-robin edge VM counter
-			edgeVmCounter++;
-			edgeVmCounter = edgeVmCounter % numOfEdgeVMs;
+			selectedVM = selectEdgeVmRoundRobin();
 		}
 		else {
-			SimLogger.printLine("Unknown device id! Terminating simulation...");
-			System.exit(1);
+			throw new IllegalArgumentException("Unknown device ID: " + deviceId);
 		}
 		return selectedVM;
+	}
+
+	private Vm selectCloudVmRoundRobin() {
+		int hostCount = SimSettings.getInstance().getNumOfCloudHost();
+		int totalVmCount = 0;
+		for (int hostIndex = 0; hostIndex < hostCount; hostIndex++) {
+			totalVmCount += SimManager.getInstance().getCloudServerManager().getVmList(hostIndex).size();
+		}
+		if (totalVmCount == 0) {
+			return null;
+		}
+		int targetIndex = Math.floorMod(cloudVmCounter++, totalVmCount);
+		for (int hostIndex = 0; hostIndex < hostCount; hostIndex++) {
+			java.util.List<? extends Vm> vmList =
+					SimManager.getInstance().getCloudServerManager().getVmList(hostIndex);
+			if (targetIndex < vmList.size()) {
+				return vmList.get(targetIndex);
+			}
+			targetIndex -= vmList.size();
+		}
+		throw new IllegalStateException("Cloud VM inventory changed during selection");
+	}
+
+	private Vm selectEdgeVmRoundRobin() {
+		int hostCount = SimSettings.getInstance().getNumOfEdgeHosts();
+		int totalVmCount = 0;
+		for (int hostIndex = 0; hostIndex < hostCount; hostIndex++) {
+			totalVmCount += SimManager.getInstance().getEdgeServerManager().getVmList(hostIndex).size();
+		}
+		if (totalVmCount == 0) {
+			return null;
+		}
+		int targetIndex = Math.floorMod(edgeVmCounter++, totalVmCount);
+		for (int hostIndex = 0; hostIndex < hostCount; hostIndex++) {
+			java.util.List<? extends Vm> vmList =
+					SimManager.getInstance().getEdgeServerManager().getVmList(hostIndex);
+			if (targetIndex < vmList.size()) {
+				return vmList.get(targetIndex);
+			}
+			targetIndex -= vmList.size();
+		}
+		throw new IllegalStateException("Edge VM inventory changed during selection");
 	}
 
 	@Override
@@ -440,7 +466,7 @@ public class VehicularEdgeOrchestrator extends EdgeOrchestrator {
 		// Schedule periodic statistics window updates for predictive policy
 		if(policy.equals("PREDICTIVE")) {
 			schedule(getId(), SimSettings.CLIENT_ACTIVITY_START_TIME +
-					OrchestratorStatisticLogger.PREDICTION_WINDOW_UPDATE_INTERVAL, 
+					OrchestratorStatisticLogger.PREDICTION_WINDOW_UPDATE_INTERVAL,
 					UPDATE_PREDICTION_WINDOW);
 		}
 	}
@@ -455,7 +481,7 @@ public class VehicularEdgeOrchestrator extends EdgeOrchestrator {
 	public void processEvent(SimEvent ev) {
 		if (ev == null) {
 			SimLogger.printLine(getName() + ".processOtherEvent(): " + "Error - an event is null! Terminating simulation...");
-			System.exit(1);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 			return;
 		}
 
@@ -473,10 +499,15 @@ public class VehicularEdgeOrchestrator extends EdgeOrchestrator {
 		}
 	}
 
+	/**
+	 * Handles the periodic prediction-window event.
+	 *
+	 * @param ev CloudSim event to process
+	 */
 	public void processOtherEvent(SimEvent ev) {
 		if (ev == null) {
 			SimLogger.printLine(getName() + ".processOtherEvent(): " + "Error - an event is null! Terminating simulation...");
-			System.exit(1);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 			return;
 		}
 	}

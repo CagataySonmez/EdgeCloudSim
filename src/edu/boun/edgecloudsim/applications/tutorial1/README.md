@@ -42,7 +42,7 @@ This tutorial implements and compares five distinct VM scheduling algorithms:
 
 ### 1. Random (RND)
 - **Strategy**: Randomly selects an available VM from the pool
-- **Characteristics**: 
+- **Characteristics**:
   - No optimization criteria
   - Provides baseline performance metrics
   - Useful for comparison against optimized algorithms
@@ -77,4 +77,4 @@ This tutorial implements and compares five distinct VM scheduling algorithms:
 
 ---
 
-**Note**: This tutorial provides fundamental insights into task offloading decision making. Real-world deployments should consider additional factors such as network conditions, task dependencies, security requirements, and user mobility patterns.
+**Note**: This tutorial provides fundamental insights into task offloading decision-making. Real-world deployments should consider additional factors such as network conditions, task dependencies, security requirements, and user mobility patterns.

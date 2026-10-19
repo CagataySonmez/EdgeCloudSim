@@ -1,13 +1,12 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Mobile Server Manager
- * 
- * Description: 
+ *
+ * Description:
  * DefaultMobileServerManager is responsible for creating datacenters, hosts and VMs.
  *
- * Please note that the mobile processing units are simulated via
- * CloudSim. It is assumed that the mobile devices operate Hosts
- * and VMs like a server. That is why the class names are similar
- * to other Cloud and Edge components (to provide consistency).
+ * Mobile processing units are represented by CloudSim hosts and VMs,
+ * following the same abstraction used for the cloud and edge tiers.
  *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
@@ -41,7 +40,7 @@ public class DefaultMobileServerManager extends MobileServerManager{
 	@Override
 	public void initialize() {
 	}
-	
+
 	/**
 	 * Creates and returns the VM allocation policy for mobile datacenters.
 	 * @param list List of mobile hosts available for VM allocation

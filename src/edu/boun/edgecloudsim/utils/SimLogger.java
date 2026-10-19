@@ -1,28 +1,29 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Simulation Logger
- * 
- * Description: 
+ *
+ * Description:
  * SimLogger is responsible for storing simulation events/results
  * in to the files in a specific format.
  * Format is decided in a way to use results in matlab efficiently.
  * If you need more results or another file format, you should modify
  * this class.
- * 
+ *
  * IMPORTANT NOTES:
  * EdgeCloudSim is designed to perform file logging operations with
  * a low memory consumption. Deep file logging is performed whenever
  * a task is completed. This may cause too many file IO operation and
- * increase the time consumption!
- * 
+ * increase execution time.
+ *
  * The basic results are kept in the memory, and saved to the files
  * at the end of the simulation. So, basic file logging does
- * bring too much overhead to the time complexity. 
- * 
- * In the earlier versions (v3 and older), EdgeCloudSim keeps all the 
+ * bring too much overhead to the time complexity.
+ *
+ * In the earlier versions (v3 and older), EdgeCloudSim keeps all the
  * task results in the memory and save them to the files when the
  * simulation ends. Since this approach increases memory consumption
  * too much, we sacrificed the time complexity.
- * 
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -45,47 +46,26 @@ import edu.boun.edgecloudsim.core.SimSettings.NETWORK_DELAY_TYPES;
 import edu.boun.edgecloudsim.utils.SimLogger.NETWORK_ERRORS;
 
 /**
- * Comprehensive simulation logging and result collection system for EdgeCloudSim.
- * 
- * <p>SimLogger is responsible for tracking, collecting, and persisting simulation events
- * and performance metrics throughout the simulation execution. It provides both real-time
- * logging capabilities and comprehensive result aggregation for post-simulation analysis.</p>
- * 
- * <p><b>Key Design Features:</b>
- * <ul>
- *   <li><b>Memory Optimization:</b> Balances memory usage with file I/O overhead</li>
- *   <li><b>MATLAB Compatibility:</b> Generates results in MATLAB-friendly formats</li>
- *   <li><b>Multi-tier Analytics:</b> Tracks metrics across cloud, edge, and mobile tiers</li>
- *   <li><b>Comprehensive Coverage:</b> Monitors performance, failures, delays, and costs</li>
- * </ul></p>
- * 
- * <p><b>Logging Strategy:</b>
- * <ul>
- *   <li><b>Deep Logging:</b> Immediate file writes for detailed task events (high I/O)</li>
- *   <li><b>Basic Logging:</b> Memory accumulation with end-of-simulation writes (low overhead)</li>
- *   <li><b>Selective Logging:</b> Configurable verbosity levels for different metrics</li>
- * </ul></p>
- * 
- * <p><b>Collected Metrics Categories:</b>
- * <ul>
- *   <li>Task completion rates and failure analysis</li>
- *   <li>Network delays across all communication segments</li>
- *   <li>Processing times and service quality metrics</li>
- *   <li>Resource utilization and capacity constraints</li>
- *   <li>Cost analysis and Quality of Experience (QoE)</li>
- *   <li>Infrastructure overhead and orchestration costs</li>
- * </ul></p>
- * 
- * <p>The logger implements the Singleton pattern to ensure consistent data collection
- * across all simulation components while maintaining thread-safe operations.</p>
- * 
- * @see edu.boun.edgecloudsim.core.SimManager
- * @see edu.boun.edgecloudsim.core.SimSettings
+ * Collects task, delay, utilization, cost, and failure measurements and writes
+ * the simulator's delimited result files.
+ *
+ * <p>Basic logging retains task records until the simulation ends. Deep logging
+ * additionally writes per-task records during the run. This class is a singleton,
+ * but its mutable state is not generally synchronized; simulations are expected to
+ * update it through the CloudSim event thread.</p>
  */
 public class SimLogger {
+	private static double divideOrZero(double numerator, double denominator) {
+		return denominator == 0 ? 0 : numerator / denominator;
+	}
+
+	static boolean isCompletedStatus(TASK_STATUS status) {
+		return status == TASK_STATUS.COMLETED;
+	}
+
 	/**
 	 * Enumeration of possible task states throughout the simulation lifecycle.
-	 * 
+	 *
 	 * <p>Task status tracking enables detailed analysis of where tasks succeed,
 	 * fail, or encounter bottlenecks in the edge-cloud processing pipeline.</p>
 	 */
@@ -98,8 +78,8 @@ public class SimLogger {
 		PROCESSING,
 		/** Task results are being downloaded back to mobile device */
 		DOWNLOADING,
-		/** Task has completed successfully */
-		COMLETED,  // Note: Misspelling preserved from original code
+		/** Task has completed successfully. */
+		COMLETED,
 		/** Task rejected due to insufficient VM computational capacity */
 		REJECTED_DUE_TO_VM_CAPACITY,
 		/** Task rejected due to insufficient network bandwidth */
@@ -109,12 +89,21 @@ public class SimLogger {
 		/** Task failed due to device mobility (moved out of range) */
 		UNFINISHED_DUE_TO_MOBILITY,
 		/** Task rejected due to WLAN coverage limitations */
-		REJECTED_DUE_TO_WLAN_COVERAGE
+		REJECTED_DUE_TO_WLAN_COVERAGE;
+
+		/**
+		 * Correctly spelled alias for {@link #COMLETED}.
+		 *
+		 * <p>This is deliberately an alias rather than a new enum value. Consequently,
+		 * existing identity comparisons, ordinals, serialized enum names, and switch
+		 * statements continue to observe the historical value.</p>
+		 */
+		public static final TASK_STATUS COMPLETED = COMLETED;
 	}
-	
+
 	/**
 	 * Enumeration of network error types for failure analysis.
-	 * 
+	 *
 	 * <p>Network error categorization enables targeted analysis of communication
 	 * failures across different network segments and technologies.</p>
 	 */
@@ -133,37 +122,37 @@ public class SimLogger {
 
 	/** Simulation start timestamp for performance measurement */
 	private long startTime;
-	
+
 	/** Simulation end timestamp for performance measurement */
 	private long endTime;
-	
+
 	/** Global flag controlling file-based logging operations */
 	private static boolean fileLogEnabled;
-	
+
 	/** Global flag controlling console output logging */
 	private static boolean printLogEnabled;
-	
+
 	/** Prefix for output file naming to support batch simulations */
 	private String filePrefix;
-	
+
 	/** Directory path for simulation output files */
 	private String outputFolder;
-	
+
 	/** Map storing detailed task event information for deep logging */
 	private Map<Integer, LogItem> taskMap;
-	
+
 	/** List tracking VM computational load over time */
 	private LinkedList<VmLoadLogItem> vmLoadList;
-	
+
 	/** List tracking access point network delays over time */
 	private LinkedList<ApDelayLogItem> apDelayList;
 
 	/** Singleton instance ensuring consistent logging across simulation components */
 	private static SimLogger singleton = new SimLogger();
-	
+
 	/** Number of application types defined in simulation configuration */
 	private int numOfAppTypes;
-	
+
 	private File successFile = null, failFile = null;
 	private FileWriter successFW = null, failFW = null;
 	private BufferedWriter successBW = null, failBW = null;
@@ -190,7 +179,7 @@ public class SimLogger {
 	private double[] wanDelay = null;
 	private double[] manDelay = null;
 	private double[] lanDelay = null;
-	
+
 	private double[] gsmUsage = null;
 	private double[] wanUsage = null;
 	private double[] manUsage = null;
@@ -210,7 +199,7 @@ public class SimLogger {
 	private int[] failedTaskDueToVmCapacityOnCloud = null;
 	private int[] failedTaskDueToVmCapacityOnEdge = null;
 	private int[] failedTaskDueToVmCapacityOnMobile = null;
-	
+
 	private double[] cost = null;
 	private double[] QoE = null;
 	private int[] failedTaskDuetoBw = null;
@@ -219,14 +208,14 @@ public class SimLogger {
 	private int[] failedTaskDuetoWanBw = null;
 	private int[] failedTaskDuetoGsmBw = null;
 	private int[] failedTaskDuetoMobility = null;
-	private int[] refectedTaskDuetoWlanRange = null;
-	
+	private int[] rejectedTaskDueToWlanRange = null;
+
 	/** Array storing orchestration overhead measurements per application type */
 	private double[] orchestratorOverhead = null;
 
 	/**
 	 * Private constructor implementing Singleton pattern.
-	 * 
+	 *
 	 * <p>Initializes the logger with default settings (logging disabled) and prevents
 	 * external instantiation to ensure consistent data collection across the simulation.</p>
 	 */
@@ -237,11 +226,11 @@ public class SimLogger {
 
 	/**
 	 * Returns the singleton instance of SimLogger.
-	 * 
+	 *
 	 * <p>Provides global access to the simulation logger, ensuring all components
 	 * use the same logging instance for consistent data collection and result
 	 * aggregation throughout the simulation execution.</p>
-	 * 
+	 *
 	 * @return the singleton SimLogger instance
 	 */
 	public static SimLogger getInstance() {
@@ -250,9 +239,9 @@ public class SimLogger {
 
 	/**
 	 * Enables file-based logging for persistent result storage.
-	 * 
+	 *
 	 * <p>When enabled, the logger writes detailed simulation results to files
-	 * for post-simulation analysis. File logging includes comprehensive metrics
+	 * for post-simulation analysis. File logging includes aggregate metrics
 	 * suitable for MATLAB analysis and visualization tools.</p>
 	 */
 	public static void enableFileLog() {
@@ -261,7 +250,7 @@ public class SimLogger {
 
 	/**
 	 * Enables console-based logging for real-time monitoring.
-	 * 
+	 *
 	 * <p>When enabled, the logger outputs simulation progress and key events
 	 * to the console, providing real-time feedback during simulation execution.
 	 * Useful for debugging and monitoring simulation progress.</p>
@@ -272,7 +261,7 @@ public class SimLogger {
 
 	/**
 	 * Checks if file logging is currently enabled.
-	 * 
+	 *
 	 * @return true if file logging is enabled, false otherwise
 	 */
 	public static boolean isFileLogEnabled() {
@@ -281,27 +270,27 @@ public class SimLogger {
 
 	/**
 	 * Disables file-based logging to reduce I/O overhead.
-	 * 
+	 *
 	 * <p>When disabled, simulation results will only be kept in memory
 	 * and won't be persistently stored to files.</p>
 	 */
 	public static void disableFileLog() {
 		fileLogEnabled = false;
 	}
-	
+
 	/**
 	 * Disables console-based logging to reduce output verbosity.
-	 * 
+	 *
 	 * <p>When disabled, the logger will run silently without console output,
 	 * improving performance for batch simulation runs.</p>
 	 */
 	public static void disablePrintLog() {
 		printLogEnabled = false;
 	}
-	
+
 	/**
 	 * Returns the output folder path for simulation results.
-	 * 
+	 *
 	 * @return the directory path where simulation output files are stored
 	 */
 	public String getOutputFolder() {
@@ -310,7 +299,7 @@ public class SimLogger {
 
 	/**
 	 * Helper method to append a line to a buffered writer with proper formatting.
-	 * 
+	 *
 	 * @param bw the BufferedWriter to write to
 	 * @param line the text line to append
 	 * @throws IOException if writing fails
@@ -322,10 +311,10 @@ public class SimLogger {
 
 	/**
 	 * Prints a line to console if print logging is enabled.
-	 * 
+	 *
 	 * <p>Provides conditional console output based on the global print logging
 	 * setting. Use this method throughout EdgeCloudSim for consistent logging behavior.</p>
-	 * 
+	 *
 	 * @param msg the message to print to console
 	 */
 	public static void printLine(String msg) {
@@ -335,10 +324,10 @@ public class SimLogger {
 
 	/**
 	 * Prints text to console without newline if print logging is enabled.
-	 * 
+	 *
 	 * <p>Useful for progress indicators and multi-part messages that span
 	 * multiple print calls.</p>
-	 * 
+	 *
 	 * @param msg the message to print to console
 	 */
 	public static void print(String msg) {
@@ -348,12 +337,12 @@ public class SimLogger {
 
 	/**
 	 * Initializes the logging system for a new simulation run.
-	 * 
+	 *
 	 * <p>This method sets up all necessary data structures and file handles for
 	 * collecting simulation metrics. It must be called before any logging operations
 	 * begin. The method configures both memory-based and file-based logging depending
 	 * on the enabled logging modes.</p>
-	 * 
+	 *
 	 * <p><b>Initialization Tasks:</b>
 	 * <ul>
 	 *   <li>Records simulation start timestamp for performance measurement</li>
@@ -361,8 +350,8 @@ public class SimLogger {
 	 *   <li>Initializes metric collection arrays for all application types</li>
 	 *   <li>Creates file handles for deep logging if enabled</li>
 	 *   <li>Prepares data structures for real-time event tracking</li>
-	 * </ul></p>
-	 * 
+	 * </ul>
+	 *
 	 * @param outFolder the directory path where result files will be stored
 	 * @param fileName the prefix for output file naming
 	 */
@@ -373,9 +362,9 @@ public class SimLogger {
 		taskMap = new HashMap<Integer, LogItem>();
 		vmLoadList = new LinkedList<VmLoadLogItem>();
 		apDelayList = new LinkedList<ApDelayLogItem>();
-		
+
 		numOfAppTypes = SimSettings.getInstance().getTaskLookUpTable().length;
-		
+
 		if (SimSettings.getInstance().getDeepFileLoggingEnabled()) {
 			try {
 				successFile = new File(outputFolder, filePrefix + "_SUCCESS.log");
@@ -385,12 +374,12 @@ public class SimLogger {
 				failFile = new File(outputFolder, filePrefix + "_FAIL.log");
 				failFW = new FileWriter(failFile, true);
 				failBW = new BufferedWriter(failFW);
-				
+
 				appendToFile(successBW, "#auto generated file!");
 				appendToFile(failBW, "#auto generated file!");
 			} catch (IOException e) {
 				e.printStackTrace();
-				System.exit(1);
+				edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 			}
 		}
 
@@ -416,7 +405,7 @@ public class SimLogger {
 		wanDelay = new double[numOfAppTypes + 1];
 		manDelay = new double[numOfAppTypes + 1];
 		lanDelay = new double[numOfAppTypes + 1];
-		
+
 		gsmUsage = new double[numOfAppTypes + 1];
 		wanUsage = new double[numOfAppTypes + 1];
 		manUsage = new double[numOfAppTypes + 1];
@@ -436,7 +425,7 @@ public class SimLogger {
 		failedTaskDueToVmCapacityOnCloud = new int[numOfAppTypes + 1];
 		failedTaskDueToVmCapacityOnEdge = new int[numOfAppTypes + 1];
 		failedTaskDueToVmCapacityOnMobile = new int[numOfAppTypes + 1];
-		
+
 		cost = new double[numOfAppTypes + 1];
 		QoE = new double[numOfAppTypes + 1];
 		failedTaskDuetoBw = new int[numOfAppTypes + 1];
@@ -445,24 +434,24 @@ public class SimLogger {
 		failedTaskDuetoWanBw = new int[numOfAppTypes + 1];
 		failedTaskDuetoGsmBw = new int[numOfAppTypes + 1];
 		failedTaskDuetoMobility = new int[numOfAppTypes + 1];
-		refectedTaskDuetoWlanRange = new int[numOfAppTypes + 1];
+		rejectedTaskDueToWlanRange = new int[numOfAppTypes + 1];
 
 		orchestratorOverhead = new double[numOfAppTypes + 1];
 	}
 
 	/**
 	 * Creates a new log entry for a task with its basic characteristics.
-	 * 
+	 *
 	 * <p>Initializes logging for a new task by creating a LogItem with the specified
 	 * parameters. This method should be called when a task is first created and
 	 * before any processing begins.</p>
-	 * 
+	 *
 	 * @param deviceId ID of the mobile device generating the task
 	 * @param taskId unique identifier for the task
 	 * @param taskType application type index of the task
 	 * @param taskLenght computational requirement in million instructions
-	 * @param taskInputType input data size in bytes
-	 * @param taskOutputSize output data size in bytes
+	 * @param taskInputType input data size in kilobytes
+	 * @param taskOutputSize output data size in kilobytes
 	 */
 	public void addLog(int deviceId, int taskId, int taskType,
 			int taskLenght, int taskInputType, int taskOutputSize) {
@@ -471,7 +460,7 @@ public class SimLogger {
 
 	/**
 	 * Records the start time of task processing.
-	 * 
+	 *
 	 * @param taskId unique identifier for the task
 	 * @param time simulation time when task processing begins
 	 */
@@ -481,7 +470,7 @@ public class SimLogger {
 
 	/**
 	 * Records upload network delay for a task.
-	 * 
+	 *
 	 * @param taskId unique identifier for the task
 	 * @param delay upload delay in seconds
 	 * @param delayType type of network segment causing the delay
@@ -492,7 +481,7 @@ public class SimLogger {
 
 	/**
 	 * Records download network delay for a task.
-	 * 
+	 *
 	 * @param taskId unique identifier for the task
 	 * @param delay download delay in seconds
 	 * @param delayType type of network segment causing the delay
@@ -500,10 +489,10 @@ public class SimLogger {
 	public void setDownloadDelay(int taskId, double delay, NETWORK_DELAY_TYPES delayType) {
 		taskMap.get(taskId).setDownloadDelay(delay, delayType);
 	}
-	
+
 	/**
 	 * Records task assignment to computational resources.
-	 * 
+	 *
 	 * @param taskId unique identifier for the task
 	 * @param datacenterId ID of the assigned datacenter
 	 * @param hostId ID of the assigned host machine
@@ -516,7 +505,7 @@ public class SimLogger {
 
 	/**
 	 * Records the start of task execution on the assigned VM.
-	 * 
+	 *
 	 * @param taskId unique identifier for the task
 	 */
 	public void taskExecuted(int taskId) {
@@ -525,11 +514,11 @@ public class SimLogger {
 
 	/**
 	 * Records task completion and triggers result aggregation.
-	 * 
+	 *
 	 * <p>Marks the task as successfully completed and calls recordLog to
 	 * aggregate the results into summary statistics and optionally write
 	 * to result files.</p>
-	 * 
+	 *
 	 * @param taskId unique identifier for the task
 	 * @param time simulation time when task completed
 	 */
@@ -540,7 +529,7 @@ public class SimLogger {
 
 	/**
 	 * Records task rejection due to insufficient VM computational capacity.
-	 * 
+	 *
 	 * @param taskId unique identifier for the task
 	 * @param time simulation time when rejection occurred
 	 * @param vmType type of VM that rejected the task (cloud/edge/mobile)
@@ -552,7 +541,7 @@ public class SimLogger {
 
 	/**
 	 * Records task rejection due to WLAN coverage limitations.
-	 * 
+	 *
 	 * @param taskId unique identifier for the task
 	 * @param time simulation time when rejection occurred
 	 * @param vmType intended VM type for the rejected task
@@ -561,10 +550,10 @@ public class SimLogger {
     	taskMap.get(taskId).taskRejectedDueToWlanCoverage(time, vmType);
 		recordLog(taskId);
     }
-    
+
     /**
      * Records task rejection due to insufficient network bandwidth.
-     * 
+     *
      * @param taskId unique identifier for the task
      * @param time simulation time when rejection occurred
      * @param vmType intended VM type for the rejected task
@@ -577,7 +566,7 @@ public class SimLogger {
 
 	/**
 	 * Records task failure due to network bandwidth constraints.
-	 * 
+	 *
 	 * @param taskId unique identifier for the task
 	 * @param time simulation time when failure occurred
 	 * @param delayType network segment that caused the bandwidth failure
@@ -589,7 +578,7 @@ public class SimLogger {
 
 	/**
 	 * Records task failure due to device mobility (moved out of coverage).
-	 * 
+	 *
 	 * @param taskId unique identifier for the task
 	 * @param time simulation time when mobility failure occurred
 	 */
@@ -600,17 +589,17 @@ public class SimLogger {
 
 	/**
 	 * Records Quality of Experience (QoE) metric for a task.
-	 * 
+	 *
 	 * @param taskId unique identifier for the task
 	 * @param QoE quality of experience score
 	 */
 	public void setQoE(int taskId, double QoE){
 		taskMap.get(taskId).setQoE(QoE);
 	}
-	
+
 	/**
 	 * Records orchestration overhead for task management.
-	 * 
+	 *
 	 * @param taskId unique identifier for the task
 	 * @param overhead orchestration overhead in seconds
 	 */
@@ -620,10 +609,10 @@ public class SimLogger {
 
 	/**
 	 * Records VM utilization across different processing tiers.
-	 * 
+	 *
 	 * <p>Logs computational load distribution for performance analysis.
 	 * Only records if location logging is enabled in simulation settings.</p>
-	 * 
+	 *
 	 * @param time current simulation time
 	 * @param loadOnEdge computational load on edge infrastructure (0-1)
 	 * @param loadOnCloud computational load on cloud infrastructure (0-1)
@@ -636,11 +625,11 @@ public class SimLogger {
 
 	/**
 	 * Records access point network delay measurements over time.
-	 * 
+	 *
 	 * <p>Logs upload and download delays for all access points to analyze
 	 * network performance variations. Only records if AP delay logging
 	 * is enabled in simulation settings.</p>
-	 * 
+	 *
 	 * @param time current simulation time
 	 * @param apUploadDelays array of upload delays for each access point
 	 * @param apDownloadDelays array of download delays for each access point
@@ -649,15 +638,15 @@ public class SimLogger {
 		if(SimSettings.getInstance().getApDelayLogInterval() != 0)
 			apDelayList.add(new ApDelayLogItem(time, apUploadDelays, apDownloadDelays));
 	}
-	
+
 	/**
-	 * Finalizes logging and generates comprehensive simulation result files.
-	 * 
+	 * Finalizes logging and writes the configured simulation result files.
+	 *
 	 * <p>This method performs the critical task of aggregating all collected
 	 * simulation data and writing detailed results to files. It calculates
 	 * summary statistics, generates performance reports, and creates output
 	 * files suitable for MATLAB analysis and visualization.</p>
-	 * 
+	 *
 	 * <p><b>Generated Output Files:</b>
 	 * <ul>
 	 *   <li>Generic results per application type with performance metrics</li>
@@ -665,8 +654,8 @@ public class SimLogger {
 	 *   <li>Location-based performance breakdowns</li>
 	 *   <li>Access point delay measurements over time</li>
 	 *   <li>Deep task logs (if enabled) for detailed event analysis</li>
-	 * </ul></p>
-	 * 
+	 * </ul>
+	 *
 	 * @throws IOException if file writing operations fail
 	 */
 	public void simStopped() throws IOException {
@@ -722,7 +711,7 @@ public class SimLogger {
 			appendToFile(apDownloadDelayBW, "#auto generated file!");
 		}
 
-		//the tasks in the map is not completed yet!
+		// Remaining entries represent tasks that had not completed when the simulation stopped.
 		for (Map.Entry<Integer, LogItem> entry : taskMap.entrySet()) {
 			LogItem value = entry.getValue();
 
@@ -756,7 +745,7 @@ public class SimLogger {
 		manDelay[numOfAppTypes] = DoubleStream.of(manDelay).sum();
 		wanDelay[numOfAppTypes] = DoubleStream.of(wanDelay).sum();
 		gsmDelay[numOfAppTypes] = DoubleStream.of(gsmDelay).sum();
-		
+
 		lanUsage[numOfAppTypes] = DoubleStream.of(lanUsage).sum();
 		manUsage[numOfAppTypes] = DoubleStream.of(manUsage).sum();
 		wanUsage[numOfAppTypes] = DoubleStream.of(wanUsage).sum();
@@ -776,7 +765,7 @@ public class SimLogger {
 		failedTaskDueToVmCapacityOnCloud[numOfAppTypes] = IntStream.of(failedTaskDueToVmCapacityOnCloud).sum();
 		failedTaskDueToVmCapacityOnEdge[numOfAppTypes] = IntStream.of(failedTaskDueToVmCapacityOnEdge).sum();
 		failedTaskDueToVmCapacityOnMobile[numOfAppTypes] = IntStream.of(failedTaskDueToVmCapacityOnMobile).sum();
-		
+
 		cost[numOfAppTypes] = DoubleStream.of(cost).sum();
 		QoE[numOfAppTypes] = DoubleStream.of(QoE).sum();
 		failedTaskDuetoBw[numOfAppTypes] = IntStream.of(failedTaskDuetoBw).sum();
@@ -785,10 +774,10 @@ public class SimLogger {
 		failedTaskDuetoManBw[numOfAppTypes] = IntStream.of(failedTaskDuetoManBw).sum();
 		failedTaskDuetoLanBw[numOfAppTypes] = IntStream.of(failedTaskDuetoLanBw).sum();
 		failedTaskDuetoMobility[numOfAppTypes] = IntStream.of(failedTaskDuetoMobility).sum();
-		refectedTaskDuetoWlanRange[numOfAppTypes] = IntStream.of(refectedTaskDuetoWlanRange).sum();
+		rejectedTaskDueToWlanRange[numOfAppTypes] = IntStream.of(rejectedTaskDueToWlanRange).sum();
 
 		orchestratorOverhead[numOfAppTypes] = DoubleStream.of(orchestratorOverhead).sum();
-		
+
 		// calculate server load
 		double totalVmLoadOnEdge = 0;
 		double totalVmLoadOnCloud = 0;
@@ -809,7 +798,7 @@ public class SimLogger {
 				for (int t = 1; t < (SimSettings.getInstance().getSimulationTime() / locationLogInterval); t++) {
 					int[] locationInfo = new int[SimSettings.getInstance().getNumOfEdgeDatacenters()];
 					Double time = t * SimSettings.getInstance().getLocationLogInterval();
-					
+
 					if (time < SimSettings.CLIENT_ACTIVITY_START_TIME)
 						continue;
 
@@ -825,7 +814,7 @@ public class SimLogger {
 					locationBW.newLine();
 				}
 			}
-			
+
 			// write delay info to file for each access point
 			if(SimSettings.getInstance().getApDelayLogInterval() != 0) {
 				for (ApDelayLogItem entry : apDelayList) {
@@ -844,40 +833,37 @@ public class SimLogger {
 
 				// check if the divisor is zero in order to avoid division by
 				// zero problem
-				double _serviceTime = (completedTask[i] == 0) ? 0.0 : (serviceTime[i] / (double) completedTask[i]);
-				double _networkDelay = (completedTask[i] == 0) ? 0.0 : (networkDelay[i] / ((double) completedTask[i] - (double)completedTaskOnMobile[i]));
-				double _processingTime = (completedTask[i] == 0) ? 0.0 : (processingTime[i] / (double) completedTask[i]);
-				double _vmLoadOnEdge = (vmLoadList.size() == 0) ? 0.0 : (totalVmLoadOnEdge / (double) vmLoadList.size());
-				double _vmLoadOnClould = (vmLoadList.size() == 0) ? 0.0 : (totalVmLoadOnCloud / (double) vmLoadList.size());
-				double _vmLoadOnMobile = (vmLoadList.size() == 0) ? 0.0 : (totalVmLoadOnMobile / (double) vmLoadList.size());
-				double _cost = (completedTask[i] == 0) ? 0.0 : (cost[i] / (double) completedTask[i]);
-				double _QoE1 = (completedTask[i] == 0) ? 0.0 : (QoE[i] / (double) completedTask[i]);
-				double _QoE2 = (completedTask[i] == 0) ? 0.0 : (QoE[i] / (double) (failedTask[i] + completedTask[i]));
+					double _serviceTime = divideOrZero(serviceTime[i], completedTask[i]);
+					double _networkDelay = divideOrZero(networkDelay[i],
+							completedTask[i] - completedTaskOnMobile[i]);
+					double _processingTime = divideOrZero(processingTime[i], completedTask[i]);
+					double _vmLoadOnEdge = divideOrZero(totalVmLoadOnEdge, vmLoadList.size());
+					double _vmLoadOnCloud = divideOrZero(totalVmLoadOnCloud, vmLoadList.size());
+					double _vmLoadOnMobile = divideOrZero(totalVmLoadOnMobile, vmLoadList.size());
+					double _cost = divideOrZero(cost[i], completedTask[i]);
+					double _QoE1 = divideOrZero(QoE[i], completedTask[i]);
+					double _QoE2 = divideOrZero(QoE[i], failedTask[i] + completedTask[i]);
 
-				double _lanDelay = (lanUsage[i] == 0) ? 0.0
-						: (lanDelay[i] / (double) lanUsage[i]);
-				double _manDelay = (manUsage[i] == 0) ? 0.0
-						: (manDelay[i] / (double) manUsage[i]);
-				double _wanDelay = (wanUsage[i] == 0) ? 0.0
-						: (wanDelay[i] / (double) wanUsage[i]);
-				double _gsmDelay = (gsmUsage[i] == 0) ? 0.0
-						: (gsmDelay[i] / (double) gsmUsage[i]);
-				
+					double _lanDelay = divideOrZero(lanDelay[i], lanUsage[i]);
+					double _manDelay = divideOrZero(manDelay[i], manUsage[i]);
+					double _wanDelay = divideOrZero(wanDelay[i], wanUsage[i]);
+					double _gsmDelay = divideOrZero(gsmDelay[i], gsmUsage[i]);
+
 				// write generic results
 				String genericResult1 = Integer.toString(completedTask[i]) + SimSettings.DELIMITER
-						+ Integer.toString(failedTask[i]) + SimSettings.DELIMITER 
-						+ Integer.toString(uncompletedTask[i]) + SimSettings.DELIMITER 
+						+ Integer.toString(failedTask[i]) + SimSettings.DELIMITER
+						+ Integer.toString(uncompletedTask[i]) + SimSettings.DELIMITER
 						+ Integer.toString(failedTaskDuetoBw[i]) + SimSettings.DELIMITER
-						+ Double.toString(_serviceTime) + SimSettings.DELIMITER 
-						+ Double.toString(_processingTime) + SimSettings.DELIMITER 
+						+ Double.toString(_serviceTime) + SimSettings.DELIMITER
+						+ Double.toString(_processingTime) + SimSettings.DELIMITER
 						+ Double.toString(_networkDelay) + SimSettings.DELIMITER
-						+ Double.toString(0) + SimSettings.DELIMITER 
-						+ Double.toString(_cost) + SimSettings.DELIMITER 
-						+ Integer.toString(failedTaskDueToVmCapacity[i]) + SimSettings.DELIMITER 
-						+ Integer.toString(failedTaskDuetoMobility[i]) + SimSettings.DELIMITER 
-						+ Double.toString(_QoE1) + SimSettings.DELIMITER 
+						+ Double.toString(0) + SimSettings.DELIMITER
+						+ Double.toString(_cost) + SimSettings.DELIMITER
+						+ Integer.toString(failedTaskDueToVmCapacity[i]) + SimSettings.DELIMITER
+						+ Integer.toString(failedTaskDuetoMobility[i]) + SimSettings.DELIMITER
+						+ Double.toString(_QoE1) + SimSettings.DELIMITER
 						+ Double.toString(_QoE2) + SimSettings.DELIMITER
-						+ Integer.toString(refectedTaskDuetoWlanRange[i]);
+							+ Integer.toString(rejectedTaskDueToWlanRange[i]);
 
 				// check if the divisor is zero in order to avoid division by zero problem
 				double _serviceTimeOnEdge = (completedTaskOnEdge[i] == 0) ? 0.0
@@ -890,8 +876,8 @@ public class SimLogger {
 						+ Integer.toString(0) + SimSettings.DELIMITER
 						+ Double.toString(_serviceTimeOnEdge) + SimSettings.DELIMITER
 						+ Double.toString(_processingTimeOnEdge) + SimSettings.DELIMITER
-						+ Double.toString(0.0) + SimSettings.DELIMITER 
-						+ Double.toString(_vmLoadOnEdge) + SimSettings.DELIMITER 
+						+ Double.toString(0.0) + SimSettings.DELIMITER
+						+ Double.toString(_vmLoadOnEdge) + SimSettings.DELIMITER
 						+ Integer.toString(failedTaskDueToVmCapacityOnEdge[i]);
 
 				// check if the divisor is zero in order to avoid division by zero problem
@@ -904,11 +890,11 @@ public class SimLogger {
 						+ Integer.toString(uncompletedTaskOnCloud[i]) + SimSettings.DELIMITER
 						+ Integer.toString(0) + SimSettings.DELIMITER
 						+ Double.toString(_serviceTimeOnCloud) + SimSettings.DELIMITER
-						+ Double.toString(_processingTimeOnCloud) + SimSettings.DELIMITER 
+						+ Double.toString(_processingTimeOnCloud) + SimSettings.DELIMITER
 						+ Double.toString(0.0) + SimSettings.DELIMITER
-						+ Double.toString(_vmLoadOnClould) + SimSettings.DELIMITER 
+							+ Double.toString(_vmLoadOnCloud) + SimSettings.DELIMITER
 						+ Integer.toString(failedTaskDueToVmCapacityOnCloud[i]);
-				
+
 				// check if the divisor is zero in order to avoid division by zero problem
 				double _serviceTimeOnMobile = (completedTaskOnMobile[i] == 0) ? 0.0
 						: (serviceTimeOnMobile[i] / (double) completedTaskOnMobile[i]);
@@ -919,11 +905,11 @@ public class SimLogger {
 						+ Integer.toString(uncompletedTaskOnMobile[i]) + SimSettings.DELIMITER
 						+ Integer.toString(0) + SimSettings.DELIMITER
 						+ Double.toString(_serviceTimeOnMobile) + SimSettings.DELIMITER
-						+ Double.toString(_processingTimeOnMobile) + SimSettings.DELIMITER 
+						+ Double.toString(_processingTimeOnMobile) + SimSettings.DELIMITER
 						+ Double.toString(0.0) + SimSettings.DELIMITER
-						+ Double.toString(_vmLoadOnMobile) + SimSettings.DELIMITER 
+						+ Double.toString(_vmLoadOnMobile) + SimSettings.DELIMITER
 						+ Integer.toString(failedTaskDueToVmCapacityOnMobile[i]);
-				
+
 				String genericResult5 = Double.toString(_lanDelay) + SimSettings.DELIMITER
 						+ Double.toString(_manDelay) + SimSettings.DELIMITER
 						+ Double.toString(_wanDelay) + SimSettings.DELIMITER
@@ -932,20 +918,20 @@ public class SimLogger {
 						+ Integer.toString(failedTaskDuetoManBw[i]) + SimSettings.DELIMITER
 						+ Integer.toString(failedTaskDuetoWanBw[i]) + SimSettings.DELIMITER
 						+ Integer.toString(failedTaskDuetoGsmBw[i]);
-				
+
 				//performance related values
 				double _orchestratorOverhead = orchestratorOverhead[i] / (double) (failedTask[i] + completedTask[i]);
-				
+
 				String genericResult6 = Long.toString((endTime-startTime)/60)  + SimSettings.DELIMITER
 						+ Double.toString(_orchestratorOverhead);
-						
+
 
 				appendToFile(genericBWs[i], genericResult1);
 				appendToFile(genericBWs[i], genericResult2);
 				appendToFile(genericBWs[i], genericResult3);
 				appendToFile(genericBWs[i], genericResult4);
 				appendToFile(genericBWs[i], genericResult5);
-				
+
 				//append performance related values only to ALL_ALLPS file
 				if(i == numOfAppTypes) {
 					appendToFile(genericBWs[i], genericResult6);
@@ -954,19 +940,19 @@ public class SimLogger {
 					printLine(SimSettings.getInstance().getTaskName(i));
 					printLine("# of tasks (Edge/Cloud): "
 							+ (failedTask[i] + completedTask[i]) + "("
-							+ (failedTaskOnEdge[i] + completedTaskOnEdge[i]) + "/" 
+							+ (failedTaskOnEdge[i] + completedTaskOnEdge[i]) + "/"
 							+ (failedTaskOnCloud[i]+ completedTaskOnCloud[i]) + ")" );
-					
+
 					printLine("# of failed tasks (Edge/Cloud): "
 							+ failedTask[i] + "("
 							+ failedTaskOnEdge[i] + "/"
 							+ failedTaskOnCloud[i] + ")");
-					
+
 					printLine("# of completed tasks (Edge/Cloud): "
 							+ completedTask[i] + "("
 							+ completedTaskOnEdge[i] + "/"
 							+ completedTaskOnCloud[i] + ")");
-					
+
 					printLine("---------------------------------------");
 				}
 			}
@@ -989,28 +975,28 @@ public class SimLogger {
 				}
 				genericBWs[i].close();
 			}
-			
+
 		}
 
 		// printout important results
 		printLine("# of tasks (Edge/Cloud/Mobile): "
 				+ (failedTask[numOfAppTypes] + completedTask[numOfAppTypes]) + "("
-				+ (failedTaskOnEdge[numOfAppTypes] + completedTaskOnEdge[numOfAppTypes]) + "/" 
-				+ (failedTaskOnCloud[numOfAppTypes]+ completedTaskOnCloud[numOfAppTypes]) + "/" 
+				+ (failedTaskOnEdge[numOfAppTypes] + completedTaskOnEdge[numOfAppTypes]) + "/"
+				+ (failedTaskOnCloud[numOfAppTypes]+ completedTaskOnCloud[numOfAppTypes]) + "/"
 				+ (failedTaskOnMobile[numOfAppTypes]+ completedTaskOnMobile[numOfAppTypes]) + ")");
-		
+
 		printLine("# of failed tasks (Edge/Cloud/Mobile): "
 				+ failedTask[numOfAppTypes] + "("
 				+ failedTaskOnEdge[numOfAppTypes] + "/"
 				+ failedTaskOnCloud[numOfAppTypes] + "/"
 				+ failedTaskOnMobile[numOfAppTypes] + ")");
-		
+
 		printLine("# of completed tasks (Edge/Cloud/Mobile): "
 				+ completedTask[numOfAppTypes] + "("
 				+ completedTaskOnEdge[numOfAppTypes] + "/"
 				+ completedTaskOnCloud[numOfAppTypes] + "/"
 				+ completedTaskOnMobile[numOfAppTypes] + ")");
-		
+
 		printLine("# of uncompleted tasks (Edge/Cloud/Mobile): "
 				+ uncompletedTask[numOfAppTypes] + "("
 				+ uncompletedTaskOnEdge[numOfAppTypes] + "/"
@@ -1022,76 +1008,80 @@ public class SimLogger {
 				+ failedTaskDueToVmCapacityOnEdge[numOfAppTypes] + "/"
 				+ failedTaskDueToVmCapacityOnCloud[numOfAppTypes] + "/"
 				+ failedTaskDueToVmCapacityOnMobile[numOfAppTypes] + ")");
-		
+
 		printLine("# of failed tasks due to Mobility/WLAN Range/Network(WLAN/MAN/WAN/GSM): "
 				+ failedTaskDuetoMobility[numOfAppTypes]
-				+ "/" + refectedTaskDuetoWlanRange[numOfAppTypes]
-				+ "/" + failedTaskDuetoBw[numOfAppTypes] 
-				+ "(" + failedTaskDuetoLanBw[numOfAppTypes] 
-				+ "/" + failedTaskDuetoManBw[numOfAppTypes] 
-				+ "/" + failedTaskDuetoWanBw[numOfAppTypes] 
+					+ "/" + rejectedTaskDueToWlanRange[numOfAppTypes]
+				+ "/" + failedTaskDuetoBw[numOfAppTypes]
+				+ "(" + failedTaskDuetoLanBw[numOfAppTypes]
+				+ "/" + failedTaskDuetoManBw[numOfAppTypes]
+				+ "/" + failedTaskDuetoWanBw[numOfAppTypes]
 				+ "/" + failedTaskDuetoGsmBw[numOfAppTypes] + ")");
-		
+
 		printLine("percentage of failed tasks: "
-				+ String.format("%.6f", ((double) failedTask[numOfAppTypes] * (double) 100)
-						/ (double) (completedTask[numOfAppTypes] + failedTask[numOfAppTypes]))
+					+ String.format("%.6f", divideOrZero((double) failedTask[numOfAppTypes] * 100,
+							completedTask[numOfAppTypes] + failedTask[numOfAppTypes]))
 				+ "%");
 
 		printLine("average service time: "
-				+ String.format("%.6f", serviceTime[numOfAppTypes] / (double) completedTask[numOfAppTypes])
+					+ String.format("%.6f", divideOrZero(serviceTime[numOfAppTypes], completedTask[numOfAppTypes]))
 				+ " seconds. (" + "on Edge: "
-				+ String.format("%.6f", serviceTimeOnEdge[numOfAppTypes] / (double) completedTaskOnEdge[numOfAppTypes])
+					+ String.format("%.6f", divideOrZero(serviceTimeOnEdge[numOfAppTypes], completedTaskOnEdge[numOfAppTypes]))
 				+ ", " + "on Cloud: "
-				+ String.format("%.6f", serviceTimeOnCloud[numOfAppTypes] / (double) completedTaskOnCloud[numOfAppTypes])
+					+ String.format("%.6f", divideOrZero(serviceTimeOnCloud[numOfAppTypes], completedTaskOnCloud[numOfAppTypes]))
 				+ ", " + "on Mobile: "
-				+ String.format("%.6f", serviceTimeOnMobile[numOfAppTypes] / (double) completedTaskOnMobile[numOfAppTypes])
+					+ String.format("%.6f", divideOrZero(serviceTimeOnMobile[numOfAppTypes], completedTaskOnMobile[numOfAppTypes]))
 				+ ")");
 
 		printLine("average processing time: "
-				+ String.format("%.6f", processingTime[numOfAppTypes] / (double) completedTask[numOfAppTypes])
+					+ String.format("%.6f", divideOrZero(processingTime[numOfAppTypes], completedTask[numOfAppTypes]))
 				+ " seconds. (" + "on Edge: "
-				+ String.format("%.6f", processingTimeOnEdge[numOfAppTypes] / (double) completedTaskOnEdge[numOfAppTypes])
-				+ ", " + "on Cloud: " 
-				+ String.format("%.6f", processingTimeOnCloud[numOfAppTypes] / (double) completedTaskOnCloud[numOfAppTypes])
-				+ ", " + "on Mobile: " 
-				+ String.format("%.6f", processingTimeOnMobile[numOfAppTypes] / (double) completedTaskOnMobile[numOfAppTypes])
+					+ String.format("%.6f", divideOrZero(processingTimeOnEdge[numOfAppTypes], completedTaskOnEdge[numOfAppTypes]))
+				+ ", " + "on Cloud: "
+					+ String.format("%.6f", divideOrZero(processingTimeOnCloud[numOfAppTypes], completedTaskOnCloud[numOfAppTypes]))
+				+ ", " + "on Mobile: "
+					+ String.format("%.6f", divideOrZero(processingTimeOnMobile[numOfAppTypes], completedTaskOnMobile[numOfAppTypes]))
 				+ ")");
 
 		printLine("average network delay: "
-				+ String.format("%.6f", networkDelay[numOfAppTypes] / ((double) completedTask[numOfAppTypes] - (double) completedTaskOnMobile[numOfAppTypes]))
+					+ String.format("%.6f", divideOrZero(networkDelay[numOfAppTypes],
+							completedTask[numOfAppTypes] - completedTaskOnMobile[numOfAppTypes]))
 				+ " seconds. (" + "LAN delay: "
-				+ String.format("%.6f", lanDelay[numOfAppTypes] / (double) lanUsage[numOfAppTypes])
+					+ String.format("%.6f", divideOrZero(lanDelay[numOfAppTypes], lanUsage[numOfAppTypes]))
 				+ ", " + "MAN delay: "
-				+ String.format("%.6f", manDelay[numOfAppTypes] / (double) manUsage[numOfAppTypes])
+					+ String.format("%.6f", divideOrZero(manDelay[numOfAppTypes], manUsage[numOfAppTypes]))
 				+ ", " + "WAN delay: "
-				+ String.format("%.6f", wanDelay[numOfAppTypes] / (double) wanUsage[numOfAppTypes])
+					+ String.format("%.6f", divideOrZero(wanDelay[numOfAppTypes], wanUsage[numOfAppTypes]))
 				+ ", " + "GSM delay: "
-				+ String.format("%.6f", gsmDelay[numOfAppTypes] / (double) gsmUsage[numOfAppTypes]) + ")");
+					+ String.format("%.6f", divideOrZero(gsmDelay[numOfAppTypes], gsmUsage[numOfAppTypes])) + ")");
 
-		printLine("average server utilization Edge/Cloud/Mobile: " 
-				+ String.format("%.6f", totalVmLoadOnEdge / (double) vmLoadList.size()) + "/"
-				+ String.format("%.6f", totalVmLoadOnCloud / (double) vmLoadList.size()) + "/"
-				+ String.format("%.6f", totalVmLoadOnMobile / (double) vmLoadList.size()));
+		printLine("average server utilization Edge/Cloud/Mobile: "
+					+ String.format("%.6f", divideOrZero(totalVmLoadOnEdge, vmLoadList.size())) + "/"
+					+ String.format("%.6f", divideOrZero(totalVmLoadOnCloud, vmLoadList.size())) + "/"
+					+ String.format("%.6f", divideOrZero(totalVmLoadOnMobile, vmLoadList.size())));
 
-		printLine("average cost: " + cost[numOfAppTypes] / completedTask[numOfAppTypes] + "$");
-		printLine("average overhead: " + orchestratorOverhead[numOfAppTypes] / (failedTask[numOfAppTypes] + completedTask[numOfAppTypes]) + " ns");
-		printLine("average QoE (for all): " + QoE[numOfAppTypes] / (failedTask[numOfAppTypes] + completedTask[numOfAppTypes]) + "%");
-		printLine("average QoE (for executed): " + QoE[numOfAppTypes] / completedTask[numOfAppTypes] + "%");
+			printLine("average cost: " + divideOrZero(cost[numOfAppTypes], completedTask[numOfAppTypes]) + "$");
+			printLine("average overhead: " + divideOrZero(orchestratorOverhead[numOfAppTypes],
+					failedTask[numOfAppTypes] + completedTask[numOfAppTypes]) + " ns");
+			printLine("average QoE (for all): " + divideOrZero(QoE[numOfAppTypes],
+					failedTask[numOfAppTypes] + completedTask[numOfAppTypes]) + "%");
+			printLine("average QoE (for executed): "
+					+ divideOrZero(QoE[numOfAppTypes], completedTask[numOfAppTypes]) + "%");
 
 		// clear related collections (map list etc.)
 		taskMap.clear();
 		vmLoadList.clear();
 		apDelayList.clear();
 	}
-	
+
 	/**
 	 * Processes and aggregates completed task metrics into summary statistics.
-	 * 
+	 *
 	 * <p>This critical method removes a task from active tracking and aggregates
 	 * its results into the appropriate statistical arrays. It handles both successful
 	 * and failed tasks, organizing metrics by task type and processing tier
-	 * (cloud/edge/mobile) for comprehensive performance analysis.</p>
-	 * 
+	 * (cloud/edge/mobile) for performance analysis.</p>
+	 *
 	 * <p><b>Aggregated Metrics Include:</b>
 	 * <ul>
 	 *   <li>Task completion and failure counts by tier</li>
@@ -1099,21 +1089,21 @@ public class SimLogger {
 	 *   <li>Processing costs and QoE scores</li>
 	 *   <li>Orchestration overhead measurements</li>
 	 *   <li>Network utilization across different segments</li>
-	 * </ul></p>
-	 * 
+	 * </ul>
+	 *
 	 * <p>Tasks that occurred during the warm-up period are excluded from
-	 * statistics to ensure accurate steady-state performance measurements.</p>
-	 * 
+	 * statistics so that the configured initialization interval is not included.</p>
+	 *
 	 * @param taskId unique identifier of the task to record
 	 */
 	private void recordLog(int taskId){
 		LogItem value = taskMap.remove(taskId);
-		
+
 		// Skip tasks from warm-up period to ensure steady-state statistics
 		if (value.isInWarmUpPeriod())
 			return;
 
-		if (value.getStatus() == SimLogger.TASK_STATUS.COMLETED) {
+		if (isCompletedStatus(value.getStatus())) {
 			completedTask[value.getTaskType()]++;
 
 			if (value.getVmType() == SimSettings.VM_TYPES.CLOUD_VM.ordinal())
@@ -1134,14 +1124,14 @@ public class SimLogger {
 				failedTaskOnEdge[value.getTaskType()]++;
 		}
 
-		if (value.getStatus() == SimLogger.TASK_STATUS.COMLETED) {
+		if (isCompletedStatus(value.getStatus())) {
 			cost[value.getTaskType()] += value.getCost();
 			QoE[value.getTaskType()] += value.getQoE();
 			serviceTime[value.getTaskType()] += value.getServiceTime();
 			networkDelay[value.getTaskType()] += value.getNetworkDelay();
 			processingTime[value.getTaskType()] += (value.getServiceTime() - value.getNetworkDelay());
 			orchestratorOverhead[value.getTaskType()] += value.getOrchestratorOverhead();
-			
+
 			if(value.getNetworkDelay(NETWORK_DELAY_TYPES.WLAN_DELAY) != 0) {
 				lanUsage[value.getTaskType()]++;
 				lanDelay[value.getTaskType()] += value.getNetworkDelay(NETWORK_DELAY_TYPES.WLAN_DELAY);
@@ -1158,7 +1148,7 @@ public class SimLogger {
 				gsmUsage[value.getTaskType()]++;
 				gsmDelay[value.getTaskType()] += value.getNetworkDelay(NETWORK_DELAY_TYPES.GSM_DELAY);
 			}
-			
+
 			if (value.getVmType() == SimSettings.VM_TYPES.CLOUD_VM.ordinal()) {
 				serviceTimeOnCloud[value.getTaskType()] += value.getServiceTime();
 				processingTimeOnCloud[value.getTaskType()] += (value.getServiceTime() - value.getNetworkDelay());
@@ -1173,7 +1163,7 @@ public class SimLogger {
 			}
 		} else if (value.getStatus() == SimLogger.TASK_STATUS.REJECTED_DUE_TO_VM_CAPACITY) {
 			failedTaskDueToVmCapacity[value.getTaskType()]++;
-			
+
 			if (value.getVmType() == SimSettings.VM_TYPES.CLOUD_VM.ordinal())
 				failedTaskDueToVmCapacityOnCloud[value.getTaskType()]++;
 			else if (value.getVmType() == SimSettings.VM_TYPES.MOBILE_VM.ordinal())
@@ -1194,19 +1184,19 @@ public class SimLogger {
 		} else if (value.getStatus() == SimLogger.TASK_STATUS.UNFINISHED_DUE_TO_MOBILITY) {
 			failedTaskDuetoMobility[value.getTaskType()]++;
 		} else if (value.getStatus() == SimLogger.TASK_STATUS.REJECTED_DUE_TO_WLAN_COVERAGE) {
-			refectedTaskDuetoWlanRange[value.getTaskType()]++;;
+			rejectedTaskDueToWlanRange[value.getTaskType()]++;
         }
-		
+
 		//if deep file logging is enabled, record every task result
 		if (SimSettings.getInstance().getDeepFileLoggingEnabled()){
 			try {
-				if (value.getStatus() == SimLogger.TASK_STATUS.COMLETED)
+				if (isCompletedStatus(value.getStatus()))
 					appendToFile(successBW, value.toString(taskId));
 				else
 					appendToFile(failBW, value.toString(taskId));
 			} catch (IOException e) {
 				e.printStackTrace();
-				System.exit(1);
+				edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 			}
 		}
 	}
@@ -1214,7 +1204,7 @@ public class SimLogger {
 
 /**
  * Represents a snapshot of VM computational load across processing tiers at a specific time.
- * 
+ *
  * <p>This helper class stores utilization measurements for edge, cloud, and mobile
  * processing infrastructure, enabling time-series analysis of resource usage patterns
  * throughout the simulation.</p>
@@ -1222,22 +1212,22 @@ public class SimLogger {
 class VmLoadLogItem {
 	/** Simulation time when this measurement was taken */
 	private double time;
-	
+
 	/** Computational load on edge infrastructure (0.0 to 1.0) */
 	private double vmLoadOnEdge;
-	
+
 	/** Computational load on cloud infrastructure (0.0 to 1.0) */
 	private double vmLoadOnCloud;
-	
+
 	/** Computational load on mobile devices (0.0 to 1.0) */
 	private double vmLoadOnMobile;
 
 	/**
 	 * Creates a new VM load measurement record.
-	 * 
+	 *
 	 * @param _time simulation timestamp
 	 * @param _vmLoadOnEdge edge infrastructure utilization (0-1)
-	 * @param _vmLoadOnCloud cloud infrastructure utilization (0-1)  
+	 * @param _vmLoadOnCloud cloud infrastructure utilization (0-1)
 	 * @param _vmLoadOnMobile mobile device utilization (0-1)
 	 */
 	VmLoadLogItem(double _time, double _vmLoadOnEdge, double _vmLoadOnCloud, double _vmLoadOnMobile) {
@@ -1262,7 +1252,7 @@ class VmLoadLogItem {
 	public double getCloudLoad() {
 		return vmLoadOnCloud;
 	}
-	
+
 	/**
 	 * Returns the mobile device computational load.
 	 * @return mobile load percentage (0.0 to 1.0)
@@ -1270,9 +1260,9 @@ class VmLoadLogItem {
 	public double getMobileLoad() {
 		return vmLoadOnMobile;
 	}
-	
+
 	public String toString() {
-		return time + 
+		return time +
 				SimSettings.DELIMITER + vmLoadOnEdge +
 				SimSettings.DELIMITER + vmLoadOnCloud +
 				SimSettings.DELIMITER + vmLoadOnMobile;
@@ -1281,7 +1271,7 @@ class VmLoadLogItem {
 
 /**
  * Represents network delay measurements for all access points at a specific time.
- * 
+ *
  * <p>This helper class stores upload and download delay measurements across
  * all access points in the simulation, enabling analysis of network performance
  * variations and bottlenecks over time.</p>
@@ -1289,16 +1279,16 @@ class VmLoadLogItem {
 class ApDelayLogItem {
 	/** Simulation time when measurements were taken */
 	private double time;
-	
+
 	/** Upload delays for each access point in seconds */
 	private double apUploadDelays[];
-	
+
 	/** Download delays for each access point in seconds */
 	double[] apDownloadDelays;
-	
+
 	/**
 	 * Creates a new access point delay measurement record.
-	 * 
+	 *
 	 * @param _time simulation timestamp
 	 * @param _apUploadDelays array of upload delays for each access point
 	 * @param _apDownloadDelays array of download delays for each access point
@@ -1308,75 +1298,75 @@ class ApDelayLogItem {
 		apUploadDelays = _apUploadDelays;
 		apDownloadDelays = _apDownloadDelays;
 	}
-	
+
 	/**
 	 * Returns formatted upload delay statistics for MATLAB analysis.
-	 * 
+	 *
 	 * @return comma-delimited string with timestamp and all AP upload delays
 	 */
 	public String getUploadStat() {
 		String result = Double.toString(time);
 		for(int i=0; i<apUploadDelays.length; i++)
 			result += SimSettings.DELIMITER + apUploadDelays[i];
-		
+
 		return result;
 	}
 
 	/**
 	 * Returns formatted download delay statistics for MATLAB analysis.
-	 * 
+	 *
 	 * @return comma-delimited string with timestamp and all AP download delays
 	 */
 	public String getDownloadStat() {
 		String result = Double.toString(time);
 		for(int i=0; i<apDownloadDelays.length; i++)
 			result += SimSettings.DELIMITER + apDownloadDelays[i];
-		
+
 		return result;
 	}
 }
 
 /**
- * Comprehensive logging record for individual task execution and performance metrics.
- * 
+ * Mutable logging record for one task execution.
+ *
  * <p>LogItem maintains detailed information about a single task's lifecycle,
  * including timing measurements, resource assignments, network delays, costs,
  * and quality metrics. This class serves as the primary data structure for
  * deep logging and detailed performance analysis.</p>
- * 
+ *
  * <p>The class tracks complete task execution from creation through completion
- * or failure, enabling comprehensive post-simulation analysis of performance
+ * or failure, enabling post-simulation analysis of performance
  * bottlenecks, resource utilization patterns, and quality of service metrics.</p>
  */
 class LogItem {
 	/** Current status of the task (created, processing, completed, failed, etc.) */
 	private SimLogger.TASK_STATUS status;
-	
+
 	/** Type of network error that occurred (if any) */
 	private SimLogger.NETWORK_ERRORS networkError;
-	
+
 	/** ID of the mobile device that generated this task */
 	private int deviceId;
-	
+
 	/** ID of the datacenter processing this task */
 	private int datacenterId;
-	
+
 	/** ID of the host machine assigned to this task */
 	private int hostId;
-	
+
 	/** ID of the virtual machine executing this task */
 	private int vmId;
-	
+
 	/** Type of processing tier (cloud/edge/mobile) */
 	private int vmType;
-	
+
 	/** Application type index of this task */
 	private int taskType;
-	
+
 	/** Computational length requirement in million instructions */
 	private int taskLenght;
-	
-	/** Input data size in bytes */
+
+	/** Input data size in kilobytes. */
 	private int taskInputType;
 	private int taskOutputSize;
 	private double taskStartTime;
@@ -1405,17 +1395,17 @@ class LogItem {
 		status = SimLogger.TASK_STATUS.CREATED;
 		taskEndTime = 0;
 	}
-	
+
 	public void taskStarted(double time) {
 		taskStartTime = time;
 		status = SimLogger.TASK_STATUS.UPLOADING;
-		
+
 		if (time < SimSettings.getInstance().getWarmUpPeriod())
 			isInWarmUpPeriod = true;
 		else
 			isInWarmUpPeriod = false;
 	}
-	
+
 	public void setUploadDelay(double delay, NETWORK_DELAY_TYPES delayType) {
 		if(delayType == NETWORK_DELAY_TYPES.WLAN_DELAY)
 			lanUploadDelay = delay;
@@ -1426,7 +1416,7 @@ class LogItem {
 		else if(delayType == NETWORK_DELAY_TYPES.GSM_DELAY)
 			gsmUploadDelay = delay;
 	}
-	
+
 	public void setDownloadDelay(double delay, NETWORK_DELAY_TYPES delayType) {
 		if(delayType == NETWORK_DELAY_TYPES.WLAN_DELAY)
 			lanDownloadDelay = delay;
@@ -1437,7 +1427,7 @@ class LogItem {
 		else if(delayType == NETWORK_DELAY_TYPES.GSM_DELAY)
 			gsmDownloadDelay = delay;
 	}
-	
+
 	public void taskAssigned(int _datacenterId, int _hostId, int _vmId, int _vmType) {
 		status = SimLogger.TASK_STATUS.PROCESSING;
 		datacenterId = _datacenterId;
@@ -1452,7 +1442,7 @@ class LogItem {
 
 	public void taskEnded(double time) {
 		taskEndTime = time;
-		status = SimLogger.TASK_STATUS.COMLETED;
+		status = SimLogger.TASK_STATUS.COMPLETED;
 	}
 
 	public void taskRejectedDueToVMCapacity(double time, int _vmType) {
@@ -1460,7 +1450,7 @@ class LogItem {
 		taskEndTime = time;
 		status = SimLogger.TASK_STATUS.REJECTED_DUE_TO_VM_CAPACITY;
 	}
-	
+
 	public void taskRejectedDueToWlanCoverage(double time, int _vmType) {
 		vmType = _vmType;
 		taskEndTime = time;
@@ -1471,7 +1461,7 @@ class LogItem {
 		vmType = _vmType;
 		taskEndTime = time;
 		status = SimLogger.TASK_STATUS.REJECTED_DUE_TO_BANDWIDTH;
-		
+
 		if(delayType == NETWORK_DELAY_TYPES.WLAN_DELAY)
 			networkError = NETWORK_ERRORS.LAN_ERROR;
 		else if(delayType == NETWORK_DELAY_TYPES.MAN_DELAY)
@@ -1485,7 +1475,7 @@ class LogItem {
 	public void taskFailedDueToBandwidth(double time, NETWORK_DELAY_TYPES delayType) {
 		taskEndTime = time;
 		status = SimLogger.TASK_STATUS.UNFINISHED_DUE_TO_BANDWIDTH;
-		
+
 		if(delayType == NETWORK_DELAY_TYPES.WLAN_DELAY)
 			networkError = NETWORK_ERRORS.LAN_ERROR;
 		else if(delayType == NETWORK_DELAY_TYPES.MAN_DELAY)
@@ -1505,11 +1495,11 @@ class LogItem {
 		bwCost = _bwCost;
 		cpuCost = _cpuCos;
 	}
-	
+
 	public void setQoE(double qoe){
 		QoE = qoe;
 	}
-	
+
 	public void setOrchestratorOverhead(double overhead){
 		orchestratorOverhead = overhead;
 	}
@@ -1529,7 +1519,7 @@ class LogItem {
 	public double getOrchestratorOverhead() {
 		return orchestratorOverhead;
 	}
-	
+
 	public double getNetworkUploadDelay(NETWORK_DELAY_TYPES delayType) {
 		double result = 0;
 		if(delayType == NETWORK_DELAY_TYPES.WLAN_DELAY)
@@ -1540,7 +1530,7 @@ class LogItem {
 			result = wanUploadDelay;
 		else if(delayType == NETWORK_DELAY_TYPES.GSM_DELAY)
 			result = gsmUploadDelay;
-		
+
 		return result;
 	}
 
@@ -1554,10 +1544,10 @@ class LogItem {
 			result = wanDownloadDelay;
 		else if(delayType == NETWORK_DELAY_TYPES.GSM_DELAY)
 			result = gsmDownloadDelay;
-		
+
 		return result;
 	}
-	
+
 	public double getNetworkDelay(NETWORK_DELAY_TYPES delayType){
 		double result = 0;
 		if(delayType == NETWORK_DELAY_TYPES.WLAN_DELAY)
@@ -1568,10 +1558,10 @@ class LogItem {
 			result = wanDownloadDelay + wanUploadDelay;
 		else if(delayType == NETWORK_DELAY_TYPES.GSM_DELAY)
 			result = gsmDownloadDelay + gsmUploadDelay;
-		
+
 		return result;
 	}
-	
+
 	public double getNetworkDelay(){
 		return  lanUploadDelay +
 				manUploadDelay +
@@ -1582,7 +1572,7 @@ class LogItem {
 				wanDownloadDelay +
 				gsmDownloadDelay;
 	}
-	
+
 	public double getServiceTime() {
 		return taskEndTime - taskStartTime;
 	}
@@ -1594,7 +1584,7 @@ class LogItem {
 	public SimLogger.NETWORK_ERRORS getNetworkError() {
 		return networkError;
 	}
-	
+
 	public int getVmType() {
 		return vmType;
 	}
@@ -1610,7 +1600,7 @@ class LogItem {
 				+ taskOutputSize + SimSettings.DELIMITER + taskStartTime + SimSettings.DELIMITER + taskEndTime
 				+ SimSettings.DELIMITER;
 
-		if (status == SimLogger.TASK_STATUS.COMLETED){
+		if (SimLogger.isCompletedStatus(status)){
 			result += getNetworkDelay() + SimSettings.DELIMITER;
 			result += getNetworkDelay(NETWORK_DELAY_TYPES.WLAN_DELAY) + SimSettings.DELIMITER;
 			result += getNetworkDelay(NETWORK_DELAY_TYPES.MAN_DELAY) + SimSettings.DELIMITER;

@@ -1,10 +1,11 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Edge Orchestrator
- * 
- * Description: 
+ *
+ * Description:
  * SampleEdgeOrchestrator offloads tasks to proper server
  * based on the applied scenario
- * 
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2022, Bogazici University, Istanbul, Turkey
  */
@@ -46,6 +47,12 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 	// numberOfHost cached to avoid repeated settings lookups
 	private int numberOfHost; //used by load balancer
 
+	/**
+	 * Creates a tutorial orchestrator.
+	 *
+	 * @param _policy orchestration-policy identifier
+	 * @param _simScenario simulation-scenario identifier
+	 */
 	public SampleEdgeOrchestrator(String _policy, String _simScenario) {
 		super(_policy, _simScenario);
 	}
@@ -56,12 +63,7 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 		numberOfHost=SimSettings.getInstance().getNumOfEdgeHosts();
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see edu.boun.edgecloudsim.edge_orchestrator.EdgeOrchestrator#getDeviceToOffload(edu.boun.edgecloudsim.edge_client.Task)
-	 * 
-	 * It is assumed that the edge orchestrator app is running on the edge devices in a distributed manner
-	 */
+	/** Selects edge or cloud execution from the estimated WAN bandwidth. */
 	@Override
 	public int getDeviceToOffload(Task task) {
 		int result = 0;
@@ -70,14 +72,14 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 		// Used to estimate available WAN bandwidth = transferred_bits / delay
 		// (Simplistic instantaneous probe; ignores contention dynamics)
 		Task dummyTask = new Task(0, 0, 0, 0, 128, 128, new UtilizationModelFull(), new UtilizationModelFull(), new UtilizationModelFull());
-		
+
 		double wanDelay = SimManager.getInstance().getNetworkModel().getUploadDelay(task.getMobileDeviceId(),
 				SimSettings.CLOUD_DATACENTER_ID, dummyTask /* 1 Mbit */);
 		double wanBW = (wanDelay == 0) ? 0 : (1 / wanDelay); /* Mbps (since dummy payload ~1 Mbit) */
 
 		// Aggregate edge utilization across all edge VMs (percentage basis)
 		double edgeUtilization = SimManager.getInstance().getEdgeServerManager().getAvgUtilization();
-		
+
 
 		if(policy.equals("NETWORK_BASED")){
 			// Threshold heuristic: if WAN > 5 Mbps offload to cloud else stay at edge
@@ -105,7 +107,7 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 		else {
 			// Unknown policy => configuration error
 			SimLogger.printLine("Unknown edge orchestrator policy! Terminating simulation...");
-			System.exit(0);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		}
 
 		return result;
@@ -115,10 +117,10 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 	public Vm getVmToOffload(Task task, int deviceId) {
 		// Select VM with maximum residual capacity that can host predicted load (Least Loaded / WORST FIT)
 		Vm selectedVM = null;
-		
+
 		if(deviceId == SimSettings.CLOUD_DATACENTER_ID){
 			// Iterate all cloud hosts and VMs
-			// Select VM on cloud devices via Least Loaded algorithm!
+			// Select a cloud VM with the least-loaded policy.
 			double selectedVmCapacity = 0; //start with min value
 			List<Host> list = SimManager.getInstance().getCloudServerManager().getDatacenter().getHostList();
 			for (int hostIndex=0; hostIndex < list.size(); hostIndex++) {
@@ -138,7 +140,7 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 		}
 		else if(deviceId == SimSettings.GENERIC_EDGE_DEVICE_ID){
 			// Iterate all edge hosts and their VMs similarly
-			//Select VM on edge devices via Least Loaded algorithm!
+			// Select an edge VM with the least-loaded policy.
 			double selectedVmCapacity = 0; //start with min value
 			for(int hostIndex=0; hostIndex<numberOfHost; hostIndex++){
 				List<EdgeVM> vmArray = SimManager.getInstance().getEdgeServerManager().getVmList(hostIndex);
@@ -155,28 +157,28 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 		else{
 			// Defensive: unexpected device id
 			SimLogger.printLine("Unknown device id! The simulation has been terminated.");
-			System.exit(0);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		}
-		
+
 		return selectedVM;
 	}
 
 	@Override
 	public void processEvent(SimEvent arg0) {
 		// No asynchronous internal events required (stateless orchestrator)
-		// Nothing to do!
+		// No action is required for this event.
 	}
 
 	@Override
 	public void shutdownEntity() {
 		// No resources to release
-		// Nothing to do!
+		// No action is required for this event.
 	}
 
 	@Override
 	public void startEntity() {
 		// No startup scheduling needed
-		// Nothing to do!
+		// No action is required for this event.
 	}
 
 }

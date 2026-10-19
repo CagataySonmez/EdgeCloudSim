@@ -1,8 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 package edu.boun.edgecloudsim.applications.tutorial4;
 
 import java.util.ArrayList;
 
 import org.apache.commons.math3.distribution.ExponentialDistribution;
+import org.apache.commons.math3.random.Well19937c;
 
 import edu.boun.edgecloudsim.core.SimSettings;
 import edu.boun.edgecloudsim.task_generator.LoadGeneratorModel;
@@ -10,9 +12,17 @@ import edu.boun.edgecloudsim.utils.TaskProperty;
 import edu.boun.edgecloudsim.utils.SimLogger;
 import edu.boun.edgecloudsim.utils.SimUtils;
 
+/** Generates the workload used by tutorial 4. */
 public class SampleLoadGenerator extends LoadGeneratorModel{
 	int taskTypeOfDevices[];
 
+	/**
+	 * Creates a tutorial workload generator.
+	 *
+	 * @param _numberOfMobileDevices number of simulated mobile devices
+	 * @param _simulationTime simulation duration in seconds
+	 * @param _simScenario simulation-scenario identifier
+	 */
 	public SampleLoadGenerator(int _numberOfMobileDevices, double _simulationTime, String _simScenario) {
 		super(_numberOfMobileDevices, _simulationTime, _simScenario);
 	}
@@ -32,14 +42,13 @@ public class SampleLoadGenerator extends LoadGeneratorModel{
 			for (int j=0; j<SimSettings.getInstance().getTaskLookUpTable().length; j++) {
 				// Cumulative probability walk; assumes percentages sum ~100 (tolerant to rounding).
 				taskTypePercentage += SimSettings.getInstance().getTaskLookUpTable()[j][0];
-				if(taskTypeSelector <= taskTypePercentage){
+				if(taskTypeSelector < taskTypePercentage){
 					randomTaskType = j;
 					break;
 				}
 			}
 			if(randomTaskType == -1){
-				SimLogger.printLine("Impossible is occurred! no random task type!");
-				continue;
+				throw new IllegalArgumentException("Application usage percentages must sum to 100");
 			}
 
 			taskTypeOfDevices[i] = randomTaskType;
@@ -49,11 +58,12 @@ public class SampleLoadGenerator extends LoadGeneratorModel{
 			double idlePeriod = SimSettings.getInstance().getTaskLookUpTable()[randomTaskType][4];
 			double activePeriodStartTime = SimUtils.getRandomDoubleNumber(
 					// Random offset reduces phase alignment (thundering herd) at simulation start.
-					SimSettings.CLIENT_ACTIVITY_START_TIME, 
+					SimSettings.CLIENT_ACTIVITY_START_TIME,
 					SimSettings.CLIENT_ACTIVITY_START_TIME * 2);  //active period starts shortly after the simulation started (e.g. 10 seconds)
 			double virtualTime = activePeriodStartTime;
 
-			ExponentialDistribution rng = new ExponentialDistribution(poissonMean);
+			ExponentialDistribution rng = new ExponentialDistribution(
+					new Well19937c(SimUtils.nextSeed()), poissonMean);
 			//ExponentialDistribution rng[] = new ExponentialDistribution[10];
 			//for(int j=0; j<10; j++)
 			//	rng[j] = new ExponentialDistribution(poissonMean * ((double)1 + (double)j * (double) 0.12));
@@ -67,8 +77,8 @@ public class SampleLoadGenerator extends LoadGeneratorModel{
 				double interval = rng.sample();
 
 				if(interval <= 0){
-					SimLogger.printLine("Impossible is occurred! interval is " + interval + " for device " + i + " time " + virtualTime);
-					continue;
+					throw new IllegalStateException("Invalid task interval " + interval
+							+ " for device " + i + " at time " + virtualTime);
 				}
 				//SimLogger.printLine(virtualTime + " -> " + interval + " for device " + i + " time ");
 				virtualTime += interval;
@@ -89,7 +99,7 @@ public class SampleLoadGenerator extends LoadGeneratorModel{
 				long outputFileSize =(long)SimSettings.getInstance().getTaskLookUpTable()[randomTaskType][6];
 				long outputFileSizeBias = outputFileSize / 10;
 
-				long length = (long)SimSettings.getInstance().getTaskLookUpTable()[randomTaskType][7];	
+				long length = (long)SimSettings.getInstance().getTaskLookUpTable()[randomTaskType][7];
 				long lengthBias = length / 10;
 
 				int pesNumber = (int)SimSettings.getInstance().getTaskLookUpTable()[randomTaskType][8];

@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Cloud Server Manager
- * 
- * Description: 
+ *
+ * Description:
  * DefaultCloudServerManager is responsible for creating datacenters, hosts and VMs.
- * 
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -50,7 +51,7 @@ public class DefaultCloudServerManager extends CloudServerManager{
 	@Override
 	public void initialize() {
 	}
-	
+
 	/**
 	 * Creates and returns the VM allocation policy for cloud datacenters.
 	 * @param hostList List of hosts available for VM allocation
@@ -61,7 +62,7 @@ public class DefaultCloudServerManager extends CloudServerManager{
 	public VmAllocationPolicy getVmAllocationPolicy(List<? extends Host> hostList, int dataCenterIndex) {
 		return new CloudVmAllocationPolicy_Custom(hostList,dataCenterIndex);
 	}
-	
+
 	/**
 	 * Starts the cloud datacenter infrastructure.
 	 * Creates and initializes the main cloud datacenter.
@@ -86,7 +87,7 @@ public class DefaultCloudServerManager extends CloudServerManager{
 	public void createVmList(int brokerId){
 		// VMs should have unique IDs, so create Cloud VMs after Edge VMs
 		int vmCounter=SimSettings.getInstance().getNumOfEdgeVMs();
-		
+
 		// Create VMs for each cloud host
 		for (int i = 0; i < SimSettings.getInstance().getNumOfCloudHost(); i++) {
 			vmList.add(i, new ArrayList<CloudVM>());
@@ -97,7 +98,7 @@ public class DefaultCloudServerManager extends CloudServerManager{
 				int ram = SimSettings.getInstance().getRamForCloudVM();
 				long storage = SimSettings.getInstance().getStorageForCloudVM();
 				long bandwidth = 0;
-				
+
 				// Create cloud VM with configured parameters
 				CloudVM vm = new CloudVM(vmCounter, brokerId, mips, numOfCores, ram, bandwidth, storage, vmm, new CloudletSchedulerTimeShared());
 				vmList.get(i).add(vm);
@@ -105,7 +106,7 @@ public class DefaultCloudServerManager extends CloudServerManager{
 			}
 		}
 	}
-	
+
 	/**
 	 * Calculates the average CPU utilization across all cloud VMs.
 	 * Iterates through all hosts and their VMs to compute overall utilization.
@@ -132,7 +133,7 @@ public class DefaultCloudServerManager extends CloudServerManager{
 	/**
 	 * Creates a cloud datacenter with specified configuration.
 	 * Configures datacenter characteristics including hosts, policies, and costs.
-	 * 
+	 *
 	 * @param index The datacenter index identifier
 	 * @return Configured Datacenter instance
 	 * @throws Exception if datacenter creation fails
@@ -145,9 +146,9 @@ public class DefaultCloudServerManager extends CloudServerManager{
 		double costPerSec = 0;
 		double costPerMem = 0;
 		double costPerStorage = 0;
-		
+
 		List<Host> hostList=createHosts();
-		
+
 		String name = "CloudDatacenter_" + Integer.toString(index);
 		double time_zone = 3.0;         // Time zone this resource is located
 		LinkedList<Storage> storageList = new LinkedList<Storage>();	// No SAN devices added currently
@@ -159,24 +160,24 @@ public class DefaultCloudServerManager extends CloudServerManager{
 
 		// Create the datacenter with VM allocation policy
 		Datacenter datacenter = null;
-	
+
 		VmAllocationPolicy vm_policy = getVmAllocationPolicy(hostList,index);
 		datacenter = new Datacenter(name, characteristics, vm_policy, storageList, 0);
-		
+
 		return datacenter;
 	}
-	
+
 	/**
 	 * Creates the list of hosts for the cloud datacenter.
 	 * Each host is configured with processing elements, RAM, storage, and bandwidth
 	 * based on simulation settings and number of VMs per host.
-	 * 
+	 *
 	 * @return List of configured Host objects for the datacenter
 	 */
 	private List<Host> createHosts(){
 		// Step 1: Create list to store cloud hosts
 		List<Host> hostList = new ArrayList<Host>();
-		
+
 		for (int i = 0; i < SimSettings.getInstance().getNumOfCloudHost(); i++) {
 			int numOfVMPerHost = SimSettings.getInstance().getNumOfCloudVMsPerHost();
 			// Calculate total resources needed (host resources = sum of VM resources)
@@ -185,7 +186,7 @@ public class DefaultCloudServerManager extends CloudServerManager{
 			int ram = SimSettings.getInstance().getRamForCloudVM() * numOfVMPerHost;
 			long storage = SimSettings.getInstance().getStorageForCloudVM() * numOfVMPerHost;
 			long bandwidth = 0;
-			
+
 			// Step 2: Create processing elements (PEs) for this host
 			List<Pe> peList = new ArrayList<Pe>();
 
@@ -193,7 +194,7 @@ public class DefaultCloudServerManager extends CloudServerManager{
 			for(int j=0; j<numOfCores; j++){
 				peList.add(new Pe(j, new PeProvisionerSimple(mips))); // PE ID and MIPS capacity
 			}
-			
+
 			// Step 4: Create host with unique ID and resource provisioners
 			Host host = new Host(
 					// Hosts should have unique IDs, so create Cloud Hosts after Edge Hosts

@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - EdgeHost
- * 
- * Description: 
+ *
+ * Description:
  * EdgeHost adds location information over CloudSim's Host class
- *               
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -22,12 +23,12 @@ import edu.boun.edgecloudsim.utils.Location;
 
 /**
  * Extended Host class for location-aware edge computing in EdgeCloudSim.
- * 
+ *
  * This class extends CloudSim's Host class to add geographic location information
  * essential for edge computing scenarios. EdgeHosts represent physical compute
  * resources deployed at specific geographic locations in the network edge,
  * enabling location-aware task placement and proximity-based orchestration.
- * 
+ *
  * Key features:
  * - Geographic location tracking for edge-aware placement decisions
  * - Integration with mobility models for dynamic device-to-edge associations
@@ -36,13 +37,13 @@ import edu.boun.edgecloudsim.utils.Location;
  */
 public class EdgeHost extends Host {
 	private Location location;    // Geographic location information for this edge host
-	
+
 	/**
 	 * Constructs an EdgeHost with the specified resource configuration.
 	 * Initializes the host with processing elements, resource provisioners,
 	 * and VM scheduling policy. Location information should be set separately
 	 * using the setPlace() method.
-	 * 
+	 *
 	 * @param id Unique identifier for this host
 	 * @param ramProvisioner RAM allocation policy for VMs on this host
 	 * @param bwProvisioner Bandwidth allocation policy for VMs on this host
@@ -56,23 +57,23 @@ public class EdgeHost extends Host {
 		super(id, ramProvisioner, bwProvisioner, storage, peList, vmScheduler);
 
 	}
-	
+
 	/**
 	 * Sets the geographic location of this edge host.
 	 * Location information is crucial for edge computing scenarios where
 	 * proximity-based decisions and location-aware orchestration are required.
-	 * 
+	 *
 	 * @param _location Location object containing coordinates, place type, and WLAN ID
 	 */
 	public void setPlace(Location _location){
 		location=_location;
 	}
-	
+
 	/**
 	 * Returns the geographic location of this edge host.
 	 * Used by orchestrators and mobility models for location-aware
 	 * task placement and device-to-host association decisions.
-	 * 
+	 *
 	 * @return Location object with this host's geographic information
 	 */
 	public Location getLocation(){

@@ -1,14 +1,14 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - MobileServerManager
- * 
- * Description: 
+ *
+ * Description:
  * MobileServerManager is responsible for creating and terminating
  * the mobile datacenters which operates the hosts and VMs.
  * It also provides the list of VMs running on the hosts and
  * the average utilization of all VMs.
  *
- * Please note that, EdgeCloudSim is built on top of CloudSim
- * Therefore, all the computational units are handled by CloudSim
+ * EdgeCloudSim delegates computational-resource simulation to CloudSim.
  *
  * The mobile processing units are simulated via CloudSim as well.
  * It is assumed that the mobile devices operate Hosts and VMs
@@ -34,7 +34,9 @@ import org.cloudbus.cloudsim.VmAllocationPolicy;
  * Uses CloudSim infrastructure to model mobile devices as lightweight servers.
  */
 public abstract class MobileServerManager {
+	/** Datacenter representing the mobile processing tier. */
 	protected Datacenter localDatacenter;
+	/** Mobile VMs grouped by host. */
 	protected List<List<MobileVM>> vmList;
 
 	/**
@@ -47,7 +49,7 @@ public abstract class MobileServerManager {
 	/**
 	 * Retrieves the list of VMs running on a specific mobile host.
 	 * Includes bounds checking to prevent index out of bounds errors.
-	 * 
+	 *
 	 * @param hostId The ID of the mobile host to query
 	 * @return List of MobileVMs running on the specified host, null if hostId is invalid
 	 */
@@ -57,7 +59,7 @@ public abstract class MobileServerManager {
 		else
 			return null;
 	}
-	
+
 	/**
 	 * Gets the mobile datacenter managed by this manager.
 	 * @return The mobile Datacenter instance representing local processing capability
@@ -65,7 +67,7 @@ public abstract class MobileServerManager {
 	public Datacenter getDatacenter(){
 		return localDatacenter;
 	}
-	
+
 	/**
 	 * Initializes the mobile server manager with required configurations.
 	 * Called before mobile datacenter operations begin.
@@ -75,7 +77,7 @@ public abstract class MobileServerManager {
 	/**
 	 * Provides VM allocation policy for mobile datacenters.
 	 * Determines how VMs are assigned to mobile device hosts.
-	 * 
+	 *
 	 * @param list List of available mobile hosts in the datacenter
 	 * @param dataCenterIndex Index identifier of the mobile datacenter
 	 * @return VmAllocationPolicy instance for mobile VM placement decisions
@@ -88,19 +90,19 @@ public abstract class MobileServerManager {
 	 * @throws Exception if mobile datacenter initialization fails
 	 */
 	public abstract void startDatacenters() throws Exception;
-	
+
 	/**
 	 * Terminates all mobile datacenters and releases their resources.
 	 * Called during simulation cleanup.
 	 */
 	public abstract void terminateDatacenters();
-	
+
 	/**
 	 * Creates the list of VMs for all mobile device hosts.
 	 * @param brokerId The broker ID that will manage these mobile VMs
 	 */
 	public abstract void createVmList(int brokerId);
-	
+
 	/**
 	 * Calculates and returns the average CPU utilization across all mobile VMs.
 	 * @return Average utilization percentage (0.0 to 1.0) of mobile processing units

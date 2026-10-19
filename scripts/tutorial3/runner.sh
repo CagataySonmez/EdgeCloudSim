@@ -24,7 +24,7 @@ scenario_conf_file="${script_root_path}/config/${scenario_name}.properties"
 scenario_edge_devices_file="${script_root_path}/config/${edge_devices_file}"
 scenario_applications_file="${script_root_path}/config/${applications_file}"
 
-# Orijinal ../../bin ve ../../lib yollarını script konumuna sabitler.
+# Resolve bin and lib paths relative to the script location.
 project_root="$(cd "${script_root_path}/../.." && pwd -P)"
 
 classpath="${project_root}/bin"

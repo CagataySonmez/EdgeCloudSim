@@ -1,10 +1,11 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Edge Orchestrator
- * 
- * Description: 
+ *
+ * Description:
  * SampleEdgeOrchestrator offloads tasks to proper server
  * based on the applied scenario
- * 
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2022, Bogazici University, Istanbul, Turkey
  */
@@ -30,8 +31,15 @@ import edu.boun.edgecloudsim.utils.SimLogger;
 // - VM selection: WORST FIT (choose VM with largest residual CPU that can host predicted load) within serving WLAN host.
 // - Prediction uses SampleCpuUtilizationModel (100 * taskLength / vmMips).
 
+/** Implements the orchestration policies introduced in tutorial 4. */
 public class SampleEdgeOrchestrator extends EdgeOrchestrator {
-	
+
+	/**
+	 * Creates a tutorial orchestrator.
+	 *
+	 * @param _policy orchestration-policy identifier
+	 * @param _simScenario simulation-scenario identifier
+	 */
 	public SampleEdgeOrchestrator(String _policy, String _simScenario) {
 		super(_policy, _simScenario);
 	}
@@ -40,12 +48,7 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 	public void initialize() {
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see edu.boun.edgecloudsim.edge_orchestrator.EdgeOrchestrator#getDeviceToOffload(edu.boun.edgecloudsim.edge_client.Task)
-	 * 
-	 * It is assumed that the edge orchestrator app is running on the edge devices in a distributed manner
-	 */
+	/** Selects the edge tier, the only execution tier used by this tutorial. */
 	@Override
 	public int getDeviceToOffload(Task task) {
 		int result = 0;
@@ -60,16 +63,16 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 	@Override
 	public Vm getVmToOffload(Task task, int deviceId) {
 		Vm selectedVM = null;
-		
+
 		// Validate target is generic edge, derive host by WLAN id
 		//in this scenario, clients can only offload to edge servers located in the serving WLAN place
 		//serving wlan ID is equal to the host id because there is only one host in one place
 		if(deviceId == SimSettings.GENERIC_EDGE_DEVICE_ID){
 			Location deviceLocation = SimManager.getInstance().getMobilityModel().getLocation(task.getMobileDeviceId(), CloudSim.clock());
 			int relatedHostId=deviceLocation.getServingWlanId();
-			
+
 			List<EdgeVM> vmArray = SimManager.getInstance().getEdgeServerManager().getVmList(relatedHostId);
-			
+
 			// For each VM compute (required vs available) and track maximum available
 			//use least loaded policy (WORST FIT) to select VM on Host located in the serving WLAN place
 			double selectedVmCapacity = 0; //start with min value
@@ -88,9 +91,9 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 		else{
 			// Unknown device id => configuration failure
 			SimLogger.printLine("Unknown device id! The simulation has been terminated.");
-			System.exit(0);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		}
-		
+
 		return selectedVM;
 	}
 
@@ -101,12 +104,12 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 
 	@Override
 	public void shutdownEntity() {
-		// Nothing to do!
+		// No action is required for this event.
 	}
 
 	@Override
 	public void startEntity() {
-		// Nothing to do!
+		// No action is required for this event.
 	}
 
 }

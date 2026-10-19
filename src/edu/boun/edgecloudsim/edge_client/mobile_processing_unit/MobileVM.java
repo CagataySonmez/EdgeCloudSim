@@ -1,13 +1,12 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - MobileVM
- * 
- * Description: 
+ *
+ * Description:
  * MobileVM adds vm type information over CloudSim's VM class
  *
- * Please note that the mobile processing units are simulated via
- * CloudSim. It is assumed that the mobile devices operate Hosts
- * and VMs like a server. That is why the class names are similar
- * to other Cloud and Edge components (to provide consistency).
+ * Mobile processing units are represented by CloudSim hosts and VMs,
+ * following the same abstraction used for the cloud and edge tiers.
  *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
@@ -27,11 +26,11 @@ import edu.boun.edgecloudsim.core.SimSettings;
  */
 public class MobileVM extends Vm {
 	private SimSettings.VM_TYPES type;
-	
+
 	/**
 	 * Constructor for MobileVM with specified resource parameters.
 	 * Creates a VM optimized for mobile device constraints and capabilities.
-	 * 
+	 *
 	 * @param id Unique identifier for this mobile VM
 	 * @param userId ID of the user/broker that owns this VM
 	 * @param mips Processing capacity in MIPS (typically lower than cloud/edge VMs)

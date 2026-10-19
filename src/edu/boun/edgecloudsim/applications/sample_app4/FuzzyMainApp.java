@@ -1,8 +1,9 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Sample Application
- * 
+ *
  * Description:  Sample application for EdgeCloudSim
- *               
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -23,28 +24,33 @@ import edu.boun.edgecloudsim.core.SimSettings;
 import edu.boun.edgecloudsim.utils.SimLogger;
 import edu.boun.edgecloudsim.utils.SimUtils;
 
+/** Command-line entry point for the fuzzy-orchestration sample. */
 public class FuzzyMainApp {
-	
+
+	/** Creates an entry-point object; invoking {@link #main(String[])} is preferred. */
+	public FuzzyMainApp() {
+	}
+
 	/**
 	 * Main entry point for the fuzzy logic-based EdgeCloudSim application.
 	 * Configures simulation parameters and runs multiple scenarios with different orchestration policies.
-	 * 
+	 *
 	 * @param args Command line arguments: [configFile, edgeDevicesFile, applicationsFile, outputFolder, iterationNumber]
 	 */
 	public static void main(String[] args) {
 		// Disable CloudSim library console output to reduce noise
 		Log.disable();
-		
+
 		// Enable console and file logging for this application
 		SimLogger.enablePrintLog();
-		
+
 		// Initialize simulation parameters
 		int iterationNumber = 1;
 		String configFile = "";
 		String outputFolder = "";
 		String edgeDevicesFile = "";
 		String applicationsFile = "";
-		
+
 		// Parse command line arguments for custom configuration files
 		if (args.length == 5){
 			configFile = args[0];          // Main simulation configuration
@@ -66,19 +72,20 @@ public class FuzzyMainApp {
 		SimSettings SS = SimSettings.getInstance();
 		if(SS.initialize(configFile, edgeDevicesFile, applicationsFile) == false){
 			SimLogger.printLine("cannot initialize simulation settings!");
-			System.exit(0);
+			System.exit(1);
 		}
-		
+
 		// Configure output logging if enabled
 		if(SS.getFileLoggingEnabled()){
 			SimLogger.enableFileLog();
 			SimUtils.cleanOutputFolder(outputFolder);
 		}
-		
+
 		DateFormat df = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 		Date SimulationStartDate = Calendar.getInstance().getTime();
 		String now = df.format(SimulationStartDate);
 		SimLogger.printLine("Simulation started at " + now);
+		SimLogger.printLine("Simulation seed: " + SimUtils.getSeed());
 		SimLogger.printLine("----------------------------------------------------------------------");
 
 		// Triple nested loop to run all combinations of: device counts, scenarios, and policies
@@ -98,23 +105,23 @@ public class FuzzyMainApp {
 					SimLogger.printLine("Scenario: " + simScenario + " - Policy: " + orchestratorPolicy + " - #iteration: " + iterationNumber);
 					SimLogger.printLine("Duration: " + SS.getSimulationTime()/60 + " min (warm up period: "+ SS.getWarmUpPeriod()/60 +" min) - #devices: " + j);
 					SimLogger.getInstance().simStarted(outputFolder,"SIMRESULT_" + simScenario + "_"  + orchestratorPolicy + "_" + j + "DEVICES");
-					
+
 					try
 					{
 						// Initialize CloudSim simulation framework
 						int num_user = 2;   // Number of grid users (standard CloudSim parameter)
 						Calendar calendar = Calendar.getInstance();
 						boolean trace_flag = false;  // Disable event tracing for performance
-				
+
 						// Initialize CloudSim library with time granularity of 0.01 seconds
 						CloudSim.init(num_user, calendar, trace_flag, 0.01);
-						
+
 						// Create fuzzy logic-specific scenario factory
 						ScenarioFactory sampleFactory = new FuzzyScenarioFactory(j,SS.getSimulationTime(), orchestratorPolicy, simScenario);
-						
+
 						// Create simulation manager with fuzzy orchestration components
 						SimManager manager = new SimManager(sampleFactory, j, simScenario, orchestratorPolicy);
-						
+
 						// Execute the simulation scenario
 						manager.startSimulation();
 					}
@@ -122,9 +129,9 @@ public class FuzzyMainApp {
 					{
 						SimLogger.printLine("The simulation has been terminated due to an unexpected error");
 						e.printStackTrace();
-						System.exit(0);
+						System.exit(1);
 					}
-					
+
 					// Log scenario completion time and performance statistics
 					Date ScenarioEndDate = Calendar.getInstance().getTime();
 					now = df.format(ScenarioEndDate);

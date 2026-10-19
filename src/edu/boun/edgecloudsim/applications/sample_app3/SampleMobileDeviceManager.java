@@ -1,7 +1,8 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Mobile Device Manager
- * 
- * Description: 
+ *
+ * Description:
  * Mobile Device Manager is one of the most important component
  * in EdgeCloudSim. It is responsible for creating the tasks,
  * submitting them to the related VM with respect to the
@@ -11,10 +12,10 @@
 
  * SampleMobileDeviceManager sends tasks to the edge servers or
  * mobile device processing unit.
- * 
+ *
  * If you want to use different topology, you should modify
  * the flow implemented in this class.
- * 
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -48,7 +49,7 @@ import edu.boun.edgecloudsim.utils.SimLogger;
 public class SampleMobileDeviceManager extends MobileDeviceManager {
 	/** Base value for custom event tags to avoid CloudSim tag conflicts */
 	private static final int BASE = 100000;
-	
+
 	/** Event tag for task requests received by edge devices */
 	private static final int REQUEST_RECEIVED_BY_EDGE_DEVICE = BASE + 1;
 	/** Event tag for task requests received by mobile devices */
@@ -58,7 +59,7 @@ public class SampleMobileDeviceManager extends MobileDeviceManager {
 
 	/** Counter for generating unique task IDs */
 	private int taskIdCounter=0;
-	
+
 	/**
 	 * Constructor for sample mobile device manager.
 	 * @throws Exception if initialization fails
@@ -72,21 +73,21 @@ public class SampleMobileDeviceManager extends MobileDeviceManager {
 	@Override
 	public void initialize() {
 	}
-	
+
 	/**
 	 * Returns custom CPU utilization model for mobile device processing.
-	 * @return CpuUtilizationModel_Custom for accurate capacity prediction
+	 * @return a new application-table-based CPU utilization model
 	 */
 	@Override
 	public UtilizationModel getCpuUtilizationModel() {
 		return new CpuUtilizationModel_Custom();
 	}
-	
+
 	@Override
 	public void startEntity() {
 		super.startEntity();
 	}
-	
+
 	/**
 	 * Submit cloudlets to VMs - not used in this mobile-edge scenario.
 	 * Tasks are submitted through submitTask() method instead.
@@ -94,24 +95,24 @@ public class SampleMobileDeviceManager extends MobileDeviceManager {
 	protected void submitCloudlets() {
 		// Not used in this scenario - tasks submitted via submitTask()
 	}
-	
+
 	/**
 	 * Process task completion events from edge servers or mobile devices.
 	 * Handles network delays, mobility effects, and result delivery.
-	 * 
+	 *
 	 * @param ev SimEvent containing the completed task
 	 */
 	protected void processCloudletReturn(SimEvent ev) {
 		NetworkModel networkModel = SimManager.getInstance().getNetworkModel();
 		Task task = (Task) ev.getData();
-		
+
 		// Log task execution completion
 		SimLogger.getInstance().taskExecuted(task.getCloudletId());
 
 		if(task.getAssociatedDatacenterId() == SimSettings.GENERIC_EDGE_DEVICE_ID){
 			// Handle task completed on edge server - need to download result
 			double delay = networkModel.getDownloadDelay(task.getAssociatedDatacenterId(), task.getMobileDeviceId(), task);
-			
+
 			if(delay > 0)
 			{
 				// Check if mobile device is still in same WLAN coverage area
@@ -121,7 +122,7 @@ public class SampleMobileDeviceManager extends MobileDeviceManager {
 					// Start result download from edge server to mobile device
 					networkModel.downloadStarted(task.getSubmittedLocation(), SimSettings.GENERIC_EDGE_DEVICE_ID);
 					SimLogger.getInstance().setDownloadDelay(task.getCloudletId(), delay, NETWORK_DELAY_TYPES.WLAN_DELAY);
-					
+
 					schedule(getId(), delay, RESPONSE_RECEIVED_BY_MOBILE_DEVICE, task);
 				}
 				else
@@ -139,42 +140,42 @@ public class SampleMobileDeviceManager extends MobileDeviceManager {
 		else if(task.getAssociatedDatacenterId() == SimSettings.MOBILE_DATACENTER_ID) {
 			// Task completed on mobile device - no network delay for local processing
 			SimLogger.getInstance().taskEnded(task.getCloudletId(), CloudSim.clock());
-			
+
 			/*
 			 * Note: Device-to-device (D2D) communication is not implemented in this scenario.
 			 * For D2D scenarios, you would need to:
 			 * 1. Calculate D2D network delay
-			 * 2. Handle mobility effects on D2D links  
+			 * 2. Handle mobility effects on D2D links
 			 * 3. Consider D2D bandwidth limitations
 			 * 4. Schedule RESPONSE_RECEIVED_BY_MOBILE_DEVICE event with calculated delay
 			 */
 		}
 		else {
 			SimLogger.printLine("Unknown datacenter id! Terminating simulation...");
-			System.exit(0);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		}
 	}
-	
+
 	/**
 	 * Process custom simulation events for mobile-edge task management.
 	 * Handles task requests and responses for both edge and mobile processing.
-	 * 
+	 *
 	 * @param ev SimEvent to process
 	 */
 	protected void processOtherEvent(SimEvent ev) {
 		if (ev == null) {
 			SimLogger.printLine(getName() + ".processOtherEvent(): " + "Error - an event is null! Terminating simulation...");
-			System.exit(0);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 			return;
 		}
-		
+
 		NetworkModel networkModel = SimManager.getInstance().getNetworkModel();
-		
+
 		switch (ev.getTag()) {
 			case REQUEST_RECEIVED_BY_MOBILE_DEVICE:
 			{
 				// Task request received by mobile device for local processing
-				Task task = (Task) ev.getData();			
+				Task task = (Task) ev.getData();
 				submitTaskToVm(task, SimSettings.VM_TYPES.MOBILE_VM);
 				break;
 			}
@@ -190,15 +191,15 @@ public class SampleMobileDeviceManager extends MobileDeviceManager {
 			{
 				// Task result received by mobile device after download completion
 				Task task = (Task) ev.getData();
-				
+
 				networkModel.downloadFinished(task.getSubmittedLocation(), SimSettings.GENERIC_EDGE_DEVICE_ID);
-				
+
 				SimLogger.getInstance().taskEnded(task.getCloudletId(), CloudSim.clock());
 				break;
 			}
 			default:
 				SimLogger.printLine(getName() + ".processOtherEvent(): " + "Error - event unknown by this DatacenterBroker. Terminating simulation...");
-				System.exit(0);
+				edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 				break;
 		}
 	}
@@ -206,7 +207,7 @@ public class SampleMobileDeviceManager extends MobileDeviceManager {
 	/**
 	 * Submit task for execution on mobile device or edge server based on orchestrator decision.
 	 * Handles network delays for edge offloading and local processing for mobile execution.
-	 * 
+	 *
 	 * @param edgeTask Task properties including size, type, and requirements
 	 */
 	public void submitTask(TaskProperty edgeTask) {
@@ -215,16 +216,16 @@ public class SampleMobileDeviceManager extends MobileDeviceManager {
 		int nextDeviceForNetworkModel = 0;
 		VM_TYPES vmType = null;
 		NETWORK_DELAY_TYPES delayType = null;
-		
+
 		NetworkModel networkModel = SimManager.getInstance().getNetworkModel();
-		
+
 		// Create task instance with unique ID and specifications
 		Task task = createTask(edgeTask);
-		
+
 		// Get current location of mobile device for network delay calculations
 		Location currentLocation = SimManager.getInstance().getMobilityModel().
 				getLocation(task.getMobileDeviceId(), CloudSim.clock());
-		
+
 		// Record task submission location for mobility tracking
 		task.setSubmittedLocation(currentLocation);
 
@@ -238,7 +239,7 @@ public class SampleMobileDeviceManager extends MobileDeviceManager {
 
 		// Get orchestrator decision on where to execute the task
 		int nextHopId = SimManager.getInstance().getEdgeOrchestrator().getDeviceToOffload(task);
-		
+
 		if(nextHopId == SimSettings.GENERIC_EDGE_DEVICE_ID){
 			// Task offloaded to edge server - calculate upload delay
 			delay = networkModel.getUploadDelay(task.getMobileDeviceId(), nextHopId, task);
@@ -251,7 +252,7 @@ public class SampleMobileDeviceManager extends MobileDeviceManager {
 			// Task executed locally on mobile device - no network delay
 			vmType = VM_TYPES.MOBILE_VM;
 			nextEvent = REQUEST_RECEIVED_BY_MOBILE_DEVICE;
-			
+
 			/*
 			 * Note: Device-to-device (D2D) communication is not implemented.
 			 * For D2D support, you would need to:
@@ -262,27 +263,27 @@ public class SampleMobileDeviceManager extends MobileDeviceManager {
 		}
 		else {
 			SimLogger.printLine("Unknown nextHopId! Terminating simulation...");
-			System.exit(0);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		}
-		
+
 		// Proceed with task execution if network bandwidth is available or local processing
 		if(delay>0 || nextHopId == SimSettings.MOBILE_DATACENTER_ID){
-			
+
 			// Get VM assignment from orchestrator based on load balancing
 			Vm selectedVM = SimManager.getInstance().getEdgeOrchestrator().getVmToOffload(task, nextHopId);
-			
+
 			if(selectedVM != null){
 				// Configure task associations for tracking and execution
 				task.setAssociatedDatacenterId(nextHopId);
 				task.setAssociatedHostId(selectedVM.getHost().getId());
 				task.setAssociatedVmId(selectedVM.getId());
-				
+
 				// Bind task to selected VM for CloudSim execution
 				getCloudletList().add(task);
 				bindCloudletToVm(task.getCloudletId(), selectedVM.getId());
 
 				SimLogger.getInstance().taskStarted(task.getCloudletId(), CloudSim.clock());
-				
+
 				// Start network upload for edge processing (skip for local mobile processing)
 				if(nextHopId != SimSettings.MOBILE_DATACENTER_ID) {
 					networkModel.uploadStarted(task.getSubmittedLocation(), nextDeviceForNetworkModel);
@@ -303,10 +304,10 @@ public class SampleMobileDeviceManager extends MobileDeviceManager {
 			SimLogger.getInstance().rejectedDueToBandwidth(task.getCloudletId(), CloudSim.clock(), vmType.ordinal(), delayType);
 		}
 	}
-	
+
 	/**
 	 * Submit task to assigned VM for execution.
-	 * 
+	 *
 	 * @param task Task to be executed
 	 * @param vmType Type of VM (MOBILE_VM or EDGE_VM)
 	 */
@@ -321,10 +322,10 @@ public class SampleMobileDeviceManager extends MobileDeviceManager {
 				task.getAssociatedVmId(),
 				vmType.ordinal());
 	}
-	
+
 	/**
 	 * Create task instance from task properties with custom CPU utilization model.
-	 * 
+	 *
 	 * @param edgeTask Task properties including size and requirements
 	 * @return Configured task ready for execution
 	 */
@@ -338,16 +339,16 @@ public class SampleMobileDeviceManager extends MobileDeviceManager {
 				edgeTask.getLength(), edgeTask.getPesNumber(),
 				edgeTask.getInputFileSize(), edgeTask.getOutputFileSize(),
 				utilizationModelCPU, utilizationModel, utilizationModel);
-		
+
 		// Set task ownership and type for tracking
 		task.setUserId(this.getId());
 		task.setTaskType(edgeTask.getTaskType());
-		
+
 		// Configure custom CPU model with task reference for capacity prediction
 		if (utilizationModelCPU instanceof CpuUtilizationModel_Custom) {
 			((CpuUtilizationModel_Custom)utilizationModelCPU).setTask(task);
 		}
-		
+
 		return task;
 	}
 }

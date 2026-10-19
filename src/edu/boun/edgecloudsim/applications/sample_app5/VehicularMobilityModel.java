@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Mobility model implementation
- * 
- * Description: 
+ *
+ * Description:
  * VehicularMobilityModel implements basic vehicular mobility model
- * 
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -20,6 +21,7 @@ import edu.boun.edgecloudsim.mobility.MobilityModel;
 import edu.boun.edgecloudsim.utils.Location;
 import edu.boun.edgecloudsim.utils.SimUtils;
 
+/** Moves vehicles around a closed sequence of configured road segments. */
 public class VehicularMobilityModel extends MobilityModel {
 	// Speed limits for different location types (km/h): [low, medium, high attractiveness]
 	private final double SPEED_FOR_PLACES[] = {20, 40, 60};
@@ -37,7 +39,7 @@ public class VehicularMobilityModel extends MobilityModel {
 
 	/**
 	 * Constructor for vehicular mobility model.
-	 * 
+	 *
 	 * @param _numberOfMobileDevices number of mobile devices (vehicles)
 	 * @param _simulationTime total simulation duration in seconds
 	 */
@@ -70,7 +72,7 @@ public class VehicularMobilityModel extends MobilityModel {
 
 			// Calculate time to traverse this segment: time = distance / speed
 			// Convert km/h to m/s: (km/h) * (1000m/km) / (3600s/h) = (km/h) / 3.6
-			timeToDriveLocationArray[i] = ((double)3.6 * (double)lengthOfSegment) /
+			timeToDriveLocationArray[i] = (3.6 * lengthOfSegment) /
 					(SPEED_FOR_PLACES[locationTypes[i]]);
 
 			// Accumulate total loop time
@@ -84,13 +86,13 @@ public class VehicularMobilityModel extends MobilityModel {
 		for(int i=0; i<numberOfMobileDevices; i++) {
 			// Random position anywhere on the road
 			initialPositionArray[i] = SimUtils.getRandomNumber(0, totalLengthOfRoad-1);
-			
+
 			// Determine which road segment the vehicle starts in
 			initialLocationIndexArray[i] = initialPositionArray[i] / lengthOfSegment;
-			
+
 			// Calculate time needed to reach the next location from current position
 			int remainingDistance = lengthOfSegment - (initialPositionArray[i] % lengthOfSegment);
-			timeToReachNextLocationArray[i] = ((double)3.6 * (double)remainingDistance) /
+			timeToReachNextLocationArray[i] = (3.6 * remainingDistance) /
 					(SPEED_FOR_PLACES[locationTypes[initialLocationIndexArray[i]]]);
 		}
 	}
@@ -98,7 +100,7 @@ public class VehicularMobilityModel extends MobilityModel {
 	/**
 	 * Calculates the current location of a vehicle at a given simulation time.
 	 * Vehicles move in a loop along the road with different speeds in different segments.
-	 * 
+	 *
 	 * @param deviceId identifier of the mobile device (vehicle)
 	 * @param time current simulation time in seconds
 	 * @return Location object containing attractiveness, segment index, and position

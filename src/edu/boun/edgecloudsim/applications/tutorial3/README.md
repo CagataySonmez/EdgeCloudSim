@@ -55,7 +55,7 @@ This tutorial implements and compares three distinct approaches for server selec
 
 ### 1. Random Server Selection (RND)
 - **Strategy**: Randomly selects a server (edge or cloud) to offload tasks
-- **Characteristics**: 
+- **Characteristics**:
   - No optimization criteria or intelligence
   - Provides baseline performance metrics for comparison
   - Equal probability for edge and cloud server selection

@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Sample Scenario Factory
- * 
+ *
  * Description:  Sample factory providing the default
- *               instances of required abstract classes 
- * 
+ *               instances of required abstract classes
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -39,7 +40,7 @@ public class FuzzyScenarioFactory implements ScenarioFactory {
 	private String orchestratorPolicy;
 	/** Simulation scenario identifier for configuration */
 	private String simScenario;
-	
+
 	/**
 	 * Constructor for fuzzy scenario factory.
 	 * @param _numOfMobileDevice Number of mobile devices in simulation
@@ -57,14 +58,14 @@ public class FuzzyScenarioFactory implements ScenarioFactory {
 		simulationTime = _simulationTime;
 		simScenario = _simScenario;
 	}
-	
+
 	/**
 	 * Creates the load generator model for task generation patterns.
 	 * @return IdleActiveLoadGenerator that simulates mobile app usage patterns
 	 */
 	@Override
 	public LoadGeneratorModel getLoadGeneratorModel() {
-		// Use idle-active pattern to simulate realistic mobile device usage
+		// Use the configured idle/active workload pattern.
 		return new IdleActiveLoadGenerator(numOfMobileDevice, simulationTime, simScenario);
 	}
 
@@ -74,27 +75,27 @@ public class FuzzyScenarioFactory implements ScenarioFactory {
 	 */
 	@Override
 	public EdgeOrchestrator getEdgeOrchestrator() {
-		// Create fuzzy orchestrator with two-stage FIS for intelligent offloading
+		// Create the orchestrator that evaluates the two-stage fuzzy inference system.
 		return new FuzzyEdgeOrchestrator(orchestratorPolicy, simScenario);
 	}
 
 	/**
 	 * Creates the mobility model for simulating mobile device movement patterns.
-	 * @return NomadicMobility model for realistic user movement simulation
+	 * @return discrete-location nomadic mobility model
 	 */
 	@Override
 	public MobilityModel getMobilityModel() {
-		// Use nomadic mobility pattern for realistic mobile device movement
+		// Use the nomadic discrete-location mobility pattern.
 		return new NomadicMobility(numOfMobileDevice,simulationTime);
 	}
 
 	/**
-	 * Creates the experimental network model with empirical throughput data.
-	 * @return FuzzyExperimentalNetworkModel with realistic WLAN/WAN characteristics
+	 * Creates the experimental network model with tabulated throughput data.
+	 * @return network model using tabulated WLAN/WAN throughput
 	 */
 	@Override
 	public NetworkModel getNetworkModel() {
-		// Use experimental network model with empirical data for accurate delay simulation
+		// Use the experimental network model with its bundled throughput tables.
 		return new FuzzyExperimentalNetworkModel(numOfMobileDevice, simScenario);
 	}
 
@@ -106,7 +107,7 @@ public class FuzzyScenarioFactory implements ScenarioFactory {
 	public EdgeServerManager getEdgeServerManager() {
 		return new DefaultEdgeServerManager();
 	}
-	
+
 	/**
 	 * Creates the cloud server manager for managing cloud computing resources.
 	 * @return DefaultCloudServerManager for standard cloud server operations
@@ -124,7 +125,7 @@ public class FuzzyScenarioFactory implements ScenarioFactory {
 	public MobileServerManager getMobileServerManager() {
 		return new DefaultMobileServerManager();
 	}
-	
+
 	/**
 	 * Creates the fuzzy mobile device manager for handling task submissions.
 	 * @return FuzzyMobileDeviceManager with integrated fuzzy logic capabilities
@@ -132,7 +133,7 @@ public class FuzzyScenarioFactory implements ScenarioFactory {
 	 */
 	@Override
 	public MobileDeviceManager getMobileDeviceManager() throws Exception {
-		// Create fuzzy-enabled mobile device manager for intelligent task handling
+		// Create the device manager used by the fuzzy-orchestration event flow.
 		return new FuzzyMobileDeviceManager();
 	}
 }

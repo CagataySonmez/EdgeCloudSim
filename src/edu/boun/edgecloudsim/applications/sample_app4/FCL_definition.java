@@ -1,19 +1,23 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 package edu.boun.edgecloudsim.applications.sample_app4;
 
 /**
  * FCL_definition class contains Fuzzy Control Language (FCL) definitions for the fuzzy logic system.
  * This class defines membership functions, fuzzy rules, and complete FCL blocks used by jFuzzyLogic
  * for making task offloading decisions in the EdgeCloudSim framework.
- * 
+ *
  * The fuzzy system considers four input variables:
  * - WAN bandwidth availability (Mbps)
  * - Task computational size (instructions)
  * - Delay sensitivity of the task (normalized 0-1)
  * - Average edge server utilization percentage (0-100%)
- * 
+ *
  * Output: Offloading decision (edge vs cloud execution)
  */
 public final class FCL_definition {
+	/** Creates a definition container; members are also available statically. */
+	public FCL_definition() {
+	}
 	/**
 	 * First fuzzy inference system membership functions for edge-cloud offloading.
 	 * Defines input variables: WAN bandwidth, task size, delay sensitivity, and average edge utilization.
@@ -62,7 +66,7 @@ public final class FCL_definition {
 	 * Complete FCL definition for first fuzzy inference system (FIS1).
 	 * Contains 81 rules for edge-cloud offloading decisions based on:
 	 * - WAN bandwidth availability (low/medium/high)
-	 * - Task computational size (low/medium/high)  
+	 * - Task computational size (low/medium/high)
 	 * - Delay sensitivity (low/medium/high)
 	 * - Average edge server utilization (low/medium/high)
 	 */
@@ -156,7 +160,7 @@ public final class FCL_definition {
 			, "END_RULEBLOCK"
 			, "END_FUNCTION_BLOCK"
 	);
-	
+
 	/**
 	 * Second fuzzy inference system membership functions for edge server selection.
 	 * Defines input variables: nearest edge utilization, best remote edge utilization, and MAN delay.
@@ -194,7 +198,7 @@ public final class FCL_definition {
 			, "	DEFAULT := 0;"
 			, "END_DEFUZZIFY"
 	);
-	
+
 	/**
 	 * Complete FCL definition for second fuzzy inference system (FIS2).
 	 * Contains 27 rules for edge server selection decisions based on:
@@ -238,7 +242,7 @@ public final class FCL_definition {
 			, "END_RULEBLOCK"
 			, "END_FUNCTION_BLOCK"
 	);
-	
+
 	/**
 	 * Third fuzzy inference system membership functions for video processing applications.
 	 * Defines input variables: WAN bandwidth, video execution complexity, data size, and CPU speed.
@@ -290,7 +294,7 @@ public final class FCL_definition {
 	 * - Video execution complexity (low/normal/high)
 	 * - Data size (small/medium/high)
 	 * - CPU speed percentage (low/medium/high)
-	 * 
+	 *
 	 * Used specifically for FUZZY_COMPETITOR policy in video processing scenarios.
 	 */
 	public final static String fclDefinition3 = String.join("\n"

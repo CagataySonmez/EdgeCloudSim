@@ -1,11 +1,12 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Edge Server Manager
- * 
- * Description: 
+ *
+ * Description:
  * DefaultEdgeServerManager is responsible for creating datacenters, hosts and VMs.
  * It also provides the list of VMs running on the hosts.
  * This information is critical for the edge orchestrator.
- * 
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -43,11 +44,17 @@ import edu.boun.edgecloudsim.utils.Location;
 import edu.boun.edgecloudsim.utils.SimLogger;
 import edu.boun.edgecloudsim.utils.SimUtils;
 
+/** Provisions the edge hosts used by tutorial 4. */
 public class SampleEdgeServerManager extends EdgeServerManager{
 	private int hostIdCounter;
 	String simScenario;
 	List<Integer> randomMIPS;
 
+	/**
+	 * Creates the tutorial edge-server manager.
+	 *
+	 * @param _simScenario simulation-scenario identifier
+	 */
 	public SampleEdgeServerManager(String _simScenario) {
 		// Manager builds edge hosts according to scenario-driven capacity distribution strategy.
 		hostIdCounter = 0;
@@ -76,7 +83,7 @@ public class SampleEdgeServerManager extends EdgeServerManager{
 	public VmAllocationPolicy getVmAllocationPolicy(List<? extends Host> hostList, int dataCenterIndex) {
 		return new EdgeVmAllocationPolicy_Custom(hostList,dataCenterIndex);
 	}
-	
+
 	public void startDatacenters() throws Exception{
 		Document doc = SimSettings.getInstance().getEdgeDevicesDocument();
 		NodeList datacenterList = doc.getElementsByTagName("datacenter");
@@ -89,27 +96,27 @@ public class SampleEdgeServerManager extends EdgeServerManager{
 
 	public void createVmList(int brokerId){
 		// One VM list per host; VMs inside a host equally share host MIPS (simple static partition).
-		// TODO: Consider using dynamic share based on active task load instead of static division.
+		// Design note: this tutorial intentionally uses a static share rather than active-load weighting.
 		int hostCounter=0;
 		int vmCounter=0;
-		
+
 		//Create VMs for each hosts
 		Document doc = SimSettings.getInstance().getEdgeDevicesDocument();
 		NodeList datacenterList = doc.getElementsByTagName("datacenter");
-		
+
 		for (int i = 0; i < datacenterList.getLength(); i++) {
 			Node datacenterNode = datacenterList.item(i);
 			Element datacenterElement = (Element) datacenterNode;
 			NodeList hostNodeList = datacenterElement.getElementsByTagName("host");
 			for (int j = 0; j < hostNodeList.getLength(); j++) {
-				
+
 				vmList.add(hostCounter, new ArrayList<EdgeVM>());
-				
+
 				Node hostNode = hostNodeList.item(j);
 				Element hostElement = (Element) hostNode;
 				NodeList vmNodeList = hostElement.getElementsByTagName("VM");
 				for (int k = 0; k < vmNodeList.getLength(); k++) {
-					Node vmNode = vmNodeList.item(k);					
+					Node vmNode = vmNodeList.item(k);
 					Element vmElement = (Element) vmNode;
 
 					String vmm = vmElement.getAttribute("vmm");
@@ -118,7 +125,7 @@ public class SampleEdgeServerManager extends EdgeServerManager{
 					int ram = Integer.parseInt(vmElement.getElementsByTagName("ram").item(0).getTextContent());
 					long storage = Long.parseLong(vmElement.getElementsByTagName("storage").item(0).getTextContent());
 					long bandwidth = SimSettings.getInstance().getWlanBandwidth() / (hostNodeList.getLength()+vmNodeList.getLength());
-					
+
 					/**
 					 * In this scenario each VM equally shares the MIPS value of corresponding Host
 					 * WARNING: getHostList().get(0) always chooses the first host of the datacenter.
@@ -126,8 +133,8 @@ public class SampleEdgeServerManager extends EdgeServerManager{
 					 */
 					Host host = getDatacenterList().get(i).getHostList().get(0);
 					mips = host.getMaxAvailableMips() / vmNodeList.getLength();
-					
-					//VM Parameters		
+
+					//VM Parameters
 					EdgeVM vm = new EdgeVM(vmCounter, brokerId, mips, numOfCores, ram, bandwidth, storage, vmm, new CloudletSchedulerTimeShared());
 					vmList.get(hostCounter).add(vm);
 					vmCounter++;
@@ -137,7 +144,7 @@ public class SampleEdgeServerManager extends EdgeServerManager{
 			}
 		}
 	}
-	
+
 	public void terminateDatacenters(){
 		for (Datacenter datacenter : localDatacenters) {
 			datacenter.shutdownEntity();
@@ -148,7 +155,7 @@ public class SampleEdgeServerManager extends EdgeServerManager{
 	public double getAvgUtilization(){
 		double totalUtilization = 0;
 		double vmCounter = 0;
-		
+
 		// for each datacenter...
 		for(int i= 0; i<localDatacenters.size(); i++) {
 			List<? extends Host> list = localDatacenters.get(i).getHostList();
@@ -174,9 +181,9 @@ public class SampleEdgeServerManager extends EdgeServerManager{
 		double costPerSec = Double.parseDouble(datacenterElement.getElementsByTagName("costPerSec").item(0).getTextContent());
 		double costPerMem = Double.parseDouble(datacenterElement.getElementsByTagName("costPerMem").item(0).getTextContent());
 		double costPerStorage = Double.parseDouble(datacenterElement.getElementsByTagName("costPerStorage").item(0).getTextContent());
-		
+
 		List<EdgeHost> hostList=createHosts(datacenterElement);
-		
+
 		String name = "Datacenter_" + Integer.toString(index);
 		double time_zone = 3.0;         // time zone this resource located
 		LinkedList<Storage> storageList = new LinkedList<Storage>();	//we are not adding SAN devices by now
@@ -191,13 +198,13 @@ public class SampleEdgeServerManager extends EdgeServerManager{
 
 		// 6. Finally, we need to create a PowerDatacenter object.
 		Datacenter datacenter = null;
-	
+
 		VmAllocationPolicy vm_policy = getVmAllocationPolicy(hostList,index);
 		datacenter = new Datacenter(name, characteristics, vm_policy, storageList, 0);
-		
+
 		return datacenter;
 	}
-	
+
 	private List<EdgeHost> createHosts(Element datacenterElement){
 		// Builds hosts from XML, assigning capacity based on scenario:
 		// EQUAL_CAPACITY -> uniform MIPS
@@ -206,7 +213,7 @@ public class SampleEdgeServerManager extends EdgeServerManager{
 		// Here are the steps needed to create a PowerDatacenter:
 		// 1. We need to create a list to store one or more Machines
 		List<EdgeHost> hostList = new ArrayList<EdgeHost>();
-		
+
 		Element location = (Element)datacenterElement.getElementsByTagName("location").item(0);
 		String attractiveness = location.getElementsByTagName("attractiveness").item(0).getTextContent();
 		int wlan_id = Integer.parseInt(location.getElementsByTagName("wlan_id").item(0).getTextContent());
@@ -217,17 +224,17 @@ public class SampleEdgeServerManager extends EdgeServerManager{
 		NodeList hostNodeList = datacenterElement.getElementsByTagName("host");
 		for (int j = 0; j < hostNodeList.getLength(); j++) {
 			Node hostNode = hostNodeList.item(j);
-			
+
 			Element hostElement = (Element) hostNode;
 			int numOfCores = Integer.parseInt(hostElement.getElementsByTagName("core").item(0).getTextContent());
 			double mips = 0;// Double.parseDouble(hostElement.getElementsByTagName("mips").item(0).getTextContent());
 			int ram = Integer.parseInt(hostElement.getElementsByTagName("ram").item(0).getTextContent());
 			long storage = Long.parseLong(hostElement.getElementsByTagName("storage").item(0).getTextContent());
 			long bandwidth = SimSettings.getInstance().getWlanBandwidth() / hostNodeList.getLength();
-			
+
 			/**
-			 * Please note that total MIPS value of all scenario should be the same!
-			 * In this scenario we have 11 edge server, and total MIPS value is 22000
+			 * Keep total MIPS capacity equal across scenarios for a controlled comparison.
+			 * This scenario uses 11 edge servers with a combined capacity of 22,000 MIPS.
 			 * Each scenario allocates this value to edge hosts at different rates
 			 */
 			if(simScenario.equals("EQUAL_CAPACITY")) {
@@ -238,8 +245,8 @@ public class SampleEdgeServerManager extends EdgeServerManager{
 				// Randomly assign one unused MIPS value; ensures reproducible total if seed fixed externally.
 				if(randomMIPS.isEmpty()) {
 					// Defensive check: XML host count must not exceed pool size.
-					SimLogger.printLine("Impossible is occurred, ramdom mips list is empty! The simulation has been terminated.");
-					System.exit(0);
+					SimLogger.printLine("Random MIPS list is unexpectedly empty; terminating the simulation.");
+					edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 				}
 
 				int randomIndex = SimUtils.getRandomNumber(0, randomMIPS.size()-1);
@@ -269,15 +276,15 @@ public class SampleEdgeServerManager extends EdgeServerManager{
 				default:
 					// Unknown mapping implies XML mismatch or new type not integrated.
 					SimLogger.printLine("Unknown place type! The simulation has been terminated.");
-					System.exit(0);
+					edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 				}
 			}
 			else {
 				// Scenario label not recognized. Validate config file field 'simScenario'.
 				SimLogger.printLine("Unknown simulation scenario! The simulation has been terminated.");
-				System.exit(0);
+				edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 			}
-			
+
 			// 2. A Machine contains one or more PEs or CPUs/Cores. Therefore, should
 			//    create a list to store these PEs before creating
 			//    a Machine.
@@ -288,7 +295,7 @@ public class SampleEdgeServerManager extends EdgeServerManager{
 			for(int i=0; i<numOfCores; i++){
 				peList.add(new Pe(i, new PeProvisionerSimple(mips))); // need to store Pe id and MIPS Rating
 			}
-			
+
 			//4. Create Hosts with its id and list of PEs and add them to the list of machines
 			EdgeHost host = new EdgeHost(
 					hostIdCounter,

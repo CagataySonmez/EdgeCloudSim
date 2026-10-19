@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - CloudVM
- * 
- * Description: 
+ *
+ * Description:
  * CloudVM adds vm type information over CloudSim's VM class
- *               
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -27,7 +28,7 @@ public class CloudVM extends Vm {
 
 	/**
 	 * Constructor for CloudVM with specified resource parameters.
-	 * 
+	 *
 	 * @param id Unique identifier for this VM
 	 * @param userId ID of the user/broker that owns this VM
 	 * @param mips Processing capacity in MIPS (Million Instructions Per Second)
@@ -56,13 +57,13 @@ public class CloudVM extends Vm {
 	/**
 	 * Dynamically reconfigures the MIPS processing capacity of this VM.
 	 * Updates both the VM's MIPS value and reallocates processing elements on the host.
-	 * 
+	 *
 	 * @param mips New MIPS processing capacity for this VM
 	 */
 	public void reconfigureMips(double mips){
 		// Update the VM's MIPS capacity
 		super.setMips(mips);
-		
+
 		// Deallocate current processing elements from the host scheduler
 		super.getHost().getVmScheduler().deallocatePesForVm(this);
 

@@ -1,12 +1,11 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
- * Title:        EdgeCloudSim - Scenarion Factory interface
- * 
- * Description: 
- * ScenarioFactory responsible for providing customizable components
- * such as  Network Model, Mobility Model, Edge Orchestrator.
- * This interface is very critical for using custom models on EdgeCloudSim
- * This interface should be implemented by EdgeCloudSim users
- * 
+ * Title:        EdgeCloudSim - Scenario Factory interface
+ *
+ * Description:
+ * Supplies configurable network, mobility, orchestration, infrastructure,
+ * workload, and device-management components to the simulation manager.
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -39,7 +38,7 @@ public interface ScenarioFactory {
 	/**
 	 * Creates the edge orchestrator for making task offloading decisions.
 	 * Determines where tasks should be executed (edge, cloud, or mobile).
-	 * @return EdgeOrchestrator instance for intelligent task placement
+	 * @return orchestrator used for task placement
 	 */
 	public EdgeOrchestrator getEdgeOrchestrator();
 

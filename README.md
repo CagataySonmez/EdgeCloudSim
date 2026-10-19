@@ -6,7 +6,7 @@
 [![Java](https://img.shields.io/badge/Java-21+-orange?style=for-the-badge&logo=java)](https://openjdk.org/)
 [![CloudSim](https://img.shields.io/badge/CloudSim-7.0.0--alpha-blue?style=for-the-badge)](https://cloudsim.org/)
 
-EdgeCloudSim provides a simulation environment specific to Edge Computing scenarios where it is possible to conduct experiments that considers both computational and networking resources. EdgeCloudSim is based on CloudSim but adds considerable functionality so that it can be efficiently used for Edge Computing scenarios. EdgeCloudSim is an open source tool and any contributions are welcome. If you want to contribute EdgeCloudSim, please check below feature list and the [contributing guidelines](/CONTRIBUTING.md). If you want to use EdgeCloudSim in your research work, please cite our paper [[3]](https://onlinelibrary.wiley.com/doi/abs/10.1002/ett.3493).
+EdgeCloudSim is an open-source simulation environment for edge-computing scenarios that models both computational and networking resources. It builds on CloudSim and adds the components required to evaluate edge architectures, mobility, networking, workload generation, and orchestration policies. Contributions are welcome; see the [contributing guidelines](/CONTRIBUTING.md). If you use EdgeCloudSim in research, please cite our paper [[3]](https://onlinelibrary.wiley.com/doi/abs/10.1002/ett.3493).
 
 ## Table of Contents
 - [🚀 What's New](#-whats-new-october-2025)
@@ -24,12 +24,12 @@ EdgeCloudSim provides a simulation environment specific to Edge Computing scenar
 - **📚 CloudSim Library Upgrade**: Updated to CloudSim 7.0.0-alpha for improved performance and stability
   - **Note**: We specifically use 7.0.0-alpha as newer CloudSim versions have breaking API changes and class modifications
   - Maintains compatibility while providing enhanced simulation capabilities
-  
+
 - **🎓 New Tutorial Series**: Added comprehensive tutorial applications (`tutorial1-5`) covering **5 different engineering problems**:
   - **📋 Complete Guide**: See detailed [EdgeCloudSim_ModellingGuide.pdf](/doc/EdgeCloudSim_ModellingGuide.pdf) for comprehensive explanation of edge computing simulation and all 5 tutorials
   - **Important**: Each tutorial includes both MATLAB and **Python analysis scripts** for result visualization
 
-- **🤖 AI-Enhanced Code Quality**: 
+- **🤖 AI-Enhanced Code Quality**:
   - Source code restructured and optimized with AI assistance
   - Enhanced code comments and documentation for better readability
 
@@ -85,7 +85,7 @@ These applications represent **real-world scenarios published in our research pa
 
 Each sample application includes complete configuration files, simulation scripts, and MATLAB analysis tools for result visualization.
 
-### Tutorials (`tutorial1` - `tutorial5`) 
+### Tutorials (`tutorial1` - `tutorial5`)
 These tutorials demonstrate **5 different engineering problems** commonly encountered in edge computing:
 - **[Tutorial 1](/src/edu/boun/edgecloudsim/applications/tutorial1)**: VM Scheduling: Performance Evaluation of Different VM Allocation Policies
 - **[Tutorial 2](/src/edu/boun/edgecloudsim/applications/tutorial2)**: What to Offload: Performance Evaluation of Different Approaches that Decide Granularity of Task Offloading
@@ -152,7 +152,7 @@ The edge orchestrator module is the decision maker of the system. It uses the in
 The core simulation module is responsible for loading and running the Edge Computing scenarios from the configuration files. In addition, it offers a logging mechanism to save the simulation results into the files. The results are saved in comma-separated value (CSV) data format by default, but it can be changed to any format.
 
 ## Extensibility
-EdgeCloudSim uses a factory pattern making easier to integrate new models mentioned above. As shown in Figure 2, EdgeCloudsim requires a scenario factory class which knows the creation logic of the abstract modules. If you want to use different mobility, load generator, networking and edge orchestrator module, you can use your own scenario factory which provides the concrete implementation of your custom modules.
+EdgeCloudSim uses the factory pattern to simplify the integration of new models. As shown in Figure 2, a scenario factory provides concrete implementations of the mobility, load-generation, networking, and orchestration abstractions. Custom scenarios can supply their own factory without modifying the simulation core.
 
 <p align="center">
   <img src="/doc/images/class_diagram.png" width="100%">
@@ -201,6 +201,36 @@ tail -f output/date/scenario_name/progress.log
 ```
 
 **Note**: Scripts are compatible with Linux, macOS, and Windows (with WSL).
+
+### Reproducible Experiments
+
+EdgeCloudSim uses a shared deterministic random stream for task generation,
+mobility, and the built-in stochastic models. Set `edgecloudsim.seed` to repeat
+an experiment with the same pseudo-random sequence:
+
+```bash
+export JAVA_TOOL_OPTIONS="-Dedgecloudsim.seed=20261018"
+cd scripts/sample_app1
+./run_scenarios.sh 1 1
+```
+
+The selected seed is written to the simulation log. If the property is omitted,
+EdgeCloudSim retains the historical behavior and creates a seed from the system
+clock. Publications should report the seed or seed set, configuration files,
+EdgeCloudSim revision, Java version, and number of independent repetitions.
+
+### Quality Checks
+
+Run the repository-wide verification before publishing results or submitting a
+pull request:
+
+```bash
+./scripts/quality_check.sh
+```
+
+The command compiles every source file with all compiler warnings treated as
+errors, runs deterministic and mathematical regression tests, validates every
+bundled configuration and WEKA model set, and checks Javadoc structure.
 
 
 ## Analyzing the Results

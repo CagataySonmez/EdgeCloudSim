@@ -1,28 +1,12 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Vehicular Network Model Implementation
- * 
- * Description: 
- * VehicularNetworkModel implements advanced MMPP/M/1 (Markov Modulated Poisson Process/M/1)
- * queuing models specifically designed for vehicular edge computing environments. This model
- * provides realistic network delay calculations for multi-modal vehicular connectivity:
- * 
- * Supported Network Technologies:
- * - WLAN: Vehicle-to-Infrastructure (V2I) via Road Side Units (RSUs)
- * - MAN: Metropolitan Area Network for inter-RSU communication
- * - WAN: Wide Area Network for RSU-to-cloud connectivity
- * - GSM: Cellular network for direct vehicle-to-cloud communication
- * 
- * Key Features:
- * - MMPP/M/1 queuing theory for realistic traffic modeling
- * - Dynamic parameter adaptation based on real-time traffic patterns
- * - Vehicular mobility-aware delay calculations
- * - Multi-hop routing support for complex vehicular scenarios
- * - Adaptive bandwidth allocation and congestion management
- * - Statistical traffic analysis with Poisson process modeling
- * 
- * The model accounts for the unique characteristics of vehicular networks including
- * high mobility, variable connectivity, and heterogeneous network access technologies.
- * 
+ *
+ * Description:
+ * Estimates WLAN, MAN, WAN, and cellular transfer delays for the vehicular
+ * sample. Queue parameters are periodically updated from observed transfer counts
+ * and sizes.
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -38,25 +22,7 @@ import edu.boun.edgecloudsim.network.NetworkModel;
 import edu.boun.edgecloudsim.utils.Location;
 import edu.boun.edgecloudsim.utils.SimLogger;
 
-/**
- * VehicularNetworkModel extends the base NetworkModel to provide sophisticated
- * network delay modeling specifically designed for vehicular edge computing scenarios.
- * This implementation uses MMPP/M/1 queuing theory to model realistic network behavior
- * across multiple vehicular communication technologies.
- * 
- * Network Technologies Supported:
- * - WLAN: V2I communication via RSUs with adaptive bandwidth allocation
- * - MAN: Inter-RSU communication for distributed edge computing
- * - WAN: RSU-to-cloud connectivity for remote processing
- * - GSM: Direct cellular connectivity for ubiquitous access
- * 
- * Key Features:
- * - MMPP (Markov Modulated Poisson Process) traffic modeling
- * - Dynamic parameter adaptation based on observed traffic patterns
- * - Real-time delay calculation with mobility awareness
- * - Statistical analysis for performance optimization
- * - Multi-modal network selection and handoff support
- */
+/** Models link delay for the four network paths used by the vehicular sample. */
 public class VehicularNetworkModel extends NetworkModel {
 	/** Maximum observed WLAN delay for performance analysis */
 	public static double maxWlanDelay = 0;
@@ -66,12 +32,7 @@ public class VehicularNetworkModel extends NetworkModel {
 	public static double maxGsmDelay = 0;
 
 	/**
-	 * MMPPWrapper implements MMPP/M/1 queue modeling for realistic vehicular traffic patterns.
-	 * This inner class manages the statistical parameters and adaptive behavior required
-	 * for accurate network delay calculations in dynamic vehicular environments.
-	 * 
-	 * The wrapper maintains both current and historical traffic statistics to enable
-	 * adaptive parameter estimation and realistic queue behavior simulation.
+	 * Stores current and fallback parameters for one adaptive queue approximation.
 	 */
 	private class MMPPWrapper {
 		/** Current Poisson arrival rate (tasks per second) */
@@ -107,7 +68,7 @@ public class VehicularNetworkModel extends NetworkModel {
 
 		/**
 		 * Returns the current Poisson arrival rate for queue calculations.
-		 * 
+		 *
 		 * @return Current Poisson mean (tasks per second)
 		 */
 		public double getPoissonMean() {
@@ -116,7 +77,7 @@ public class VehicularNetworkModel extends NetworkModel {
 
 		/**
 		 * Returns the current average task size for bandwidth calculations.
-		 * 
+		 *
 		 * @return Current average task size in KB
 		 */
 		public double getTaskSize() {
@@ -126,7 +87,7 @@ public class VehicularNetworkModel extends NetworkModel {
 		/**
 		 * Updates task statistics for MMPP modeling.
 		 * Accumulates task count and size data for adaptive parameter estimation.
-		 * 
+		 *
 		 * @param taskSize Size of the processed task in KB
 		 */
 		public void increaseMM1StatValues(double taskSize) {
@@ -138,11 +99,11 @@ public class VehicularNetworkModel extends NetworkModel {
 		 * Initializes M/M/1 queue parameters with validation for queue stability.
 		 * This method sets up the fundamental queueing parameters and validates
 		 * that the service rate exceeds the arrival rate to ensure queue stability.
-		 * 
+		 *
 		 * @param poissonMean Inter-arrival time for Poisson process (seconds)
 		 * @param taskSize Average task size (KB)
 		 * @param bandwidth Available bandwidth (Kbps)
-		 * @throws RuntimeException if μ ≤ λ (unstable queue condition)
+		 * @throws IllegalStateException if μ ≤ λ (unstable queue condition)
 		 */
 		public void initializeMM1QueueValues(double poissonMean, double taskSize, double bandwidth) {
 			currentPoissonMean = poissonMean;
@@ -153,14 +114,14 @@ public class VehicularNetworkModel extends NetworkModel {
 
 			// Calculate M/M/1 queue parameters: λ (arrival rate) and μ (service rate)
 			double avgTaskSize = taskSize * 8; // Convert from KB to Kb
-			double lamda = ((double)1/(double)poissonMean); // Tasks per second (arrival rate)
+			double arrivalRate = 1.0 / poissonMean;
 			double mu = bandwidth /*Kbps*/ / avgTaskSize /*Kb*/; // Tasks per second (service rate)
 
 			// Validate queue stability: service rate must exceed arrival rate
-			if(mu <= lamda) {
+			if(mu <= arrivalRate) {
 				SimLogger.printLine("Error in initializeMM1QueueValues function:" +
 						"MU is smaller than LAMDA! Check your simulation settings.");
-				System.exit(1);
+				edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 			}
 		}
 
@@ -178,7 +139,7 @@ public class VehicularNetworkModel extends NetworkModel {
 		 * Updates M/M/1 queue parameters based on observed traffic during measurement interval.
 		 * This method implements adaptive parameter estimation with smoothing for vehicular
 		 * traffic patterns, including optional background traffic consideration.
-		 * 
+		 *
 		 * @param interval Time interval for measurement window (seconds)
 		 * @param optionalBackgroundDataCount Additional background tasks count
 		 * @param optionalBackgroundDataSize Additional background data size (KB)
@@ -214,7 +175,7 @@ public class VehicularNetworkModel extends NetworkModel {
 	private static double MAN_CONTROL_MESSAGE_SIZE = 25;
 
 	/** Timestamp of last M/M/1 queue model parameter update */
-	private double lastMM1QueeuUpdateTime;
+	private double lastMM1QueueUpdateTime;
 
 	/** MMPP wrappers for WLAN download traffic (per access point/RSU) */
 	private MMPPWrapper[] wlanMMPPForDownload;
@@ -240,14 +201,14 @@ public class VehicularNetworkModel extends NetworkModel {
 	 * Constructor initializes the vehicular network model with MMPP/M/1 queuing capabilities.
 	 * Sets up the foundation for multi-modal vehicular network modeling including
 	 * WLAN, MAN, WAN, and GSM connectivity options.
-	 * 
+	 *
 	 * @param _numberOfMobileDevices Total number of mobile devices (vehicles) in simulation
 	 * @param _simScenario Simulation scenario identifier for configuration
 	 * @param _orchestratorPolicy Task orchestration policy (unused in constructor)
 	 */
 	public VehicularNetworkModel(int _numberOfMobileDevices, String _simScenario, String _orchestratorPolicy) {
 		super(_numberOfMobileDevices, _simScenario);
-		lastMM1QueeuUpdateTime = SimSettings.CLIENT_ACTIVITY_START_TIME;
+		lastMM1QueueUpdateTime = SimSettings.CLIENT_ACTIVITY_START_TIME;
 	}
 
 	/**
@@ -302,7 +263,7 @@ public class VehicularNetworkModel extends NetworkModel {
 			if(percentageOfAppUsage <= 0 && percentageOfAppUsage > 100) {
 				SimLogger.printLine("Usage percentage of task " + taskIndex + " is invalid (" +
 						percentageOfAppUsage + ")! Terminating simulation...");
-				System.exit(1);
+				edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 			}
 
 			// Calculate weighted averages based on application usage patterns
@@ -339,19 +300,19 @@ public class VehicularNetworkModel extends NetworkModel {
 	 * Legacy upload delay method - not used in vehicular scenarios.
 	 * Vehicular network model uses specialized delay calculation methods
 	 * that account for network technology types and MMPP/M/1 modeling.
-	 * 
-	 * Note: Source device is always mobile device in vehicular simulation scenarios!
-	 * 
+	 *
+	 * The source is a mobile device in the supported vehicular scenarios.
+	 *
 	 * @param sourceDeviceId ID of source device (not used)
 	 * @param destDeviceId ID of destination device (not used)
 	 * @param task Task object (not used)
-	 * @return Never returns - terminates simulation
-	 * @throws RuntimeException Always thrown as method is not supported
+	 * @return this method does not return normally
+	 * @throws IllegalStateException always, because the operation is unsupported in this scenario
 	 */
 	@Override
 	public double getUploadDelay(int sourceDeviceId, int destDeviceId, Task task) {
 		SimLogger.printLine("getUploadDelay is not used in this scenario! Terminating simulation...");
-		System.exit(1);
+		edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		return 0;
 	}
 
@@ -359,82 +320,82 @@ public class VehicularNetworkModel extends NetworkModel {
 	 * Legacy download delay method - not used in vehicular scenarios.
 	 * Vehicular network model uses specialized delay calculation methods
 	 * based on network technology types (WLAN, MAN, WAN, GSM).
-	 * 
-	 * Note: Destination device is always mobile device in vehicular simulation scenarios!
-	 * 
+	 *
+	 * The destination is a mobile device in the supported vehicular scenarios.
+	 *
 	 * @param sourceDeviceId ID of source device (not used)
-	 * @param destDeviceId ID of destination device (not used) 
+	 * @param destDeviceId ID of destination device (not used)
 	 * @param task Task object (not used)
-	 * @return Never returns - terminates simulation
-	 * @throws RuntimeException Always thrown as method is not supported
+	 * @return this method does not return normally
+	 * @throws IllegalStateException always, because the operation is unsupported in this scenario
 	 */
 	@Override
 	public double getDownloadDelay(int sourceDeviceId, int destDeviceId, Task task) {
 		SimLogger.printLine("getDownloadDelay is not used in this scenario! Terminating simulation...");
-		System.exit(1);
+		edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		return 0;
 	}
-	
+
 	/**
 	 * Legacy upload tracking method - not used in vehicular scenarios.
 	 * Vehicular network model uses MMPP-based statistical tracking instead.
-	 * 
+	 *
 	 * @param accessPointLocation Location of access point (not used)
 	 * @param destDeviceId Destination device ID (not used)
-	 * @throws RuntimeException Always thrown as method is not supported
+	 * @throws IllegalStateException always, because the operation is unsupported in this scenario
 	 */
 	@Override
 	public void uploadStarted(Location accessPointLocation, int destDeviceId) {
 		SimLogger.printLine("uploadStarted is not used in this scenario! Terminating simulation...");
-		System.exit(1);
+		edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 	}
 
 	/**
 	 * Legacy upload tracking method - not used in vehicular scenarios.
 	 * Vehicular network model uses MMPP-based statistical tracking instead.
-	 * 
+	 *
 	 * @param accessPointLocation Location of access point (not used)
 	 * @param destDeviceId Destination device ID (not used)
-	 * @throws RuntimeException Always thrown as method is not supported
+	 * @throws IllegalStateException always, because the operation is unsupported in this scenario
 	 */
 	@Override
 	public void uploadFinished(Location accessPointLocation, int destDeviceId) {
 		SimLogger.printLine("uploadFinished is not used in this scenario! Terminating simulation...");
-		System.exit(1);
+		edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 	}
 
 	/**
 	 * Legacy download tracking method - not used in vehicular scenarios.
 	 * Vehicular network model uses MMPP-based statistical tracking instead.
-	 * 
+	 *
 	 * @param accessPointLocation Location of access point (not used)
 	 * @param sourceDeviceId Source device ID (not used)
-	 * @throws RuntimeException Always thrown as method is not supported
+	 * @throws IllegalStateException always, because the operation is unsupported in this scenario
 	 */
 	@Override
 	public void downloadStarted(Location accessPointLocation, int sourceDeviceId) {
 		SimLogger.printLine("downloadStarted is not used in this scenario! Terminating simulation...");
-		System.exit(1);
+		edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 	}
 
 	/**
 	 * Legacy download tracking method - not used in vehicular scenarios.
 	 * Vehicular network model uses MMPP-based statistical tracking instead.
-	 * 
+	 *
 	 * @param accessPointLocation Location of access point (not used)
 	 * @param sourceDeviceId Source device ID (not used)
-	 * @throws RuntimeException Always thrown as method is not supported
+	 * @throws IllegalStateException always, because the operation is unsupported in this scenario
 	 */
 	@Override
 	public void downloadFinished(Location accessPointLocation, int sourceDeviceId) {
 		SimLogger.printLine("downloadFinished is not used in this scenario! Terminating simulation...");
-		System.exit(1);
+		edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 	}
 
 	/**
 	 * Estimates WLAN download delay for performance analysis and logging.
 	 * This method provides delay estimation without affecting MMPP statistics.
-	 * 
+	 *
 	 * @param apId Access point (RSU) ID for delay estimation
 	 * @return Estimated WLAN download delay in seconds
 	 */
@@ -445,7 +406,7 @@ public class VehicularNetworkModel extends NetworkModel {
 	/**
 	 * Estimates WLAN upload delay for performance analysis and logging.
 	 * This method provides delay estimation without affecting MMPP statistics.
-	 * 
+	 *
 	 * @param apId Access point (RSU) ID for delay estimation
 	 * @return Estimated WLAN upload delay in seconds
 	 */
@@ -456,7 +417,7 @@ public class VehicularNetworkModel extends NetworkModel {
 	/**
 	 * Estimates upload delay for specified network technology without updating statistics.
 	 * Used for orchestration decisions and performance analysis.
-	 * 
+	 *
 	 * @param delayType Network technology type (GSM, WLAN, MAN, WAN)
 	 * @param task Task containing size and location information
 	 * @return Estimated upload delay in seconds
@@ -468,7 +429,7 @@ public class VehicularNetworkModel extends NetworkModel {
 	/**
 	 * Estimates download delay for specified network technology without updating statistics.
 	 * Used for orchestration decisions and performance analysis.
-	 * 
+	 *
 	 * @param delayType Network technology type (GSM, WLAN, MAN, WAN)
 	 * @param task Task containing size and location information
 	 * @return Estimated download delay in seconds
@@ -479,8 +440,8 @@ public class VehicularNetworkModel extends NetworkModel {
 
 	/**
 	 * Calculates actual upload delay and updates MMPP statistics.
-	 * This method is called during actual task transmission for accurate modeling.
-	 * 
+	 * This method is called when an actual task transmission begins.
+	 *
 	 * @param delayType Network technology type (GSM, WLAN, MAN, WAN)
 	 * @param task Task containing size and location information
 	 * @return Actual upload delay in seconds
@@ -491,8 +452,8 @@ public class VehicularNetworkModel extends NetworkModel {
 
 	/**
 	 * Calculates actual download delay and updates MMPP statistics.
-	 * This method is called during actual task transmission for accurate modeling.
-	 * 
+	 * This method is called when an actual task transmission begins.
+	 *
 	 * @param delayType Network technology type (GSM, WLAN, MAN, WAN)
 	 * @param task Task containing size and location information
 	 * @return Actual download delay in seconds
@@ -542,7 +503,6 @@ public class VehicularNetworkModel extends NetworkModel {
 	}
 
 	private double calculateMM1(double taskSize, double bandwidth /*Kbps*/, MMPPWrapper mmppWrapper, boolean justEstimate){
-		double mu=0, lamda=0;
 		double PoissonMean = mmppWrapper.getPoissonMean();
 		double avgTaskSize = mmppWrapper.getTaskSize(); /*KB*/
 
@@ -550,12 +510,18 @@ public class VehicularNetworkModel extends NetworkModel {
 			mmppWrapper.increaseMM1StatValues(taskSize);
 
 		avgTaskSize = avgTaskSize * 8; //convert from KB to Kb
+		if (bandwidth <= 0 || PoissonMean <= 0 || avgTaskSize <= 0) {
+			return 0;
+		}
 
-		lamda = ((double)1/(double)PoissonMean); //task per seconds
-		mu = bandwidth /*Kbps*/ / avgTaskSize /*Kb*/; //task per seconds
-		double result = (double)1 / (mu-lamda);
+		double arrivalRate = 1.0 / PoissonMean;
+		double serviceRate = bandwidth / avgTaskSize;
+		if (arrivalRate >= serviceRate) {
+			return 0;
+		}
+		double result = 1.0 / (serviceRate - arrivalRate);
 
-		return (result > 7.5 || result < 0 ) ? 0 : result;
+		return (!Double.isFinite(result) || result > 7.5) ? 0 : result;
 	}
 
 	private double getWlanDownloadDelay(double taskSize, int accessPointId, boolean justEstimate) {
@@ -644,19 +610,19 @@ public class VehicularNetworkModel extends NetworkModel {
 	 * Updates all MMPP/M/1 queue model parameters based on observed traffic during the measurement interval.
 	 * This method is called periodically to adapt the vehicular network model to changing traffic patterns.
 	 * It accounts for both task traffic and background control messages in vehicular infrastructure.
-	 * 
+	 *
 	 * The update process includes:
 	 * - Per-RSU WLAN queue parameter updates
 	 * - MAN queue updates with orchestrator control message overhead
 	 * - WAN and GSM queue parameter updates
 	 * - Validation of queue stability for each network technology
 	 */
-	public void updateMM1QueeuModel(){
+	public void updateMM1QueueModel(){
 		int numOfAccessPoint = SimSettings.getInstance().getNumOfEdgeDatacenters();
 
 		// Calculate time interval since last update for adaptive parameter estimation
-		double lastInterval = CloudSim.clock() - lastMM1QueeuUpdateTime;
-		lastMM1QueeuUpdateTime = CloudSim.clock();
+		double lastInterval = CloudSim.clock() - lastMM1QueueUpdateTime;
+		lastMM1QueueUpdateTime = CloudSim.clock();
 
 		// Generate background traffic model for MAN network
 		// Assumes periodic control message exchange between RSUs and edge orchestrator
@@ -730,5 +696,13 @@ public class VehicularNetworkModel extends NetworkModel {
 		//				+ String.format("%.3f", gsmMMPPForUpload.getTaskSize()));
 		//		SimLogger.printLine("------------------------------------------------");
 
+	}
+
+	/**
+	 * @deprecated Use {@link #updateMM1QueueModel()}.
+	 */
+	@Deprecated
+	public void updateMM1QueeuModel(){
+		updateMM1QueueModel();
 	}
 }

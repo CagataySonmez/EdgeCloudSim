@@ -1,8 +1,9 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Main Application
- * 
+ *
  * Description:  Main application for Sample App2
- *               
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -26,14 +27,17 @@ import edu.boun.edgecloudsim.utils.SimUtils;
 /**
  * Main application class for Sample App 2 - Multi-tier Edge-Cloud Computing Scenario.
  * This application demonstrates EdgeCloudSim's capability to handle complex network topologies
- * including WLAN, MAN, and WAN connections with empirical delay models and orchestration policies.
+ * including WLAN, MAN, and WAN connections with tabulated delay models and orchestration policies.
  */
 public class MainApp {
+	/** Creates an entry-point object; invoking {@link #main(String[])} is preferred. */
+	public MainApp() {
+	}
 
 	/**
 	 * Main entry point for the multi-tier edge-cloud simulation.
 	 * Supports SINGLE_TIER and TWO_TIER_WITH_EO scenarios with various orchestration policies.
-	 * 
+	 *
 	 * @param args Command line arguments: [configFile, edgeDevicesFile, applicationsFile, outputFolder, iterationNumber]
 	 */
 	public static void main(String[] args) {
@@ -49,7 +53,7 @@ public class MainApp {
 		String outputFolder = "";
 		String edgeDevicesFile = "";
 		String applicationsFile = "";
-		
+
 		// Parse command line arguments for custom configuration
 		if (args.length == 5){
 			configFile = args[0];          // Configuration properties file
@@ -71,7 +75,7 @@ public class MainApp {
 		SimSettings SS = SimSettings.getInstance();
 		if(SS.initialize(configFile, edgeDevicesFile, applicationsFile) == false){
 			SimLogger.printLine("cannot initialize simulation settings!");
-			System.exit(0);
+			System.exit(1);
 		}
 
 		// Setup file logging and clean output directory if file logging is enabled
@@ -84,9 +88,10 @@ public class MainApp {
 		Date SimulationStartDate = Calendar.getInstance().getTime();
 		String now = df.format(SimulationStartDate);
 		SimLogger.printLine("Simulation started at " + now);
+		SimLogger.printLine("Simulation seed: " + SimUtils.getSeed());
 		SimLogger.printLine("----------------------------------------------------------------------");
 
-		// Triple nested loop for comprehensive simulation coverage:
+		// Evaluate every configured device count, scenario, and policy combination.
 		// 1. Mobile device count variations
 		// 2. Different simulation scenarios (SINGLE_TIER, TWO_TIER_WITH_EO)
 		// 3. Various orchestrator policies (NETWORK_BASED, UTILIZATION_BASED, HYBRID)
@@ -119,7 +124,7 @@ public class MainApp {
 						// Create scenario factory for multi-tier edge-cloud computing
 						ScenarioFactory sampleFactory = new SampleScenarioFactory(j,SS.getSimulationTime(), orchestratorPolicy, simScenario);
 
-						// Initialize EdgeCloudSim simulation manager with empirical network models
+						// Initialize EdgeCloudSim simulation manager with tabulated network models
 						SimManager manager = new SimManager(sampleFactory, j, simScenario, orchestratorPolicy);
 
 						// Execute the multi-tier edge-cloud simulation
@@ -129,7 +134,7 @@ public class MainApp {
 					{
 						SimLogger.printLine("The simulation has been terminated due to an unexpected error");
 						e.printStackTrace();
-						System.exit(0);
+						System.exit(1);
 					}
 
 					Date ScenarioEndDate = Calendar.getInstance().getTime();

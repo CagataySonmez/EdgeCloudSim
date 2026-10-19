@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 package edu.boun.edgecloudsim.edge_client;
 
 import org.cloudbus.cloudsim.DatacenterBroker;
@@ -20,20 +21,20 @@ public abstract class MobileDeviceManager  extends DatacenterBroker {
 	public MobileDeviceManager() throws Exception {
 		super("Global_Broker");
 	}
-	
+
 	/**
 	 * Initializes the mobile device manager with required configurations.
 	 * Called before starting task submission and management operations.
 	 */
 	public abstract void initialize();
-	
+
 	/**
 	 * Provides the CPU utilization model for tasks.
 	 * Defines how CPU resources are utilized during task execution.
 	 * @return UtilizationModel instance for CPU resource modeling
 	 */
 	public abstract UtilizationModel getCpuUtilizationModel();
-	
+
 	/**
 	 * Submits a task from a mobile device for processing.
 	 * Handles task orchestration and offloading decisions.

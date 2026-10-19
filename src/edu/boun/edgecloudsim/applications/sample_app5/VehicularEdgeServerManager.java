@@ -1,10 +1,11 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Edge Server Manager
- * 
- * Description: 
+ *
+ * Description:
  * VehicularEdgeServerManager is responsible for creating
  * Edge datacenters and hosts/VMs running on it.
- * 
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -40,9 +41,11 @@ import edu.boun.edgecloudsim.edge_server.EdgeVM;
 import edu.boun.edgecloudsim.edge_server.EdgeVmAllocationPolicy_Custom;
 import edu.boun.edgecloudsim.utils.Location;
 
+/** Provisions edge datacenters and VMs for the vehicular sample. */
 public class VehicularEdgeServerManager extends EdgeServerManager{
 	private int hostIdCounter;
 
+	/** Creates a manager with its host-identifier counter reset. */
 	public VehicularEdgeServerManager() {
 		hostIdCounter = 0;
 	}
@@ -101,7 +104,7 @@ public class VehicularEdgeServerManager extends EdgeServerManager{
 				Element hostElement = (Element) hostNode;
 				NodeList vmNodeList = hostElement.getElementsByTagName("VM");
 				for (int k = 0; k < vmNodeList.getLength(); k++) {
-					Node vmNode = vmNodeList.item(k);					
+					Node vmNode = vmNodeList.item(k);
 					Element vmElement = (Element) vmNode;
 
 					String vmm = vmElement.getAttribute("vmm");
