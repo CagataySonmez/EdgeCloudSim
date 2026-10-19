@@ -1,16 +1,18 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Edge Orchestrator
- * 
- * Description: 
+ *
+ * Description:
  * SampleEdgeOrchestrator offloads tasks to proper server
  * based on the applied scenario
- * 
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2022, Bogazici University, Istanbul, Turkey
  */
 
 package edu.boun.edgecloudsim.applications.tutorial1;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.cloudbus.cloudsim.Vm;
@@ -32,7 +34,7 @@ import edu.boun.edgecloudsim.utils.SimUtils;
 // Current implementation: only generic edge device supported
 // VM selection criteria: sufficient residual CPU capacity for predicted task demand
 // Policies implemented:
-//   RANDOM_FIT : pick random host, then random VM if capacity fits
+//   RANDOM_FIT : select uniformly from VMs with sufficient capacity
 //   WORST_FIT  : choose VM with largest free capacity (greedy spread)
 //   BEST_FIT   : choose VM with smallest free capacity that still fits (packing)
 //   FIRST_FIT  : first encountered VM (scans hosts in order)
@@ -40,15 +42,22 @@ import edu.boun.edgecloudsim.utils.SimUtils;
 // If no VM satisfies capacity, returns null (caller may queue or drop task)
 // Capacity units: percentage (0-100) based on utilization model prediction vs current usage
 
+/** Implements the orchestration policies introduced in tutorial 1. */
 public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 	// numberOfHost: total edge hosts (for iteration / wrap-around)
 	// lastSelectedHostIndex: remembers last host used by NEXT_FIT
 	// lastSelectedVmIndexes: per-host last VM index used by NEXT_FIT
-	
+
 	private int numberOfHost; //used by load balancer
 	private int lastSelectedHostIndex; //used by load balancer
 	private int[] lastSelectedVmIndexes; //used by each host individually
-	
+
+	/**
+	 * Creates a tutorial orchestrator.
+	 *
+	 * @param _policy orchestration-policy identifier
+	 * @param _simScenario simulation-scenario identifier
+	 */
 	public SampleEdgeOrchestrator(String _policy, String _simScenario) {
 		super(_policy, _simScenario);
 	}
@@ -57,7 +66,7 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 	public void initialize() {
 		// Obtain total hosts from settings
 		numberOfHost=SimSettings.getInstance().getNumOfEdgeHosts();
-		
+
 		// Initialize NEXT_FIT tracking indices to sentinel (-1 means not started)
 		lastSelectedHostIndex = -1;
 		lastSelectedVmIndexes = new int[numberOfHost];
@@ -65,12 +74,7 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 			lastSelectedVmIndexes[i] = -1;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see edu.boun.edgecloudsim.edge_orchestrator.EdgeOrchestrator#getDeviceToOffload(edu.boun.edgecloudsim.edge_client.Task)
-	 * 
-	 * It is assumed that the edge orchestrator app is running on the edge devices in a distributed manner
-	 */
+	/** Selects the edge tier for the tutorial's default scenario. */
 	@Override
 	public int getDeviceToOffload(Task task) {
 		// Decide which device category to offload to.
@@ -83,7 +87,7 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 		}
 		else {
 			SimLogger.printLine("Unknown simulation scenario! Terminating simulation...");
-			System.exit(0);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		}
 		return result;
 	}
@@ -95,22 +99,24 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 		// targetVmCapacity = remaining (free) CPU percentage on VM at current simulation time
 		// Accept if requiredCapacity <= targetVmCapacity
 		Vm selectedVM = null;
-		
+
 		if(deviceId == SimSettings.GENERIC_EDGE_DEVICE_ID){
 			if(policy.equalsIgnoreCase("RANDOM_FIT")){
-				// RANDOM_FIT:
-				// Pick host uniformly at random, then VM uniformly.
-				// Accept only if capacity fits; otherwise returns null (no retry here).
-				int randomHostIndex = SimUtils.getRandomNumber(0, numberOfHost-1);
-				List<EdgeVM> vmArray = SimManager.getInstance().getEdgeServerManager().getVmList(randomHostIndex);
-				int randomIndex = SimUtils.getRandomNumber(0, vmArray.size()-1);
-				
-				double requiredCapacity = ((CpuUtilizationModel_Custom)task.getUtilizationModelCpu()).predictUtilization(vmArray.get(randomIndex).getVmType());
-				double targetVmCapacity = (double)100 - vmArray.get(randomIndex).getCloudletScheduler().getTotalUtilizationOfCpu(CloudSim.clock());
-				if(requiredCapacity <= targetVmCapacity)
-					selectedVM = vmArray.get(randomIndex);
-				// requiredCapacity vs targetVmCapacity check:
-				// If insufficient, caller will interpret null (e.g., task may wait or be dropped).
+				List<EdgeVM> availableVms = new ArrayList<EdgeVM>();
+				for (int hostIndex = 0; hostIndex < numberOfHost; hostIndex++) {
+					for (EdgeVM vm : SimManager.getInstance().getEdgeServerManager().getVmList(hostIndex)) {
+						double requiredCapacity = ((CpuUtilizationModel_Custom) task.getUtilizationModelCpu())
+								.predictUtilization(vm.getVmType());
+						double availableCapacity = 100.0
+								- vm.getCloudletScheduler().getTotalUtilizationOfCpu(CloudSim.clock());
+						if (requiredCapacity <= availableCapacity) {
+							availableVms.add(vm);
+						}
+					}
+				}
+				if (!availableVms.isEmpty()) {
+					selectedVM = availableVms.get(SimUtils.getRandomNumber(0, availableVms.size() - 1));
+				}
 			}
 			else if(policy.equalsIgnoreCase("WORST_FIT")){
 				// WORST_FIT:
@@ -150,6 +156,7 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 				// FIRST_FIT:
 				// Sequential scan; pick first acceptable VM then stop.
 				// Low overhead; order of hosts/VMs biases distribution.
+				firstFit:
 				for(int hostIndex=0; hostIndex<numberOfHost; hostIndex++){
 					List<EdgeVM> vmArray = SimManager.getInstance().getEdgeServerManager().getVmList(hostIndex);
 					for(int vmIndex=0; vmIndex<vmArray.size(); vmIndex++){
@@ -157,7 +164,7 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 						double targetVmCapacity = (double)100 - vmArray.get(vmIndex).getCloudletScheduler().getTotalUtilizationOfCpu(CloudSim.clock());
 						if(requiredCapacity <= targetVmCapacity){
 							selectedVM = vmArray.get(vmIndex);
-							break;
+							break firstFit;
 						}
 					}
 				}
@@ -167,7 +174,7 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 				// Similar to FIRST_FIT but resumes from last successful (host,vm) position.
 				// Reduces repeated scanning when load is moderate.
 				// hostCheckCounter prevents infinite loops (bounded by numberOfHost).
-				int hostCheckCounter = 0;	
+				int hostCheckCounter = 0;
 				while(selectedVM == null && hostCheckCounter < numberOfHost){
 					int tries = 0;
 					lastSelectedHostIndex = (lastSelectedHostIndex+1) % numberOfHost;
@@ -193,28 +200,28 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 		else{
 			// If deviceId unknown -> fatal configuration error (terminate)
 			SimLogger.printLine("Unknown device id! The simulation has been terminated.");
-			System.exit(0);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		}
-		
+
 		return selectedVM;
 	}
 
 	@Override
 	public void processEvent(SimEvent arg0) {
 		// No asynchronous events to process (stateless orchestrator)
-		// Nothing to do!
+		// No action is required for this event.
 	}
 
 	@Override
 	public void shutdownEntity() {
 		// Cleanup not required (no allocated resources / threads)
-		// Nothing to do!
+		// No action is required for this event.
 	}
 
 	@Override
 	public void startEntity() {
 		// No startup scheduling needed
-		// Nothing to do!
+		// No action is required for this event.
 	}
 
 }

@@ -1,10 +1,11 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Edge Orchestrator
- * 
- * Description: 
+ *
+ * Description:
  * SampleEdgeOrchestrator offloads tasks to proper server
  * based on the applied scenario
- * 
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2022, Bogazici University, Istanbul, Turkey
  */
@@ -28,6 +29,7 @@ import edu.boun.edgecloudsim.utils.Location;
 import edu.boun.edgecloudsim.utils.SimLogger;
 import edu.boun.edgecloudsim.utils.SimUtils;
 
+/** Implements the orchestration policies introduced in tutorial 2. */
 public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 	// Responsibilities:
 	// - Decide whether a task executes locally (mobile device) or at the serving edge host
@@ -41,6 +43,12 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 	// Edge VM choice: WORST FIT (largest free capacity) among VMs on serving host
 	// Returns null when no VM satisfies capacity (caller handles rejection/queue)
 
+	/**
+	 * Creates a tutorial orchestrator.
+	 *
+	 * @param _policy orchestration-policy identifier
+	 * @param _simScenario simulation-scenario identifier
+	 */
 	public SampleEdgeOrchestrator(String _policy, String _simScenario) {
 		super(_policy, _simScenario);
 	}
@@ -49,12 +57,7 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 	public void initialize() {
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * @see edu.boun.edgecloudsim.edge_orchestrator.EdgeOrchestrator#getDeviceToOffload(edu.boun.edgecloudsim.edge_client.Task)
-	 * 
-	 * It is assumed that the edge orchestrator app is running on the edge devices in a distributed manner
-	 */
+	/** Selects mobile or edge execution according to the configured policy. */
 	@Override
 	public int getDeviceToOffload(Task task) {
 		int result = 0;
@@ -83,11 +86,11 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 			// Determine serving WLAN -> host id mapping (1:1 in this scenario).
 			// If edge host utilization below 90% offload to edge, else fallback to local.
 			Location deviceLocation = SimManager.getInstance().getMobilityModel().getLocation(task.getMobileDeviceId(), CloudSim.clock());
-			
+
 			//in this scenario, clients can only offload to edge servers located in the serving WLAN place
 			//serving wlan ID is equal to the host id because there is only one host in one place
 			int relatedHostId=deviceLocation.getServingWlanId();
-			
+
 			SampleEdgeServerManager sesm = (SampleEdgeServerManager)SimManager.getInstance().getEdgeServerManager();
 			double edgeUtilization = sesm.getAvgHostUtilization(relatedHostId);
 			if(edgeUtilization < 90)
@@ -98,7 +101,7 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 		else {
 			// Unknown policy is fatal misconfiguration.
 			SimLogger.printLine("Unknown simulation policy! Terminating simulation...");
-			System.exit(0);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		}
 		return result;
 	}
@@ -106,14 +109,14 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 	@Override
 	public Vm getVmToOffload(Task task, int deviceId) {
 		Vm selectedVM = null;
-		
+
 		if (deviceId == SimSettings.MOBILE_DATACENTER_ID) {
 			// Mobile execution: single MobileVM per device (index 0).
 			// Predict required CPU vs free capacity; accept if fits.
 			List<MobileVM> vmArray = SimManager.getInstance().getMobileServerManager().getVmList(task.getMobileDeviceId());
 			double requiredCapacity = ((CpuUtilizationModel_Custom)task.getUtilizationModelCpu()).predictUtilization(vmArray.get(0).getVmType());
 			double targetVmCapacity = (double) 100 - vmArray.get(0).getCloudletScheduler().getTotalUtilizationOfCpu(CloudSim.clock());
-			
+
 			if (requiredCapacity <= targetVmCapacity)
 				selectedVM = vmArray.get(0);
 		 }
@@ -123,13 +126,13 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 			// 2) Iterate its VMs selecting the one with largest free capacity (WORST FIT)
 			// 3) Use predictive model for required CPU
 			Location deviceLocation = SimManager.getInstance().getMobilityModel().getLocation(task.getMobileDeviceId(), CloudSim.clock());
-			
+
 			//in this scenario, clients can only offload to edge servers located in the serving WLAN place
 			//serving wlan ID is equal to the host id because there is only one host in one place
 			int relatedHostId=deviceLocation.getServingWlanId();
-			
+
 			List<EdgeVM> vmArray = SimManager.getInstance().getEdgeServerManager().getVmList(relatedHostId);
-			
+
 			//use least loaded policy (WORST FIT) to select VM on Host located in the serving WLAN place
 			double selectedVmCapacity = 0; //start with min value
 			for(int vmIndex=0; vmIndex<vmArray.size(); vmIndex++){
@@ -142,7 +145,7 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 			}
 			// selectedVM remains null if no VM can host the task
 		}
-		
+
 		return selectedVM;
 	}
 

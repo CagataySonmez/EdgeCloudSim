@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Scenario Factory
- * 
+ *
  * Description:  Sample scenario factory providing the default
  *               instances of required abstract classes
- * 
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -27,7 +28,7 @@ import edu.boun.edgecloudsim.network.NetworkModel;
 /**
  * Sample scenario factory for mobile-edge hybrid processing scenarios.
  * Creates EdgeCloudSim components configured for mobile device local processing
- * alongside edge server offloading with empirical network modeling.
+ * alongside edge server offloading with tabulated network modeling.
  */
 public class SampleScenarioFactory implements ScenarioFactory {
 	/** Number of mobile devices in the simulation */
@@ -38,7 +39,7 @@ public class SampleScenarioFactory implements ScenarioFactory {
 	private String orchestratorPolicy;
 	/** Simulation scenario identifier for configuration */
 	private String simScenario;
-	
+
 	/**
 	 * Constructor for sample scenario factory.
 	 * @param _numOfMobileDevice Number of mobile devices in simulation
@@ -55,9 +56,9 @@ public class SampleScenarioFactory implements ScenarioFactory {
 		simulationTime = _simulationTime;
 		simScenario = _simScenario;
 	}
-	
+
 	/**
-	 * Creates load generator model for realistic mobile app usage patterns.
+	 * Creates the configured idle/active load generator.
 	 * @return IdleActiveLoadGenerator that simulates periods of activity and idleness
 	 */
 	@Override
@@ -76,7 +77,7 @@ public class SampleScenarioFactory implements ScenarioFactory {
 
 	/**
 	 * Creates mobility model for mobile device movement simulation.
-	 * @return NomadicMobility model for realistic user mobility patterns
+	 * @return discrete-location nomadic mobility model
 	 */
 	@Override
 	public MobilityModel getMobilityModel() {
@@ -84,8 +85,8 @@ public class SampleScenarioFactory implements ScenarioFactory {
 	}
 
 	/**
-	 * Creates network model with empirical WLAN throughput characteristics.
-	 * @return SampleNetworkModel based on real-world wireless measurements
+	 * Creates network model with tabulated WLAN throughput characteristics.
+	 * @return sample network model using tabulated throughput data
 	 */
 	@Override
 	public NetworkModel getNetworkModel() {
@@ -100,7 +101,7 @@ public class SampleScenarioFactory implements ScenarioFactory {
 	public EdgeServerManager getEdgeServerManager() {
 		return new DefaultEdgeServerManager();
 	}
-	
+
 	/**
 	 * Creates cloud server manager for managing cloud computing resources.
 	 * @return DefaultCloudServerManager for standard cloud server operations

@@ -1,18 +1,22 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 package edu.boun.edgecloudsim.applications.sample_app5;
 
 import edu.boun.edgecloudsim.edge_client.Task;
 import edu.boun.edgecloudsim.utils.SimLogger;
 
+/** Maintains rolling failure-rate and service-time statistics for orchestration. */
 public class OrchestratorStatisticLogger {
 	// Number of historical time windows to maintain for performance prediction
+	/** Number of completed windows retained for prediction. */
 	public static final int NUMBER_OF_HISTORY_WINDOW = 4;
-	
+
 	// Time interval (in seconds) for updating prediction windows
+	/** Duration of each prediction window in seconds. */
 	public static final double PREDICTION_WINDOW_UPDATE_INTERVAL = 0.125;
 
 	// Array storing statistics from previous time windows for trend analysis
 	private StatisticWrapper statForPreviousWindow[];
-	
+
 	// Current time window statistics being collected
 	private StatisticWrapper statForCurrentWindow;
 
@@ -26,20 +30,21 @@ public class OrchestratorStatisticLogger {
 
 		/**
 		 * Calculates the failure rate as a percentage.
-		 * 
-		 * @return failure rate percentage (0-100), or 0.1 as default if no failures
+		 *
+		 * @return failure percentage in the range [0, 100], or 0.1 when no observations exist
 		 */
 		double getFailureRate() {
-			double failureRate = 0.1; // Default minimal failure rate
-			if(numOfFailedTasks != 0)
-				failureRate = ((double)100 * numOfFailedTasks) / (numOfCompletedTasks + numOfFailedTasks);
+			double failureRate = 0.1; // Non-zero prior keeps inverse scoring finite.
+			long numberOfTasks = numOfCompletedTasks + numOfFailedTasks;
+			if(numberOfTasks != 0)
+				failureRate = 100.0 * numOfFailedTasks / numberOfTasks;
 
-			return failureRate; 
+			return failureRate;
 		}
 
 		/**
 		 * Calculates the average service time per completed task.
-		 * 
+		 *
 		 * @return average service time in seconds, or 0.01 as default if no completed tasks
 		 */
 		double getAvgServiceTime() {
@@ -61,9 +66,9 @@ public class OrchestratorStatisticLogger {
 
 		/**
 		 * Gets the failure rate for a specific datacenter type.
-		 * 
+		 *
 		 * @param targetDatacenter datacenter type identifier
-		 * @return failure rate percentage for the specified datacenter
+		 * @return failure percentage for the specified datacenter
 		 */
 		double getFailureRate(int targetDatacenter) {
 			double failureRate = 0;
@@ -79,17 +84,15 @@ public class OrchestratorStatisticLogger {
 				failureRate = cloudViaGsmStat.getFailureRate();
 				break;
 			default:
-				SimLogger.printLine("Unknown target datacenter in predictive orchestration policy! Terminating simulation...");
-				System.exit(1);
-				break;
+				throw new IllegalArgumentException("Unknown target datacenter: " + targetDatacenter);
 			}
 
-			return failureRate; 
+			return failureRate;
 		}
 
 		/**
 		 * Gets the average service time for a specific datacenter type.
-		 * 
+		 *
 		 * @param targetDatacenter datacenter type identifier
 		 * @return average service time in seconds for the specified datacenter
 		 */
@@ -107,9 +110,7 @@ public class OrchestratorStatisticLogger {
 				serviceTime = cloudViaGsmStat.getAvgServiceTime();
 				break;
 			default:
-				SimLogger.printLine("Unknown target datacenter in predictive orchestration policy! Terminating simulation...");
-				System.exit(1);
-				break;
+				throw new IllegalArgumentException("Unknown target datacenter: " + targetDatacenter);
 			}
 
 			return serviceTime;
@@ -122,7 +123,7 @@ public class OrchestratorStatisticLogger {
 	 */
 	public OrchestratorStatisticLogger() {
 		// Initialize current statistics window
-		statForCurrentWindow = new StatisticWrapper();		
+		statForCurrentWindow = new StatisticWrapper();
 		statForCurrentWindow.cloudViaRsuStat = new StatItem();
 		statForCurrentWindow.cloudViaGsmStat = new StatItem();
 		statForCurrentWindow.edgeStat = new StatItem();
@@ -140,7 +141,7 @@ public class OrchestratorStatisticLogger {
 
 	/**
 	 * Records a successful task completion for statistical analysis.
-	 * 
+	 *
 	 * @param task completed task
 	 * @param serviceTime observed service time in seconds
 	 */
@@ -150,7 +151,7 @@ public class OrchestratorStatisticLogger {
 
 	/**
 	 * Records a failed task for statistical analysis.
-	 * 
+	 *
 	 * @param task failed task
 	 */
 	public synchronized void addFailStat(Task task) {
@@ -171,9 +172,7 @@ public class OrchestratorStatisticLogger {
 			statItem = statForCurrentWindow.cloudViaGsmStat;
 			break;
 		default:
-			SimLogger.printLine("Unknow target datacenter in predictive orchestration policy! Terminating simulation...");
-			System.exit(1);
-			break;
+			throw new IllegalArgumentException("Unknown target datacenter: " + targetDatacenter);
 		}
 
 		if(isCompleted) {
@@ -185,27 +184,54 @@ public class OrchestratorStatisticLogger {
 		}
 	}
 
-	public double getFailureRate(int targetDatacenter){
+	/**
+	 * Returns the rolling failure-rate estimate for an execution tier.
+	 *
+	 * @param targetDatacenter execution-tier identifier
+	 * @return weighted failure-rate estimate, as a percentage
+	 */
+	public synchronized double getFailureRate(int targetDatacenter){
 		double result = 0;
 
 		for (int i=0; i<NUMBER_OF_HISTORY_WINDOW; i++) {
-			result += (statForPreviousWindow[i].getFailureRate(targetDatacenter) * (double)(NUMBER_OF_HISTORY_WINDOW - i));
+			double weight = NUMBER_OF_HISTORY_WINDOW - i;
+			result += statForPreviousWindow[i].getFailureRate(targetDatacenter) * weight;
 		}
 
 		return result;
 	}
 
-	public double getServiceTime(int targetDatacenter){
+	/**
+	 * Returns the rolling service-time estimate for an execution tier.
+	 *
+	 * @param targetDatacenter execution-tier identifier
+	 * @return weighted mean service-time estimate in seconds
+	 */
+	public synchronized double getServiceTime(int targetDatacenter){
 		double result = 0;
 
 		for (int i=0; i<NUMBER_OF_HISTORY_WINDOW; i++) {
-			result += (statForPreviousWindow[i].getAvgServiceTime(targetDatacenter) * (double)(NUMBER_OF_HISTORY_WINDOW - i));
+			double weight = NUMBER_OF_HISTORY_WINDOW - i;
+			result += statForPreviousWindow[i].getAvgServiceTime(targetDatacenter) * weight;
 		}
 
 		return result;
 	}
 
-	public void switchNewStatWindow() {
+	double getWeightedAverageFailureRate(int targetDatacenter) {
+		return getFailureRate(targetDatacenter) / getTotalHistoryWeight();
+	}
+
+	double getWeightedAverageServiceTime(int targetDatacenter) {
+		return getServiceTime(targetDatacenter) / getTotalHistoryWeight();
+	}
+
+	private static double getTotalHistoryWeight() {
+		return NUMBER_OF_HISTORY_WINDOW * (NUMBER_OF_HISTORY_WINDOW + 1) / 2.0;
+	}
+
+	/** Advances the rolling history and starts an empty current window. */
+	public synchronized void switchNewStatWindow() {
 		for(int i = NUMBER_OF_HISTORY_WINDOW -2; i>=0; i--){
 			statForPreviousWindow[i+1].cloudViaRsuStat.numOfCompletedTasks = statForPreviousWindow[i].cloudViaRsuStat.numOfCompletedTasks;
 			statForPreviousWindow[i+1].cloudViaRsuStat.numOfFailedTasks = statForPreviousWindow[i].cloudViaRsuStat.numOfFailedTasks;

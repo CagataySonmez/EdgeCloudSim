@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Scenario Factory
- * 
+ *
  * Description:  VehicularScenarioFactory provides the default
- *               instances of required abstract classes 
- * 
+ *               instances of required abstract classes
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -21,6 +22,7 @@ import edu.boun.edgecloudsim.mobility.MobilityModel;
 import edu.boun.edgecloudsim.task_generator.LoadGeneratorModel;
 import edu.boun.edgecloudsim.network.NetworkModel;
 
+/** Creates the component set used by the vehicular sample. */
 public class VehicularScenarioFactory implements ScenarioFactory {
 	private int numOfMobileDevice;      // Number of vehicles in the simulation
 	private double simulationTime;      // Total simulation duration in seconds
@@ -29,7 +31,7 @@ public class VehicularScenarioFactory implements ScenarioFactory {
 
 	/**
 	 * Constructor for vehicular scenario factory.
-	 * 
+	 *
 	 * @param _numOfMobileDevice number of mobile devices (vehicles)
 	 * @param _simulationTime simulation duration in seconds
 	 * @param _orchestratorPolicy orchestration policy name
@@ -47,7 +49,7 @@ public class VehicularScenarioFactory implements ScenarioFactory {
 
 	/**
 	 * Creates the load generator model for vehicular applications.
-	 * 
+	 *
 	 * @return VehicularLoadGenerator instance for generating task workloads
 	 */
 	@Override
@@ -57,7 +59,7 @@ public class VehicularScenarioFactory implements ScenarioFactory {
 
 	/**
 	 * Creates the edge orchestrator for task offloading decisions.
-	 * 
+	 *
 	 * @return VehicularEdgeOrchestrator instance with specified policy
 	 */
 	@Override
@@ -67,7 +69,7 @@ public class VehicularScenarioFactory implements ScenarioFactory {
 
 	/**
 	 * Creates the mobility model for vehicle movement simulation.
-	 * 
+	 *
 	 * @return VehicularMobilityModel instance for vehicular mobility patterns
 	 */
 	@Override
@@ -77,7 +79,7 @@ public class VehicularScenarioFactory implements ScenarioFactory {
 
 	/**
 	 * Creates the network model for communication delays and protocols.
-	 * 
+	 *
 	 * @return VehicularNetworkModel instance for vehicular network simulation
 	 */
 	@Override
@@ -87,7 +89,7 @@ public class VehicularScenarioFactory implements ScenarioFactory {
 
 	/**
 	 * Creates the edge server manager for edge infrastructure.
-	 * 
+	 *
 	 * @return VehicularEdgeServerManager instance for managing edge resources
 	 */
 	@Override
@@ -97,7 +99,7 @@ public class VehicularScenarioFactory implements ScenarioFactory {
 
 	/**
 	 * Creates the cloud server manager for cloud infrastructure.
-	 * 
+	 *
 	 * @return DefaultCloudServerManager instance for managing cloud resources
 	 */
 	@Override
@@ -107,7 +109,7 @@ public class VehicularScenarioFactory implements ScenarioFactory {
 
 	/**
 	 * Creates the mobile device manager for handling vehicle-side operations.
-	 * 
+	 *
 	 * @return VehicularMobileDeviceManager instance for managing mobile devices
 	 * @throws Exception if device manager cannot be created
 	 */
@@ -118,7 +120,7 @@ public class VehicularScenarioFactory implements ScenarioFactory {
 
 	/**
 	 * Creates the mobile server manager for local processing capabilities.
-	 * 
+	 *
 	 * @return VehicularMobileServerManager instance for managing mobile processing units
 	 */
 	@Override

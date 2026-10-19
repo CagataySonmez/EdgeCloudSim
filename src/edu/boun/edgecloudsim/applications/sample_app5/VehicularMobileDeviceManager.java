@@ -1,25 +1,11 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Vehicular Mobile Device Manager
- * 
- * Description: 
- * VehicularMobileDeviceManager implements advanced mobile device management specifically
- * designed for vehicular edge computing scenarios. This manager handles task orchestration
- * in dynamic vehicular environments with sophisticated network modeling capabilities:
- * 
- * Key Features:
- * - Vehicular-specific task routing via VehicularEdgeOrchestrator
- * - Multi-connectivity support: GSM, RSU-to-cloud, WLAN, MAN networks
- * - High-mobility awareness with real-time location tracking
- * - Vehicular CPU utilization modeling for realistic resource consumption
- * - Advanced handoff management for moving vehicles
- * - Road Side Unit (RSU) integration for V2I communication
- * - Adaptive network queue modeling with frequent updates
- * - Comprehensive failure handling for mobility-induced disconnections
- * 
- * The manager supports complex vehicular scenarios including vehicle-to-infrastructure
- * communication, mobile edge computing with RSUs, and seamless handoffs between
- * different network technologies in vehicular environments.
- * 
+ *
+ * Description:
+ * Handles task events for the vehicular sample across cellular, roadside-unit,
+ * WLAN, MAN, cloud, edge, and mobile-processing paths.
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -36,7 +22,6 @@ import org.cloudbus.cloudsim.core.CloudSim;
 import org.cloudbus.cloudsim.core.CloudSimTags;
 import org.cloudbus.cloudsim.core.SimEvent;
 
-import edu.boun.edgecloudsim.applications.sample_app5.VehicularEdgeOrchestrator;
 import edu.boun.edgecloudsim.cloud_server.CloudVM;
 import edu.boun.edgecloudsim.core.SimManager;
 import edu.boun.edgecloudsim.core.SimSettings;
@@ -50,29 +35,11 @@ import edu.boun.edgecloudsim.utils.TaskProperty;
 import edu.boun.edgecloudsim.utils.Location;
 import edu.boun.edgecloudsim.utils.SimLogger;
 
-/**
- * VehicularMobileDeviceManager extends the base MobileDeviceManager to provide
- * specialized functionality for vehicular edge computing scenarios. This manager
- * handles complex vehicular networking environments with multiple connectivity options,
- * high mobility patterns, and sophisticated task orchestration strategies.
- * 
- * Key Vehicular Features:
- * - Multi-modal connectivity: GSM, RSU-WAN, WLAN, MAN networks
- * - Real-time vehicle mobility tracking and handoff management
- * - Road Side Unit (RSU) integration for Vehicle-to-Infrastructure (V2I) communication
- * - Vehicular-specific CPU utilization modeling
- * - High-frequency network queue model updates for dynamic environments
- * - Advanced failure recovery mechanisms for mobility-induced disconnections
- * - Comprehensive delay logging and performance analysis
- * 
- * The manager implements event-driven architecture with vehicular-specific event types
- * and provides seamless task execution across different network technologies commonly
- * found in intelligent transportation systems and vehicular edge computing deployments.
- */
+/** Coordinates task submission and response delivery for the vehicular sample. */
 public class VehicularMobileDeviceManager extends MobileDeviceManager {
 	/** Base value for custom event tags to avoid conflicts with CloudSim tags */
 	private static final int BASE = 100000;
-	
+
 	/** Event tag for periodic M/M/1 queue model updates in dynamic vehicular environment */
 	private static final int UPDATE_MM1_QUEUE_MODEL = BASE + 1;
 	/** Event tag for logging network delay measurements for performance analysis */
@@ -98,35 +65,29 @@ public class VehicularMobileDeviceManager extends MobileDeviceManager {
 
 	/** Update interval for M/M/1 queue model (frequent updates for vehicular dynamics) */
 	private static final double MM1_QUEUE_MODEL_UPDATE_INTERVAL = 0.5;
-	
+
 	/** Counter for generating unique task IDs across vehicular network */
 	private int taskIdCounter=0;
 
 	/**
-	 * Constructor for VehicularMobileDeviceManager.
-	 * Initializes the vehicular-specific mobile device manager with enhanced
-	 * capabilities for dynamic vehicular environments and multi-modal connectivity.
-	 * 
+	 * Creates the mobile-device manager.
+	 *
 	 * @throws Exception if initialization fails
 	 */
 	public VehicularMobileDeviceManager() throws Exception{
 	}
 
 	/**
-	 * Initializes the vehicular mobile device manager.
-	 * Sets up vehicular-specific components including network models,
-	 * mobility tracking systems, and multi-connectivity infrastructure.
+	 * Performs scenario-specific initialization. No additional state is required.
 	 */
 	@Override
 	public void initialize() {
 	}
 
 	/**
-	 * Returns the CPU utilization model specifically designed for vehicular scenarios.
-	 * The VehicularCpuUtilizationModel accounts for the unique resource consumption
-	 * patterns in vehicular applications and mobile computing environments.
-	 * 
-	 * @return VehicularCpuUtilizationModel for realistic vehicular CPU modeling
+	 * Returns the application-table-based utilization model used by this sample.
+	 *
+	 * @return a new vehicular utilization model
 	 */
 	@Override
 	public UtilizationModel getCpuUtilizationModel() {
@@ -161,7 +122,7 @@ public class VehicularMobileDeviceManager extends MobileDeviceManager {
 	/**
 	 * Processes task completion events and handles network delays for result transmission.
 	 * Calculates download delays based on the datacenter type used for task execution.
-	 * 
+	 *
 	 * @param ev SimEvent containing the completed task
 	 */
 	protected void processCloudletReturn(SimEvent ev) {
@@ -210,7 +171,7 @@ public class VehicularMobileDeviceManager extends MobileDeviceManager {
 		// Handle response from edge datacenter with mobility awareness
 		else if(task.getAssociatedDatacenterId() == VehicularEdgeOrchestrator.EDGE_DATACENTER) {
 			Location currentLocation = SimManager.getInstance().getMobilityModel().getLocation(task.getMobileDeviceId(),CloudSim.clock());
-			
+
 			// Check if vehicle is still in same WLAN coverage area
 			if(task.getSubmittedLocation().getServingWlanId() == currentLocation.getServingWlanId())
 			{
@@ -263,7 +224,7 @@ public class VehicularMobileDeviceManager extends MobileDeviceManager {
 		else {
 			// Unknown datacenter configuration error
 			SimLogger.printLine("Unknown datacenter id! Terminating simulation...");
-			System.exit(1);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		}
 
 	}
@@ -272,15 +233,15 @@ public class VehicularMobileDeviceManager extends MobileDeviceManager {
 	 * Processes custom vehicular events including network updates and task routing.
 	 * This method handles vehicular-specific events such as M/M/1 queue model updates,
 	 * delay logging, VM selection, and complex multi-hop task routing scenarios.
-	 * 
+	 *
 	 * @param ev The simulation event to process
-	 * @pre ev != null
-	 * @post Event is processed according to vehicular networking requirements
+	 * <p><b>Precondition:</b> {@code ev != null}</p>
+	 * <p><b>Postcondition:</b> Event is processed according to vehicular networking requirements</p>
 	 */
 	protected void processOtherEvent(SimEvent ev) {
 		if (ev == null) {
 			SimLogger.printLine(getName() + ".processOtherEvent(): " + "Error - an event is null! Terminating simulation...");
-			System.exit(1);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 			return;
 		}
 
@@ -291,7 +252,7 @@ public class VehicularMobileDeviceManager extends MobileDeviceManager {
 		case UPDATE_MM1_QUEUE_MODEL:
 		{
 			// Update M/M/1 queue model parameters for dynamic vehicular environment
-			((VehicularNetworkModel)networkModel).updateMM1QueeuModel();
+			networkModel.updateMM1QueueModel();
 			// Schedule next update with high frequency for vehicular dynamics
 			schedule(getId(), MM1_QUEUE_MODEL_UPDATE_INTERVAL, UPDATE_MM1_QUEUE_MODEL);
 
@@ -303,13 +264,13 @@ public class VehicularMobileDeviceManager extends MobileDeviceManager {
 			int[] indices = {0,6,10}; // Sample RSU indices for performance monitoring
 			double apUploadDelays[] = new double[indices.length];
 			double apDownloadDelays[] = new double[indices.length];
-			
+
 			// Estimate current WLAN delays for selected RSUs
 			for(int i=0; i<indices.length; i++){
 				apUploadDelays[i] = networkModel.estimateWlanUploadDelay(indices[i]);
 				apDownloadDelays[i] = networkModel.estimateWlanDownloadDelay(indices[i]);
 			}
-			
+
 			// Record delay measurements for performance analysis
 			SimLogger.getInstance().addApDelayLog(CloudSim.clock(), apUploadDelays, apDownloadDelays);
 
@@ -344,7 +305,7 @@ public class VehicularMobileDeviceManager extends MobileDeviceManager {
 			else {
 				// Unknown routing configuration error
 				SimLogger.printLine("Unknown nextHopId! Terminating simulation...");
-				System.exit(1);
+				edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 			}
 
 			// Select appropriate VM based on orchestrator decision
@@ -391,14 +352,14 @@ public class VehicularMobileDeviceManager extends MobileDeviceManager {
 		case REQUEST_RECEIVED_BY_EDGE_DEVICE:
 		{
 			// Handle task arrival at edge device (direct WLAN connection)
-			Task task = (Task) ev.getData();			
+			Task task = (Task) ev.getData();
 			submitTaskToVm(task, SimSettings.VM_TYPES.EDGE_VM);
 			break;
 		}
 		case REQUEST_RECEIVED_BY_MOBILE_DEVICE:
 		{
 			// Handle task execution on mobile device (local processing)
-			Task task = (Task) ev.getData();			
+			Task task = (Task) ev.getData();
 			submitTaskToVm(task, SimSettings.VM_TYPES.MOBILE_VM);
 			break;
 		}
@@ -458,8 +419,8 @@ public class VehicularMobileDeviceManager extends MobileDeviceManager {
 		{
 			// Handle response arrival at edge device (from cloud via RSU-WAN)
 			Task task = (Task) ev.getData();
-			
-			// Check vehicle's current location for optimal response routing
+
+			// Check the vehicle's current location before selecting the response path.
 			Location currentLocation = SimManager.getInstance().getMobilityModel().getLocation(task.getMobileDeviceId(),CloudSim.clock());
 			if(task.getSubmittedLocation().getServingWlanId() == currentLocation.getServingWlanId())
 			{
@@ -557,15 +518,15 @@ public class VehicularMobileDeviceManager extends MobileDeviceManager {
 		default:
 			// Handle unknown event types with error termination
 			SimLogger.printLine(getName() + ".processOtherEvent(): " + "Error - event unknown by this DatacenterBroker. Terminating simulation...");
-			System.exit(1);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 			break;
 		}
 	}
 
 	/**
-	 * Submits a task for processing by determining the optimal offloading destination.
+	 * Submits a task after selecting an offloading destination.
 	 * Handles the complete task lifecycle from submission to scheduling.
-	 * 
+	 *
 	 * @param edgeTask task properties including size, type, and timing requirements
 	 */
 	public synchronized void submitTask(TaskProperty edgeTask) {
@@ -590,7 +551,7 @@ public class VehicularMobileDeviceManager extends MobileDeviceManager {
 				(int)task.getCloudletFileSize(),
 				(int)task.getCloudletOutputSize());
 
-		long startTime = System.nanoTime();   
+		long startTime = System.nanoTime();
 		int nextHopId = SimManager.getInstance().getEdgeOrchestrator().getDeviceToOffload(task);
 		long estimatedTime = System.nanoTime() - startTime;
 
@@ -619,7 +580,7 @@ public class VehicularMobileDeviceManager extends MobileDeviceManager {
 		}
 		else {
 			SimLogger.printLine("Unknown nextHopId! Terminating simulation...");
-			System.exit(1);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		}
 
 		task.setAssociatedDatacenterId(nextHopId);
@@ -645,11 +606,11 @@ public class VehicularMobileDeviceManager extends MobileDeviceManager {
 	 * Submits a task to the specified virtual machine after capacity validation.
 	 * This method handles the final step of task assignment by checking VM capacity
 	 * and either executing the task or rejecting it based on resource availability.
-	 * 
+	 *
 	 * @param task The task to be submitted for execution
 	 * @param vmType Type of VM (edge, cloud, or mobile) for capacity management
-	 * @pre task != null && task has valid VM assignment
-	 * @post Task is submitted to CloudSim or rejected with appropriate logging
+	 * <p><b>Precondition:</b> {@code task != null} with a valid VM assignment</p>
+	 * <p><b>Postcondition:</b> Task is submitted to CloudSim or rejected with appropriate logging</p>
 	 */
 	private void submitTaskToVm(Task task, SimSettings.VM_TYPES vmType) {
 		VehicularEdgeOrchestrator edgeOrchestrator = (VehicularEdgeOrchestrator)SimManager.getInstance().getEdgeOrchestrator();
@@ -685,7 +646,7 @@ public class VehicularMobileDeviceManager extends MobileDeviceManager {
 		}
 		else {
 			SimLogger.printLine("Unknown vm type! Terminating simulation...");
-			System.exit(1);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		}
 
 		// Calculate current VM capacity and required resources
@@ -711,11 +672,11 @@ public class VehicularMobileDeviceManager extends MobileDeviceManager {
 	 * Creates a CloudSim task from EdgeCloudSim task properties for vehicular scenarios.
 	 * This method converts high-level vehicular task specifications into CloudSim-compatible
 	 * task objects with vehicular-specific resource utilization models.
-	 * 
+	 *
 	 * @param edgeTask EdgeCloudSim task properties containing vehicular task specifications
 	 * @return CloudSim Task object configured for vehicular computing scenarios
-	 * @pre edgeTask != null && contains valid vehicular task parameters
-	 * @post Returns initialized Task with unique ID and vehicular resource models
+	 * <p><b>Precondition:</b> {@code edgeTask != null} with valid vehicular task parameters</p>
+	 * <p><b>Postcondition:</b> Returns initialized Task with unique ID and vehicular resource models</p>
 	 */
 	private Task createTask(TaskProperty edgeTask){
 		// Configure resource utilization models for vehicular scenarios

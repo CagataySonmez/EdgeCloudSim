@@ -1,11 +1,12 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Basic Edge Orchestrator implementation
- * 
- * Description: 
+ *
+ * Description:
  * BasicEdgeOrchestrator implements basic algorithms which are
  * first/next/best/worst/random fit algorithms while assigning
  * requests to the edge devices.
- *               
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -35,8 +36,15 @@ import edu.boun.edgecloudsim.utils.SimUtils;
 //   requiredCapacity = predicted CPU utilization (%) for this task on VM type
 //   targetVmCapacity = residual CPU capacity (%) = 100 - current utilization
 // Returns null if randomly chosen VM cannot host (caller handles rejection).
+/** Implements the orchestration policies introduced in tutorial 5. */
 public class SampleEdgeOrchestrator extends EdgeOrchestrator {
-	
+
+	/**
+	 * Creates a tutorial orchestrator.
+	 *
+	 * @param _policy orchestration-policy identifier
+	 * @param _simScenario simulation-scenario identifier
+	 */
 	public SampleEdgeOrchestrator(String _policy, String _simScenario) {
 		super(_policy, _simScenario);
 	}
@@ -50,28 +58,28 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 		// Always offload to edge (no cloud/mobile local decision logic in this scenario)
 		return SimSettings.GENERIC_EDGE_DEVICE_ID;
 	}
-	
+
 	@Override
 	public Vm getVmToOffload(Task task, int deviceId) {
 		Vm selectedVM = null;
-		
+
 		// Determine serving WLAN -> host id (assumption: 1 host per WLAN region)
 		Location deviceLocation = SimManager.getInstance().getMobilityModel().getLocation(task.getMobileDeviceId(), CloudSim.clock());
 		int relatedHostId=deviceLocation.getServingWlanId();
-		
+
 		List<EdgeVM> vmArray = SimManager.getInstance().getEdgeServerManager().getVmList(relatedHostId);
 		int randomIndex = SimUtils.getRandomNumber(0, vmArray.size()-1);
-		
+
 		// RANDOM selection among VMs on that host
 		// Predictive utilization vs residual capacity check
 		double requiredCapacity = ((CpuUtilizationModel_Custom)task.getUtilizationModelCpu()).predictUtilization(vmArray.get(randomIndex).getVmType());
 		double targetVmCapacity = (double)100 - vmArray.get(randomIndex).getCloudletScheduler().getTotalUtilizationOfCpu(CloudSim.clock());
 		if(requiredCapacity <= targetVmCapacity)
 			selectedVM = vmArray.get(randomIndex);
-		
+
 		return selectedVM;
 	}
-	
+
 	@Override
 	public void processEvent(SimEvent arg0) {
 		// No asynchronous events handled (stateless orchestrator)

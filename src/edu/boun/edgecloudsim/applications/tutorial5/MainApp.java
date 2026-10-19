@@ -1,8 +1,9 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Sample Application
- * 
+ *
  * Description:  Sample application for this scenario
- *               
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -24,13 +25,22 @@ import edu.boun.edgecloudsim.core.SimSettings;
 import edu.boun.edgecloudsim.utils.SimLogger;
 import edu.boun.edgecloudsim.utils.SimUtils;
 
+/** Command-line entry point for tutorial 5. */
 public class MainApp {
-	
+
+	/** Number of command-line arguments accepted by the runner. */
 	public static final int EXPECTED_NUM_OF_ARGS = 5;
+	/** Directory containing this tutorial's configuration files. */
 	public static final String APPLICATION_FOLDER = "tutorial5";
 
+	/** Creates an entry-point object; invoking {@link #main(String[])} is preferred. */
+	public MainApp() {
+	}
+
 	/**
-	 * Creates main() to run this example
+	 * Runs the tutorial simulation.
+	 *
+	 * @param args configuration, edge-device, application, output-directory, and iteration arguments
 	 */
 	public static void main(String[] args) {
 		// Suppress CloudSim internal console noise (EdgeCloudSim uses SimLogger)
@@ -52,7 +62,7 @@ public class MainApp {
 		// Argument parsing: expect [config edge_devices applications output iteration]
 		// Defaults selected for quick IDE run (note different *1.properties / xml)
 		// Command line arguments will be properly provided by our simulation runner scripts.
-		// IDE users mostly do not provide simulation configuration files and iteration value!
+		// When arguments are omitted, use the bundled configuration for an IDE run.
 		if (args.length == EXPECTED_NUM_OF_ARGS){
 			configFile = args[0];
 			edgeDevicesFile = args[1];
@@ -67,16 +77,11 @@ public class MainApp {
 			configFile = "scripts/" + APPLICATION_FOLDER + "/config/default_config1.properties";
 			applicationsFile = "scripts/" + APPLICATION_FOLDER + "/config/applications1.xml";
 			edgeDevicesFile = "scripts/" + APPLICATION_FOLDER + "/config/edge_devices1.xml";
-			
-			// Do not remove files in the output folder while using an IDE (eclipse etc)
-			// That means you need to clear iteration folders manually!
+
+			// Preserve existing output during an IDE run; clear it manually when required.
 			clearOutputFolder = false;
-			
-			// !! IMPORTANT NOTICE !!
-			// For those who are using an IDE can modify
-			// -> iteration value to run a specific iteration
-			// -> iteration Start/End value to run multiple iterations at a time
-			//    in this case start shall be less than or equal to end value
+
+			// IDE runs can adjust these bounds to select one or more iterations.
 			int iteration = 1;
 			iterationStart = iteration;
 			iterationEnd = iteration;
@@ -88,16 +93,17 @@ public class MainApp {
 		if(SS.initialize(configFile, edgeDevicesFile, applicationsFile) == false){
 			// ...existing code...
 			SimLogger.printLine("cannot initialize simulation settings!");
-			System.exit(0);
+			System.exit(1);
 		}
-		
+
 		// Human-readable timestamp formatter for start/end logging
 		DateFormat df = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 		Date SimulationStartDate = Calendar.getInstance().getTime();
 		String now = df.format(SimulationStartDate);
 		SimLogger.printLine("Simulation started at " + now);
+		SimLogger.printLine("Simulation seed: " + SimUtils.getSeed());
 		SimLogger.printLine("----------------------------------------------------------------------");
-		
+
 		// Execution roadmap:
 		// 1) Parse CLI args (or use default script configs for IDE runs)
 		// 2) Initialize SimSettings (config, edge devices, applications)
@@ -113,12 +119,12 @@ public class MainApp {
 		//                  * Log per-scenario timing
 		// 4) Log total wall-clock simulation duration
 		// Fail-fast: terminate on any configuration or runtime error to avoid corrupt results.
-		
+
 		for(int iterationNumber=iterationStart; iterationNumber<=iterationEnd; iterationNumber++) {
 			// Auto-generate per-iteration result folder when not provided
 			if (args.length != EXPECTED_NUM_OF_ARGS)
 				outputFolder = "sim_results/" + APPLICATION_FOLDER + "/ite" + iterationNumber;
-			
+
 			if(SS.getFileLoggingEnabled()){
 				// Prepare output directory (clean only if flag true)
 				SimLogger.enableFileLog();
@@ -146,7 +152,7 @@ public class MainApp {
 					dir.mkdirs();
 				}
 			}
-	
+
 			// Sweep over mobile device counts (scalability experiments)
 			for(int j=SS.getMinNumOfMobileDev(); j<=SS.getMaxNumOfMobileDev(); j+=SS.getMobileDevCounterSize())
 			{
@@ -160,13 +166,13 @@ public class MainApp {
 						String orchestratorPolicy = SS.getOrchestratorPolicies()[i];
 						Date ScenarioStartDate = Calendar.getInstance().getTime();
 						now = df.format(ScenarioStartDate);
-	
+
 						// Log scenario header summary (factors + iteration)
 						SimLogger.printLine("Scenario started at " + now);
 						SimLogger.printLine("Scenario: " + simScenario + " - Policy: " + orchestratorPolicy + " - #iteration: " + iterationNumber);
 						SimLogger.printLine("Duration: " + SS.getSimulationTime()/60 + " min (warm up period: "+ SS.getWarmUpPeriod()/60 +" min) - #devices: " + j);
 						SimLogger.getInstance().simStarted(outputFolder,"SIMRESULT_" + simScenario + "_"  + orchestratorPolicy + "_" + j + "DEVICES");
-	
+
 						try
 						{
 							// CloudSim kernel initialization:
@@ -177,16 +183,16 @@ public class MainApp {
 							int num_user = 2;   // number of grid users
 							Calendar calendar = Calendar.getInstance();
 							boolean trace_flag = false;  // mean trace events
-	
+
 							// Initialize the CloudSim library
 							CloudSim.init(num_user, calendar, trace_flag, 0.01);
-	
+
 							// Build factory providing mobility, network, load generator, orchestrator, managers
 							ScenarioFactory sampleFactory = new SampleScenarioFactory(j,SS.getSimulationTime(), orchestratorPolicy, simScenario);
-	
+
 							// SimManager wires all components and starts discrete-event processing
 							SimManager manager = new SimManager(sampleFactory, j, simScenario, orchestratorPolicy);
-	
+
 							// Launch simulation (blocking until completion)
 							manager.startSimulation();
 						}
@@ -195,9 +201,9 @@ public class MainApp {
 							// Fail fast to prevent partial / inconsistent datasets
 							SimLogger.printLine("The simulation has been terminated due to an unexpected error");
 							e.printStackTrace();
-							System.exit(0);
+							System.exit(1);
 						}
-	
+
 						// Per-scenario duration log (human-readable difference)
 						Date ScenarioEndDate = Calendar.getInstance().getTime();
 						now = df.format(ScenarioEndDate);

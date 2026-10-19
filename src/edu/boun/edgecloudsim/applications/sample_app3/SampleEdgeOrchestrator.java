@@ -1,10 +1,11 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Edge Orchestrator
- * 
- * Description: 
+ *
+ * Description:
  * SampleEdgeOrchestrator offloads tasks to proper server
  * In this scenario mobile devices can also execute tasks
- * 
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -31,10 +32,10 @@ import edu.boun.edgecloudsim.utils.SimLogger;
  * Supports three orchestration policies:
  * - ONLY_EDGE: All tasks offloaded to edge servers
  * - ONLY_MOBILE: All tasks processed locally on mobile devices
- * - HYBRID: Intelligent decision based on mobile device capacity
+ * - HYBRID: Capacity-based decision between mobile and edge execution
  */
 public class SampleEdgeOrchestrator extends EdgeOrchestrator {
-	
+
 	/** Number of edge hosts for load balancing calculations */
 	private int numberOfHost;
 
@@ -57,7 +58,7 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 
 	/**
 	 * Determines the target device for task offloading based on orchestration policy.
-	 * 
+	 *
 	 * @param task The task to be offloaded
 	 * @return Device ID: GENERIC_EDGE_DEVICE_ID for edge, MOBILE_DATACENTER_ID for mobile
 	 */
@@ -75,11 +76,11 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 			result = SimSettings.MOBILE_DATACENTER_ID;
 		}
 		else if(policy.equals("HYBRID")){
-			// Intelligent decision based on mobile device capacity
+			// Select the tier according to the mobile device's remaining capacity.
 			List<MobileVM> vmArray = SimManager.getInstance().getMobileServerManager().getVmList(task.getMobileDeviceId());
 			double requiredCapacity = ((CpuUtilizationModel_Custom)task.getUtilizationModelCpu()).predictUtilization(vmArray.get(0).getVmType());
 			double targetVmCapacity = (double) 100 - vmArray.get(0).getCloudletScheduler().getTotalUtilizationOfCpu(CloudSim.clock());
-			
+
 			// If mobile device has sufficient capacity, process locally; otherwise offload to edge
 			if (requiredCapacity <= targetVmCapacity)
 				result = SimSettings.MOBILE_DATACENTER_ID;
@@ -88,7 +89,7 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 		}
 		else {
 			SimLogger.printLine("Unknown edge orchestrator policy! Terminating simulation...");
-			System.exit(0);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		}
 
 		return result;
@@ -96,7 +97,7 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 
 	/**
 	 * Selects specific VM for task execution based on device type and load balancing.
-	 * 
+	 *
 	 * @param task The task to be executed
 	 * @param deviceId Target device ID (mobile or edge)
 	 * @return Selected VM instance or null if no suitable VM found
@@ -104,13 +105,13 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 	@Override
 	public Vm getVmToOffload(Task task, int deviceId) {
 		Vm selectedVM = null;
-		
+
 		if (deviceId == SimSettings.MOBILE_DATACENTER_ID) {
 			// Select mobile VM if device has sufficient capacity
 			List<MobileVM> vmArray = SimManager.getInstance().getMobileServerManager().getVmList(task.getMobileDeviceId());
 			double requiredCapacity = ((CpuUtilizationModel_Custom)task.getUtilizationModelCpu()).predictUtilization(vmArray.get(0).getVmType());
 			double targetVmCapacity = (double) 100 - vmArray.get(0).getCloudletScheduler().getTotalUtilizationOfCpu(CloudSim.clock());
-			
+
 			// Verify mobile device capacity before assignment
 			if (requiredCapacity <= targetVmCapacity)
 				selectedVM = vmArray.get(0);
@@ -123,7 +124,7 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 				for(int vmIndex=0; vmIndex<vmArray.size(); vmIndex++){
 					double requiredCapacity = ((CpuUtilizationModel_Custom)task.getUtilizationModelCpu()).predictUtilization(vmArray.get(vmIndex).getVmType());
 					double targetVmCapacity = (double)100 - vmArray.get(vmIndex).getCloudletScheduler().getTotalUtilizationOfCpu(CloudSim.clock());
-					
+
 					// Select VM with highest available capacity that can handle the task
 					if(requiredCapacity <= targetVmCapacity && targetVmCapacity > selectedVmCapacity){
 						selectedVM = vmArray.get(vmIndex);
@@ -134,25 +135,25 @@ public class SampleEdgeOrchestrator extends EdgeOrchestrator {
 		}
 		else{
 			SimLogger.printLine("Unknown device id! The simulation has been terminated.");
-			System.exit(0);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		}
-		
+
 		return selectedVM;
 	}
 
 	@Override
 	public void processEvent(SimEvent arg0) {
-		// Nothing to do!
+		// No action is required for this event.
 	}
 
 	@Override
 	public void shutdownEntity() {
-		// Nothing to do!
+		// No action is required for this event.
 	}
 
 	@Override
 	public void startEntity() {
-		// Nothing to do!
+		// No action is required for this event.
 	}
 
 }

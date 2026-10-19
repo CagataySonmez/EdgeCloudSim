@@ -1,16 +1,17 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Network Model
- * 
- * Description: 
+ *
+ * Description:
  * SampleNetworkModel uses
- * -> the result of an empirical study for the WLAN and WAN delays
+ * -> the bundled WLAN and WAN throughput tables
  * The experimental network model is developed
  * by taking measurements from the real life deployments.
- *   
+ *
  * -> MMPP/MMPP/1 queue model for MAN delay
  * MAN delay is observed via a single server queue model with
  * Markov-modulated Poisson process (MMPP) arrivals.
- *   
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -26,16 +27,26 @@ import edu.boun.edgecloudsim.network.NetworkModel;
 import edu.boun.edgecloudsim.utils.Location;
 import edu.boun.edgecloudsim.utils.SimLogger;
 
+/** Models WLAN, WAN, and adaptive MAN transfer delay for tutorial 3. */
 public class SampleNetworkModel extends NetworkModel {
-	public static enum NETWORK_TYPE {WLAN, LAN};
-	public static enum LINK_TYPE {DOWNLOAD, UPLOAD};
-	public static double MAN_BW = 1300*1024; //Kbps effective MAN bandwidth (shared)
+	/** Network segments represented by the tabulated model. */
+	public static enum NETWORK_TYPE {
+		/** Wireless local-area network. */ WLAN,
+		/** Wired local-area network. */ LAN
+	}
+	/** Transfer directions represented by the model. */
+	public static enum LINK_TYPE {
+		/** Transfer toward a mobile device. */ DOWNLOAD,
+		/** Transfer away from a mobile device. */ UPLOAD
+	}
+	/** Effective shared MAN bandwidth in Kbit/s. */
+	public static double MAN_BW = 1300*1024;
 
 	@SuppressWarnings("unused")
 	private int manClients; // concurrent MAN relay sessions (aggregate)
 	private int[] wanClients;
 	private int[] wlanClients;
-	
+
 	private double lastMM1QueueUpdateTime; // last time we reset MAN statistics
 	private double ManPoissonMeanForDownload; // average inter-arrival (s) for MAN downloads (adaptive)
 	private double ManPoissonMeanForUpload;   // average inter-arrival (s) for MAN uploads (adaptive)
@@ -43,12 +54,13 @@ public class SampleNetworkModel extends NetworkModel {
 	private double avgManTaskInputSize;  // average MAN task input size (KB) over last window
 	private double avgManTaskOutputSize; // average MAN task output size (KB) over last window
 
-	//record last n task statistics during MM1_QUEUE_MODEL_UPDATE_INTEVAL seconds to simulate mmpp/m/1 queue model
+	// Statistics accumulated during the current M/M/1 update interval.
 	private double totalManTaskInputSize;     // cumulative input KB this window
 	private double totalManTaskOutputSize;    // cumulative output KB this window
 	private double numOfManTaskForDownload;   // download task count this window
 	private double numOfManTaskForUpload;     // upload task count this window
-	
+
+	/** Per-client WLAN throughput in Kbit/s, indexed by active-client count minus one. */
 	public static final double[] experimentalWlanDelay = {
 		/*1 Client*/ 88040.279 /*(Kbps)*/,
 		/*2 Clients*/ 45150.982 /*(Kbps)*/,
@@ -65,94 +77,95 @@ public class SampleNetworkModel extends NetworkModel {
 		/*13 Clients*/ 13177.631 /*(Kbps)*/,
 		/*14 Clients*/ 12811.330 /*(Kbps)*/,
 		/*15 Clients*/ 12584.387 /*(Kbps)*/,
-		/*15 Clients*/ 12135.161 /*(Kbps)*/,
-		/*16 Clients*/ 11705.638 /*(Kbps)*/,
-		/*17 Clients*/ 11276.116 /*(Kbps)*/,
-		/*18 Clients*/ 10846.594 /*(Kbps)*/,
-		/*19 Clients*/ 10417.071 /*(Kbps)*/,
-		/*20 Clients*/ 9987.549 /*(Kbps)*/,
-		/*21 Clients*/ 9367.587 /*(Kbps)*/,
-		/*22 Clients*/ 8747.625 /*(Kbps)*/,
-		/*23 Clients*/ 8127.663 /*(Kbps)*/,
-		/*24 Clients*/ 7907.701 /*(Kbps)*/,
-		/*25 Clients*/ 7887.739 /*(Kbps)*/,
-		/*26 Clients*/ 7690.831 /*(Kbps)*/,
-		/*27 Clients*/ 7393.922 /*(Kbps)*/,
-		/*28 Clients*/ 7297.014 /*(Kbps)*/,
-		/*29 Clients*/ 7100.106 /*(Kbps)*/,
-		/*30 Clients*/ 6903.197 /*(Kbps)*/,
-		/*31 Clients*/ 6701.986 /*(Kbps)*/,
-		/*32 Clients*/ 6500.776 /*(Kbps)*/,
-		/*33 Clients*/ 6399.565 /*(Kbps)*/,
-		/*34 Clients*/ 6098.354 /*(Kbps)*/,
-		/*35 Clients*/ 5897.143 /*(Kbps)*/,
-		/*36 Clients*/ 5552.127 /*(Kbps)*/,
-		/*37 Clients*/ 5207.111 /*(Kbps)*/,
-		/*38 Clients*/ 4862.096 /*(Kbps)*/,
-		/*39 Clients*/ 4517.080 /*(Kbps)*/,
-		/*40 Clients*/ 4172.064 /*(Kbps)*/,
-		/*41 Clients*/ 4092.922 /*(Kbps)*/,
-		/*42 Clients*/ 4013.781 /*(Kbps)*/,
-		/*43 Clients*/ 3934.639 /*(Kbps)*/,
-		/*44 Clients*/ 3855.498 /*(Kbps)*/,
-		/*45 Clients*/ 3776.356 /*(Kbps)*/,
-		/*46 Clients*/ 3697.215 /*(Kbps)*/,
-		/*47 Clients*/ 3618.073 /*(Kbps)*/,
-		/*48 Clients*/ 3538.932 /*(Kbps)*/,
-		/*49 Clients*/ 3459.790 /*(Kbps)*/,
-		/*50 Clients*/ 3380.649 /*(Kbps)*/,
-		/*51 Clients*/ 3274.611 /*(Kbps)*/,
-		/*52 Clients*/ 3168.573 /*(Kbps)*/,
-		/*53 Clients*/ 3062.536 /*(Kbps)*/,
-		/*54 Clients*/ 2956.498 /*(Kbps)*/,
-		/*55 Clients*/ 2850.461 /*(Kbps)*/,
-		/*56 Clients*/ 2744.423 /*(Kbps)*/,
-		/*57 Clients*/ 2638.386 /*(Kbps)*/,
-		/*58 Clients*/ 2532.348 /*(Kbps)*/,
-		/*59 Clients*/ 2426.310 /*(Kbps)*/,
-		/*60 Clients*/ 2320.273 /*(Kbps)*/,
-		/*61 Clients*/ 2283.828 /*(Kbps)*/,
-		/*62 Clients*/ 2247.383 /*(Kbps)*/,
-		/*63 Clients*/ 2210.939 /*(Kbps)*/,
-		/*64 Clients*/ 2174.494 /*(Kbps)*/,
-		/*65 Clients*/ 2138.049 /*(Kbps)*/,
-		/*66 Clients*/ 2101.604 /*(Kbps)*/,
-		/*67 Clients*/ 2065.160 /*(Kbps)*/,
-		/*68 Clients*/ 2028.715 /*(Kbps)*/,
-		/*69 Clients*/ 1992.270 /*(Kbps)*/,
-		/*70 Clients*/ 1955.825 /*(Kbps)*/,
-		/*71 Clients*/ 1946.788 /*(Kbps)*/,
-		/*72 Clients*/ 1937.751 /*(Kbps)*/,
-		/*73 Clients*/ 1928.714 /*(Kbps)*/,
-		/*74 Clients*/ 1919.677 /*(Kbps)*/,
-		/*75 Clients*/ 1910.640 /*(Kbps)*/,
-		/*76 Clients*/ 1901.603 /*(Kbps)*/,
-		/*77 Clients*/ 1892.566 /*(Kbps)*/,
-		/*78 Clients*/ 1883.529 /*(Kbps)*/,
-		/*79 Clients*/ 1874.492 /*(Kbps)*/,
-		/*80 Clients*/ 1865.455 /*(Kbps)*/,
-		/*81 Clients*/ 1833.185 /*(Kbps)*/,
-		/*82 Clients*/ 1800.915 /*(Kbps)*/,
-		/*83 Clients*/ 1768.645 /*(Kbps)*/,
-		/*84 Clients*/ 1736.375 /*(Kbps)*/,
-		/*85 Clients*/ 1704.106 /*(Kbps)*/,
-		/*86 Clients*/ 1671.836 /*(Kbps)*/,
-		/*87 Clients*/ 1639.566 /*(Kbps)*/,
-		/*88 Clients*/ 1607.296 /*(Kbps)*/,
-		/*89 Clients*/ 1575.026 /*(Kbps)*/,
-		/*90 Clients*/ 1542.756 /*(Kbps)*/,
-		/*91 Clients*/ 1538.544 /*(Kbps)*/,
-		/*92 Clients*/ 1534.331 /*(Kbps)*/,
-		/*93 Clients*/ 1530.119 /*(Kbps)*/,
-		/*94 Clients*/ 1525.906 /*(Kbps)*/,
-		/*95 Clients*/ 1521.694 /*(Kbps)*/,
-		/*96 Clients*/ 1517.481 /*(Kbps)*/,
-		/*97 Clients*/ 1513.269 /*(Kbps)*/,
-		/*98 Clients*/ 1509.056 /*(Kbps)*/,
-		/*99 Clients*/ 1504.844 /*(Kbps)*/,
-		/*100 Clients*/ 1500.631 /*(Kbps)*/
+		/*16 Clients*/ 12135.161 /*(Kbps)*/,
+		/*17 Clients*/ 11705.638 /*(Kbps)*/,
+		/*18 Clients*/ 11276.116 /*(Kbps)*/,
+		/*19 Clients*/ 10846.594 /*(Kbps)*/,
+		/*20 Clients*/ 10417.071 /*(Kbps)*/,
+		/*21 Clients*/ 9987.549 /*(Kbps)*/,
+		/*22 Clients*/ 9367.587 /*(Kbps)*/,
+		/*23 Clients*/ 8747.625 /*(Kbps)*/,
+		/*24 Clients*/ 8127.663 /*(Kbps)*/,
+		/*25 Clients*/ 7907.701 /*(Kbps)*/,
+		/*26 Clients*/ 7887.739 /*(Kbps)*/,
+		/*27 Clients*/ 7690.831 /*(Kbps)*/,
+		/*28 Clients*/ 7393.922 /*(Kbps)*/,
+		/*29 Clients*/ 7297.014 /*(Kbps)*/,
+		/*30 Clients*/ 7100.106 /*(Kbps)*/,
+		/*31 Clients*/ 6903.197 /*(Kbps)*/,
+		/*32 Clients*/ 6701.986 /*(Kbps)*/,
+		/*33 Clients*/ 6500.776 /*(Kbps)*/,
+		/*34 Clients*/ 6399.565 /*(Kbps)*/,
+		/*35 Clients*/ 6098.354 /*(Kbps)*/,
+		/*36 Clients*/ 5897.143 /*(Kbps)*/,
+		/*37 Clients*/ 5552.127 /*(Kbps)*/,
+		/*38 Clients*/ 5207.111 /*(Kbps)*/,
+		/*39 Clients*/ 4862.096 /*(Kbps)*/,
+		/*40 Clients*/ 4517.080 /*(Kbps)*/,
+		/*41 Clients*/ 4172.064 /*(Kbps)*/,
+		/*42 Clients*/ 4092.922 /*(Kbps)*/,
+		/*43 Clients*/ 4013.781 /*(Kbps)*/,
+		/*44 Clients*/ 3934.639 /*(Kbps)*/,
+		/*45 Clients*/ 3855.498 /*(Kbps)*/,
+		/*46 Clients*/ 3776.356 /*(Kbps)*/,
+		/*47 Clients*/ 3697.215 /*(Kbps)*/,
+		/*48 Clients*/ 3618.073 /*(Kbps)*/,
+		/*49 Clients*/ 3538.932 /*(Kbps)*/,
+		/*50 Clients*/ 3459.790 /*(Kbps)*/,
+		/*51 Clients*/ 3380.649 /*(Kbps)*/,
+		/*52 Clients*/ 3274.611 /*(Kbps)*/,
+		/*53 Clients*/ 3168.573 /*(Kbps)*/,
+		/*54 Clients*/ 3062.536 /*(Kbps)*/,
+		/*55 Clients*/ 2956.498 /*(Kbps)*/,
+		/*56 Clients*/ 2850.461 /*(Kbps)*/,
+		/*57 Clients*/ 2744.423 /*(Kbps)*/,
+		/*58 Clients*/ 2638.386 /*(Kbps)*/,
+		/*59 Clients*/ 2532.348 /*(Kbps)*/,
+		/*60 Clients*/ 2426.310 /*(Kbps)*/,
+		/*61 Clients*/ 2320.273 /*(Kbps)*/,
+		/*62 Clients*/ 2283.828 /*(Kbps)*/,
+		/*63 Clients*/ 2247.383 /*(Kbps)*/,
+		/*64 Clients*/ 2210.939 /*(Kbps)*/,
+		/*65 Clients*/ 2174.494 /*(Kbps)*/,
+		/*66 Clients*/ 2138.049 /*(Kbps)*/,
+		/*67 Clients*/ 2101.604 /*(Kbps)*/,
+		/*68 Clients*/ 2065.160 /*(Kbps)*/,
+		/*69 Clients*/ 2028.715 /*(Kbps)*/,
+		/*70 Clients*/ 1992.270 /*(Kbps)*/,
+		/*71 Clients*/ 1955.825 /*(Kbps)*/,
+		/*72 Clients*/ 1946.788 /*(Kbps)*/,
+		/*73 Clients*/ 1937.751 /*(Kbps)*/,
+		/*74 Clients*/ 1928.714 /*(Kbps)*/,
+		/*75 Clients*/ 1919.677 /*(Kbps)*/,
+		/*76 Clients*/ 1910.640 /*(Kbps)*/,
+		/*77 Clients*/ 1901.603 /*(Kbps)*/,
+		/*78 Clients*/ 1892.566 /*(Kbps)*/,
+		/*79 Clients*/ 1883.529 /*(Kbps)*/,
+		/*80 Clients*/ 1874.492 /*(Kbps)*/,
+		/*81 Clients*/ 1865.455 /*(Kbps)*/,
+		/*82 Clients*/ 1833.185 /*(Kbps)*/,
+		/*83 Clients*/ 1800.915 /*(Kbps)*/,
+		/*84 Clients*/ 1768.645 /*(Kbps)*/,
+		/*85 Clients*/ 1736.375 /*(Kbps)*/,
+		/*86 Clients*/ 1704.106 /*(Kbps)*/,
+		/*87 Clients*/ 1671.836 /*(Kbps)*/,
+		/*88 Clients*/ 1639.566 /*(Kbps)*/,
+		/*89 Clients*/ 1607.296 /*(Kbps)*/,
+		/*90 Clients*/ 1575.026 /*(Kbps)*/,
+		/*91 Clients*/ 1542.756 /*(Kbps)*/,
+		/*92 Clients*/ 1538.544 /*(Kbps)*/,
+		/*93 Clients*/ 1534.331 /*(Kbps)*/,
+		/*94 Clients*/ 1530.119 /*(Kbps)*/,
+		/*95 Clients*/ 1525.906 /*(Kbps)*/,
+		/*96 Clients*/ 1521.694 /*(Kbps)*/,
+		/*97 Clients*/ 1517.481 /*(Kbps)*/,
+		/*98 Clients*/ 1513.269 /*(Kbps)*/,
+		/*99 Clients*/ 1509.056 /*(Kbps)*/,
+		/*100 Clients*/ 1504.844 /*(Kbps)*/,
+		/*101 Clients*/ 1500.631 /*(Kbps)*/
 	};
-	
+
+	/** Per-client WAN throughput in Kbit/s, indexed by active-client count minus one. */
 	public static final double[] experimentalWanDelay = {
 		/*1 Client*/ 20703.973 /*(Kbps)*/,
 		/*2 Clients*/ 12023.957 /*(Kbps)*/,
@@ -180,7 +193,13 @@ public class SampleNetworkModel extends NetworkModel {
 		/*24 Clients*/ 1358.411 /*(Kbps)*/,
 		/*25 Clients*/ 1311.131 /*(Kbps)*/
 	};
-	
+
+	/**
+	 * Creates the tutorial network model.
+	 *
+	 * @param _numberOfMobileDevices number of simulated mobile devices
+	 * @param _simScenario scenario identifier
+	 */
 	public SampleNetworkModel(int _numberOfMobileDevices, String _simScenario) {
 		super(_numberOfMobileDevices, _simScenario);
 	}
@@ -190,23 +209,23 @@ public class SampleNetworkModel extends NetworkModel {
 		// Initialize per-AP arrays (one AP per edge datacenter)
 		// Derive initial MAN queue means from task lookup table (weighted by usage percentages)
 		// Assumption: half tasks initially traverse MAN (factor 4 used as heuristic scaling)
-		wanClients = new int[SimSettings.getInstance().getNumOfEdgeDatacenters()];  //we have one access point for each datacenter
-		wlanClients = new int[SimSettings.getInstance().getNumOfEdgeDatacenters()];  //we have one access point for each datacenter
+		wanClients = new int[SimSettings.getInstance().getNumOfEdgeDatacenters()];  // One access point per edge datacenter.
+		wlanClients = new int[SimSettings.getInstance().getNumOfEdgeDatacenters()];  // One access point per edge datacenter.
 
 		int numOfApp = SimSettings.getInstance().getTaskLookUpTable().length;
 		SimSettings SS = SimSettings.getInstance();
 		for(int taskIndex=0; taskIndex<numOfApp; taskIndex++) {
 			if(SS.getTaskLookUpTable()[taskIndex][0] == 0) {
 				SimLogger.printLine("Usage percentage of task " + taskIndex + " is 0! Terminating simulation...");
-				System.exit(0);
+				edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 			}
 			else{
 				double weight = SS.getTaskLookUpTable()[taskIndex][0]/(double)100;
-				
+
 				//assume half of the tasks use the MAN at the beginning
 				ManPoissonMeanForDownload += ((SS.getTaskLookUpTable()[taskIndex][2])*weight) * 4;
 				ManPoissonMeanForUpload = ManPoissonMeanForDownload;
-				
+
 				avgManTaskInputSize += SS.getTaskLookUpTable()[taskIndex][5]*weight;
 				avgManTaskOutputSize += SS.getTaskLookUpTable()[taskIndex][6]*weight;
 			}
@@ -216,7 +235,7 @@ public class SampleNetworkModel extends NetworkModel {
 		ManPoissonMeanForUpload = ManPoissonMeanForUpload/numOfApp;
 		avgManTaskInputSize = avgManTaskInputSize/numOfApp;
 		avgManTaskOutputSize = avgManTaskOutputSize/numOfApp;
-		
+
 		// Initialize rolling window statistics
 		lastMM1QueueUpdateTime = SimSettings.CLIENT_ACTIVITY_START_TIME;
 		totalManTaskOutputSize = 0;
@@ -226,7 +245,7 @@ public class SampleNetworkModel extends NetworkModel {
 	}
 
     /**
-    * source device is always mobile device in our simulation scenarios!
+    * The source is a mobile device in the supported scenarios.
     */
 	@Override
 	public double getUploadDelay(int sourceDeviceId, int destDeviceId, Task task) {
@@ -235,12 +254,12 @@ public class SampleNetworkModel extends NetworkModel {
 		//   Mobile -> Cloud (WAN)
 		//   Mobile -> Edge (WLAN)
 		double delay = 0;
-		
+
 		//special case for man communication
 		if(sourceDeviceId == destDeviceId && sourceDeviceId == SimSettings.GENERIC_EDGE_DEVICE_ID){
 			return delay = getManUploadDelay();
 		}
-		
+
 		Location accessPointLocation = SimManager.getInstance().getMobilityModel().getLocation(sourceDeviceId,CloudSim.clock());
 
 		//mobile device to cloud server
@@ -251,12 +270,12 @@ public class SampleNetworkModel extends NetworkModel {
 		else if (destDeviceId == SimSettings.GENERIC_EDGE_DEVICE_ID) {
 			delay = getWlanUploadDelay(accessPointLocation, task.getCloudletFileSize());
 		}
-		
+
 		return delay;
 	}
 
     /**
-    * destination device is always mobile device in our simulation scenarios!
+    * The destination is a mobile device in the supported scenarios.
     */
 	@Override
 	public double getDownloadDelay(int sourceDeviceId, int destDeviceId, Task task) {
@@ -265,14 +284,14 @@ public class SampleNetworkModel extends NetworkModel {
 		//   Cloud -> Mobile (WAN)
 		//   Edge -> Mobile (WLAN)
 		double delay = 0;
-		
+
 		//special case for man communication
 		if(sourceDeviceId == destDeviceId && sourceDeviceId == SimSettings.GENERIC_EDGE_DEVICE_ID){
 			return delay = getManDownloadDelay();
 		}
-		
+
 		Location accessPointLocation = SimManager.getInstance().getMobilityModel().getLocation(destDeviceId,CloudSim.clock());
-		
+
 		//cloud server to mobile device
 		if(sourceDeviceId == SimSettings.CLOUD_DATACENTER_ID){
 			delay = getWanDownloadDelay(accessPointLocation, task.getCloudletOutputSize());
@@ -281,7 +300,7 @@ public class SampleNetworkModel extends NetworkModel {
 		else{
 			delay = getWlanDownloadDelay(accessPointLocation, task.getCloudletOutputSize());
 		}
-		
+
 		return delay;
 	}
 
@@ -296,7 +315,7 @@ public class SampleNetworkModel extends NetworkModel {
 			manClients++;
 		else {
 			SimLogger.printLine("Error - unknown device id in uploadStarted(). Terminating simulation...");
-			System.exit(0);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		}
 	}
 
@@ -311,7 +330,7 @@ public class SampleNetworkModel extends NetworkModel {
 			manClients--;
 		else {
 			SimLogger.printLine("Error - unknown device id in uploadFinished(). Terminating simulation...");
-			System.exit(0);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		}
 	}
 
@@ -326,43 +345,43 @@ public class SampleNetworkModel extends NetworkModel {
 	}
 
 	private double getWlanDownloadDelay(Location accessPointLocation, double dataSize) {
-		// Convert KB -> Kb and divide by empirical throughput (scaled by 3 for 802.11ac approximation)
+		// Convert KB -> Kb and divide by tabulated throughput (scaled by 3 for 802.11ac approximation)
 		// Returns 0 if user index exceeds table => treated as bandwidth failure upstream
 		int numOfWlanUser = wlanClients[accessPointLocation.getServingWlanId()];
 		double taskSizeInKb = dataSize * (double)8; //KB to Kb
 		double result=0;
-		
-		if(numOfWlanUser < experimentalWlanDelay.length)
+
+		if(numOfWlanUser >= 0 && numOfWlanUser < experimentalWlanDelay.length)
 			result = taskSizeInKb /*Kb*/ / (experimentalWlanDelay[numOfWlanUser] * (double) 3 ) /*Kbps*/; //802.11ac is around 3 times faster than 802.11n
 
 		//System.out.println("--> " + numOfWlanUser + " user, " + taskSizeInKb + " KB, " +result + " sec");
 		return result;
 	}
-	
+
 	private double getWlanUploadDelay(Location accessPointLocation, double dataSize) {
 		// Symmetric with download
 		return getWlanDownloadDelay(accessPointLocation, dataSize);
 	}
-	
+
 	private double getWanDownloadDelay(Location accessPointLocation, double dataSize) {
 		// WAN throughput lookup (no scaling factor)
 		int numOfWanUser = wanClients[accessPointLocation.getServingWlanId()];
 		double taskSizeInKb = dataSize * (double)8; //KB to Kb
 		double result=0;
-		
-		if(numOfWanUser < experimentalWanDelay.length)
+
+		if(numOfWanUser >= 0 && numOfWanUser < experimentalWanDelay.length)
 			result = taskSizeInKb /*Kb*/ / (experimentalWanDelay[numOfWanUser]) /*Kbps*/;
-		
+
 		//System.out.println("--> " + numOfWanUser + " user, " + taskSizeInKb + " KB, " +result + " sec");
-		
+
 		return result;
 	}
-	
+
 	private double getWanUploadDelay(Location accessPointLocation, double dataSize) {
 		// Symmetric with download
 		return getWanDownloadDelay(accessPointLocation, dataSize);
 	}
-	
+
 	private double calculateMM1(double propagationDelay, double bandwidth /*Kbps*/, double PoissonMean,
 	                            double avgTaskSize /*KB*/, int deviceCount){
 		// M/M/1 delay approximation:
@@ -371,22 +390,25 @@ public class SampleNetworkModel extends NetworkModel {
 		//   Expected system time = 1 / (μ - λ)
 		// Add propagation delay then cap excessive (>15s) delays to 0 to indicate failure.
 		// Negative (μ <= λ) => saturated -> return 0 (failure)
-		double mu=0, lamda=0;
-		
+		if (propagationDelay < 0 || bandwidth <= 0 || PoissonMean <= 0
+				|| avgTaskSize <= 0 || deviceCount < 0) {
+			return 0;
+		}
+
 		avgTaskSize = avgTaskSize * 8; //convert from KB to Kb
 
-        lamda = ((double)1/(double)PoissonMean); //task per seconds
-		mu = bandwidth /*Kbps*/ / avgTaskSize /*Kb*/; //task per seconds
-		double result = (double)1 / (mu-lamda*(double)deviceCount);
-		
-		if(result < 0)
+		double arrivalRate = 1.0 / PoissonMean;
+		double serviceRate = bandwidth / avgTaskSize;
+		double aggregateArrivalRate = arrivalRate * deviceCount;
+		if (aggregateArrivalRate >= serviceRate)
 			return 0;
-		
+		double result = 1.0 / (serviceRate - aggregateArrivalRate);
+
 		result += propagationDelay;
-		
-		return (result > 15) ? 0 : result;
+
+		return (!Double.isFinite(result) || result > 15) ? 0 : result;
 	}
-	
+
 	private double getManDownloadDelay() {
 		// Use adaptive parameters to compute current MAN download delay
 		// Update rolling statistics for next interval adaptation
@@ -395,15 +417,15 @@ public class SampleNetworkModel extends NetworkModel {
 				ManPoissonMeanForDownload,
 				avgManTaskOutputSize,
 				numberOfMobileDevices);
-		
+
 		totalManTaskOutputSize += avgManTaskOutputSize;
 		numOfManTaskForDownload++;
-		
+
 		//System.out.println("--> " + SimManager.getInstance().getNumOfMobileDevice() + " user, " +result + " sec");
-		
+
 		return result;
 	}
-	
+
 	private double getManUploadDelay() {
 		// Symmetric logic for MAN upload path
 		double result = calculateMM1(SimSettings.getInstance().getInternalLanDelay(),
@@ -411,22 +433,23 @@ public class SampleNetworkModel extends NetworkModel {
 				ManPoissonMeanForUpload,
 				avgManTaskInputSize,
 				numberOfMobileDevices);
-		
+
 		totalManTaskInputSize += avgManTaskInputSize;
 		numOfManTaskForUpload++;
 
 		//System.out.println(CloudSim.clock() + " -> " + SimManager.getInstance().getNumOfMobileDevice() + " user, " + result + " sec");
-		
+
 		return result;
 	}
-	
-	public void updateMM1QueeuModel(){
+
+	/** Recalculates MAN queue parameters from the current measurement window. */
+	public void updateMM1QueueModel(){
 		// Recompute Poisson means and average sizes based on window statistics.
 		// Avoid division by zero by checking task counts.
 		// Reset window accumulators for next period.
 		double lastInterval = CloudSim.clock() - lastMM1QueueUpdateTime;
 		lastMM1QueueUpdateTime = CloudSim.clock();
-		
+
 		if(numOfManTaskForDownload != 0){
 			ManPoissonMeanForDownload = lastInterval / (numOfManTaskForDownload / (double)numberOfMobileDevices);
 			avgManTaskOutputSize = totalManTaskOutputSize / numOfManTaskForDownload;
@@ -435,10 +458,16 @@ public class SampleNetworkModel extends NetworkModel {
 			ManPoissonMeanForUpload = lastInterval / (numOfManTaskForUpload / (double)numberOfMobileDevices);
 			avgManTaskInputSize = totalManTaskInputSize / numOfManTaskForUpload;
 		}
-		
+
 		totalManTaskOutputSize = 0;
 		numOfManTaskForDownload = 0;
 		totalManTaskInputSize = 0;
 		numOfManTaskForUpload = 0;
+	}
+
+	/** @deprecated Use {@link #updateMM1QueueModel()}. */
+	@Deprecated
+	public void updateMM1QueeuModel(){
+		updateMM1QueueModel();
 	}
 }

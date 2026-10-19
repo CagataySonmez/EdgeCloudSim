@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Scenario Factory
- * 
+ *
  * Description:  Sample scenario factory providing the default
  *               instances of required abstract classes
- * 
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -30,12 +31,13 @@ import edu.boun.edgecloudsim.network.NetworkModel;
 // - Encapsulates scenario parameters (device count, duration, orchestrator policy, scenario label)
 // Extension points: replace returned concrete classes with custom implementations to change behavior.
 
+/** Creates the component set used by tutorial 3. */
 public class SampleScenarioFactory implements ScenarioFactory {
 	private int numOfMobileDevice;
 	private double simulationTime;
 	private String orchestratorPolicy;
 	private String simScenario;
-	
+
 	SampleScenarioFactory(int _numOfMobileDevice,
 			double _simulationTime,
 			String _orchestratorPolicy,
@@ -49,7 +51,7 @@ public class SampleScenarioFactory implements ScenarioFactory {
 		simulationTime = _simulationTime;
 		simScenario = _simScenario;
 	}
-	
+
 	@Override
 	public LoadGeneratorModel getLoadGeneratorModel() {
 		// Provides per-device workload (idle/active cycles)
@@ -79,7 +81,7 @@ public class SampleScenarioFactory implements ScenarioFactory {
 		// Edge infrastructure (datacenters/hosts/VMs)
 		return new DefaultEdgeServerManager();
 	}
-	
+
 	@Override
 	public CloudServerManager getCloudServerManager() {
 		// Remote cloud resources (default implementation)

@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use EdgeCloudSim in research, please cite the software and the preferred article below."
+title: "EdgeCloudSim"
+type: software
+license: GPL-3.0-or-later
+repository-code: "https://github.com/CagataySonmez/EdgeCloudSim"
+authors:
+  - family-names: "Sonmez"
+    given-names: "Cagatay"
+  - family-names: "Ozgovde"
+    given-names: "Atay"
+  - family-names: "Ersoy"
+    given-names: "Cem"
+preferred-citation:
+  type: article
+  title: "EdgeCloudSim: An environment for performance evaluation of edge computing systems"
+  authors:
+    - family-names: "Sonmez"
+      given-names: "Cagatay"
+    - family-names: "Ozgovde"
+      given-names: "Atay"
+    - family-names: "Ersoy"
+      given-names: "Cem"
+  journal: "Transactions on Emerging Telecommunications Technologies"
+  year: 2018
+  doi: "10.1002/ett.3493"
+

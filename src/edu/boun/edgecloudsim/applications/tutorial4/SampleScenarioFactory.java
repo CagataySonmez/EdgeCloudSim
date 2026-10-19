@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Scenario Factory
- * 
+ *
  * Description:  VehicularScenarioFactory provides the default
- *               instances of required abstract classes 
- * 
+ *               instances of required abstract classes
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -22,6 +23,7 @@ import edu.boun.edgecloudsim.mobility.MobilityModel;
 import edu.boun.edgecloudsim.task_generator.LoadGeneratorModel;
 import edu.boun.edgecloudsim.network.NetworkModel;
 
+/** Creates the component set used by tutorial 4. */
 public class SampleScenarioFactory implements ScenarioFactory {
 	// total number of mobile (edge) devices to simulate
 	private int numOfMobileDevice;

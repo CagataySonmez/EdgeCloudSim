@@ -1,10 +1,11 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Mobile Server Manager
- * 
- * Description: 
- * VehicularDefaultMobileServerManager is responsible for creating
- * mobile datacenters, hosts and VMs.
- * 
+ *
+ * Description:
+ * VehicularMobileServerManager creates the mobile datacenter, hosts, and VMs
+ * used by the vehicular sample.
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -35,12 +36,13 @@ import edu.boun.edgecloudsim.edge_client.mobile_processing_unit.MobileServerMana
 import edu.boun.edgecloudsim.edge_client.mobile_processing_unit.MobileVM;
 import edu.boun.edgecloudsim.edge_client.mobile_processing_unit.MobileVmAllocationPolicy_Custom;
 
+/** Provisions the mobile processing tier for the vehicular sample. */
 public class VehicularMobileServerManager extends MobileServerManager{
 	private int numOfMobileDevices=0;  // Total number of mobile devices (vehicles)
 
 	/**
 	 * Constructor for vehicular mobile server manager.
-	 * 
+	 *
 	 * @param _numOfMobileDevices number of mobile devices to manage
 	 */
 	public VehicularMobileServerManager(int _numOfMobileDevices) {
@@ -76,7 +78,7 @@ public class VehicularMobileServerManager extends MobileServerManager{
 	/**
 	 * Creates VM list for mobile processing units.
 	 * Each mobile device gets one VM for local task processing.
-	 * 
+	 *
 	 * @param brockerId CloudSim broker identifier
 	 */
 	@Override
@@ -106,7 +108,7 @@ public class VehicularMobileServerManager extends MobileServerManager{
 
 	/**
 	 * Calculates average CPU utilization across all mobile VMs.
-	 * 
+	 *
 	 * @return average CPU utilization as a percentage (0-100)
 	 */
 	@Override
@@ -131,7 +133,7 @@ public class VehicularMobileServerManager extends MobileServerManager{
 
 	/**
 	 * Creates a mobile datacenter for vehicle-based processing units.
-	 * 
+	 *
 	 * @param index datacenter identifier
 	 * @return configured Datacenter instance for mobile processing
 	 * @throws Exception if datacenter creation fails
@@ -169,7 +171,7 @@ public class VehicularMobileServerManager extends MobileServerManager{
 	/**
 	 * Creates mobile hosts representing the processing units in each vehicle.
 	 * Each mobile device gets one host with configured processing capabilities.
-	 * 
+	 *
 	 * @return list of configured MobileHost instances
 	 */
 	private List<MobileHost> createHosts(){

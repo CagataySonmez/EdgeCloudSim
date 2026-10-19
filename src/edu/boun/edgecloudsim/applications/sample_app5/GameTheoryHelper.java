@@ -1,11 +1,13 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 package edu.boun.edgecloudsim.applications.sample_app5;
 
+/** Computes the cloud-offloading probability used by the game-theory policy. */
 public class GameTheoryHelper {
 
 	// Pricing factor used in Nash equilibrium calculations
-	private static double PRICING_FACTOR = 0.6;
-	private double MAX_TASK_ARRIVAL_RATE;
-	private double MIN_TASK_ARRIVAL_RATE;
+	private static final double PRICING_FACTOR = 0.6;
+	private final double maxTaskArrivalRate;
+	private final double minTaskArrivalRate;
 
 	// The offloading probability vector p for each vehicle
 	private double[] pVector;
@@ -15,14 +17,21 @@ public class GameTheoryHelper {
 
 	/**
 	 * Constructor to initialize game theory helper for vehicular edge computing.
-	 * 
+	 *
 	 * @param minTaskArrivalRate minimum task arrival rate for normalization
 	 * @param maxTaskArrivalRate maximum task arrival rate for normalization
 	 * @param numOfVehicles number of vehicles participating in the game
 	 */
 	public GameTheoryHelper(double minTaskArrivalRate, double maxTaskArrivalRate, int numOfVehicles) {
-		MAX_TASK_ARRIVAL_RATE = maxTaskArrivalRate;
-		MIN_TASK_ARRIVAL_RATE = minTaskArrivalRate;
+		if (!Double.isFinite(minTaskArrivalRate) || !Double.isFinite(maxTaskArrivalRate)
+				|| maxTaskArrivalRate <= minTaskArrivalRate) {
+			throw new IllegalArgumentException("Maximum task arrival rate must be greater than the minimum rate");
+		}
+		if (numOfVehicles <= 0) {
+			throw new IllegalArgumentException("Number of vehicles must be positive");
+		}
+		this.maxTaskArrivalRate = maxTaskArrivalRate;
+		this.minTaskArrivalRate = minTaskArrivalRate;
 
 		// Initialize probability vector with default value of 0.33 for each vehicle
 		pVector = new double[numOfVehicles];
@@ -36,9 +45,8 @@ public class GameTheoryHelper {
 	}
 
 	/**
-	 * Calculates the optimal cloud offloading probability using Nash equilibrium strategy.
-	 * This method implements a game-theoretic approach where vehicles compete for resources.
-	 * 
+	 * Calculates the bounded cloud-offloading probability defined by the sample policy.
+	 *
 	 * @param vehicleID vehicle identifier
 	 * @param taskArrivalRate current task arrival rate for the vehicle
 	 * @param expectedEdgeDelay expected processing delay at edge server
@@ -47,8 +55,17 @@ public class GameTheoryHelper {
 	 * @return probability of offloading to cloud (between 0.01 and 0.99)
 	 */
 	public synchronized double getPi(int vehicleID, double taskArrivalRate, double expectedEdgeDelay, double expectedCloudDelay, double maxDelay) {
-		// Calculate optimal probability based on Nash equilibrium formula
-		pVector[vehicleID] = (expectedEdgeDelay - expectedCloudDelay) / (2 * PRICING_FACTOR * maxDelay * (1 - multiplyArray(vehicleID)));
+		if (vehicleID < 0 || vehicleID >= pVector.length) {
+			throw new IllegalArgumentException("Vehicle ID is outside the configured range: " + vehicleID);
+		}
+		if (!Double.isFinite(maxDelay) || maxDelay <= 0) {
+			throw new IllegalArgumentException("Maximum delay must be a positive finite value");
+		}
+		// Evaluate the probability formula used by the game-theory policy.
+		double denominator = 2 * PRICING_FACTOR * maxDelay * (1 - multiplyArray(vehicleID));
+		pVector[vehicleID] = denominator == 0
+				? 0.99
+				: (expectedEdgeDelay - expectedCloudDelay) / denominator;
 		arrivalRateVector[vehicleID] = normalizeTaskArrivalRate(taskArrivalRate);
 
 		// Ensure probability stays within valid bounds [0.01, 0.99]
@@ -62,35 +79,38 @@ public class GameTheoryHelper {
 
 	/**
 	 * Normalizes the task arrival rate to a value between 0 and 1.
-	 * 
+	 *
 	 * @param taskArrivalRate raw task arrival rate
 	 * @return normalized task arrival rate in range [0,1]
 	 */
 	private double normalizeTaskArrivalRate(double taskArrivalRate) {
-		double result = (taskArrivalRate - MIN_TASK_ARRIVAL_RATE) / (MAX_TASK_ARRIVAL_RATE - MIN_TASK_ARRIVAL_RATE);
+		double result = (taskArrivalRate - minTaskArrivalRate) / (maxTaskArrivalRate - minTaskArrivalRate);
 		return Math.max(Math.min(result,1),0);
 	}
 
 	/**
 	 * Calculates the product of (1 - λᵢ * pᵢ) for all vehicles except the excluded one.
 	 * This represents the probability that other vehicles don't interfere with resource allocation.
-	 * 
+	 *
 	 * @param excludedIndex index of the vehicle to exclude from calculation
 	 * @return product value used in Nash equilibrium calculation
 	 */
 	private double multiplyArray(int excludedIndex) {
-		double product = 1.0; 
-		
+		double product = 1.0;
+
 		// Calculate product for all vehicles except the excluded one
-		for (int i = 0; i < pVector.length && i != excludedIndex; i++)
+		for (int i = 0; i < pVector.length; i++) {
+			if (i == excludedIndex) {
+				continue;
+			}
 			product *= (1 - arrivalRateVector[i] * pVector[i]);
+		}
 
 		// Handle edge cases to prevent infinite values
-		if(product == Double.POSITIVE_INFINITY)
-			product = 0.99;
-		else if(product == Double.NEGATIVE_INFINITY)
-			product = 0.01;
+		if (!Double.isFinite(product)) {
+			throw new IllegalStateException("Non-finite game-theory product");
+		}
 
-		return product; 
+		return product;
 	}
 }

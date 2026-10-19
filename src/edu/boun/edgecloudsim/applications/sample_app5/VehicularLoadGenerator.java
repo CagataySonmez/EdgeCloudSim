@@ -1,8 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 package edu.boun.edgecloudsim.applications.sample_app5;
 
 import java.util.ArrayList;
 
 import org.apache.commons.math3.distribution.ExponentialDistribution;
+import org.apache.commons.math3.random.Well19937c;
 
 import edu.boun.edgecloudsim.core.SimSettings;
 import edu.boun.edgecloudsim.task_generator.LoadGeneratorModel;
@@ -10,13 +12,14 @@ import edu.boun.edgecloudsim.utils.TaskProperty;
 import edu.boun.edgecloudsim.utils.SimLogger;
 import edu.boun.edgecloudsim.utils.SimUtils;
 
+/** Generates per-vehicle task streams for the vehicular sample. */
 public class VehicularLoadGenerator extends LoadGeneratorModel{
 	// Array storing the assigned task type for each mobile device
 	int taskTypeOfDevices[];
 
 	/**
 	 * Constructor for vehicular load generator.
-	 * 
+	 *
 	 * @param _numberOfMobileDevices total number of mobile devices (vehicles)
 	 * @param _simulationTime total simulation duration in seconds
 	 * @param _simScenario simulation scenario identifier
@@ -38,20 +41,19 @@ public class VehicularLoadGenerator extends LoadGeneratorModel{
 		taskTypeOfDevices = new int[numberOfMobileDevices];
 		for(int i=0; i<numberOfMobileDevices; i++) {
 			int randomTaskType = -1;
-			
+
 			// Select task type based on probability distribution from lookup table
 			double taskTypeSelector = SimUtils.getRandomDoubleNumber(0,100);
 			double taskTypePercentage = 0;
 			for (int j=0; j<SimSettings.getInstance().getTaskLookUpTable().length; j++) {
 				taskTypePercentage += SimSettings.getInstance().getTaskLookUpTable()[j][0];
-				if(taskTypeSelector <= taskTypePercentage){
+				if(taskTypeSelector < taskTypePercentage){
 					randomTaskType = j;
 					break;
 				}
 			}
 			if(randomTaskType == -1){
-				SimLogger.printLine("Impossible is occurred! no random task type!");
-				continue;
+				throw new IllegalArgumentException("Application usage percentages must sum to 100");
 			}
 
 			taskTypeOfDevices[i] = randomTaskType;
@@ -60,15 +62,16 @@ public class VehicularLoadGenerator extends LoadGeneratorModel{
 			double poissonMean = SimSettings.getInstance().getTaskLookUpTable()[randomTaskType][2];
 			double activePeriod = SimSettings.getInstance().getTaskLookUpTable()[randomTaskType][3];
 			double idlePeriod = SimSettings.getInstance().getTaskLookUpTable()[randomTaskType][4];
-			
+
 			// Start activity at a random time within the initial window
 			double activePeriodStartTime = SimUtils.getRandomDoubleNumber(
-					SimSettings.CLIENT_ACTIVITY_START_TIME, 
+					SimSettings.CLIENT_ACTIVITY_START_TIME,
 					SimSettings.CLIENT_ACTIVITY_START_TIME * 2);
 			double virtualTime = activePeriodStartTime;
 
 			// Create exponential distribution for Poisson process (inter-arrival times)
-			ExponentialDistribution rng = new ExponentialDistribution(poissonMean);
+			ExponentialDistribution rng = new ExponentialDistribution(
+					new Well19937c(SimUtils.nextSeed()), poissonMean);
 
 			// Generate tasks for this device throughout the simulation
 			while(virtualTime < simulationTime) {
@@ -76,10 +79,10 @@ public class VehicularLoadGenerator extends LoadGeneratorModel{
 				double interval = rng.sample();
 
 				if(interval <= 0){
-					SimLogger.printLine("Impossible is occurred! interval is " + interval + " for device " + i + " time " + virtualTime);
-					continue;
+					throw new IllegalStateException("Invalid task interval " + interval
+							+ " for device " + i + " at time " + virtualTime);
 				}
-				
+
 				virtualTime += interval;
 
 				// Check if we've exceeded the current active period
@@ -97,7 +100,7 @@ public class VehicularLoadGenerator extends LoadGeneratorModel{
 				long outputFileSize =(long)SimSettings.getInstance().getTaskLookUpTable()[randomTaskType][6];
 				long outputFileSizeBias = outputFileSize / 10;
 
-				long length = (long)SimSettings.getInstance().getTaskLookUpTable()[randomTaskType][7];	
+				long length = (long)SimSettings.getInstance().getTaskLookUpTable()[randomTaskType][7];
 				long lengthBias = length / 10;
 
 				int pesNumber = (int)SimSettings.getInstance().getTaskLookUpTable()[randomTaskType][8];
@@ -115,7 +118,7 @@ public class VehicularLoadGenerator extends LoadGeneratorModel{
 
 	/**
 	 * Returns the assigned task type for a specific device.
-	 * 
+	 *
 	 * @param deviceId the device identifier
 	 * @return task type assigned to the device
 	 */

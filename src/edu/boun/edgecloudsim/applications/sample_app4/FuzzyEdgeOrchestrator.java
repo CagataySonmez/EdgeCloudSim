@@ -1,11 +1,12 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Basic Edge Orchestrator implementation
- * 
- * Description: 
+ *
+ * Description:
  * BasicEdgeOrchestrator implements basic algorithms which are
  * first/next/best/worst/random fit algorithms while assigning
  * requests to the edge devices.
- *               
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -32,14 +33,22 @@ import edu.boun.edgecloudsim.edge_client.CpuUtilizationModel_Custom;
 import edu.boun.edgecloudsim.edge_client.Task;
 import edu.boun.edgecloudsim.utils.SimLogger;
 
+/** Applies the sample application's fuzzy rules to task-placement decisions. */
 public class FuzzyEdgeOrchestrator extends EdgeOrchestrator {
+	/** Input-size normalization bound used by the fuzzy rule base, in kilobytes. */
 	public static final double MAX_DATA_SIZE=2500;
-	
+
 	private int numberOfHost; //used by load balancer
 	private FIS fis1 = null;
 	private FIS fis2 = null;
 	private FIS fis3 = null;
 
+	/**
+	 * Creates a fuzzy-rule-based orchestrator.
+	 *
+	 * @param _policy orchestration-policy identifier
+	 * @param _simScenario simulation-scenario identifier
+	 */
 	public FuzzyEdgeOrchestrator(String _policy, String _simScenario) {
 		super(_policy, _simScenario);
 	}
@@ -47,7 +56,7 @@ public class FuzzyEdgeOrchestrator extends EdgeOrchestrator {
 	@Override
 	public void initialize() {
 		numberOfHost=SimSettings.getInstance().getNumOfEdgeHosts();
-		
+
 		try {
 			fis1 = FIS.createFromString(FCL_definition.fclDefinition1, false);
 			fis2 = FIS.createFromString(FCL_definition.fclDefinition2, false);
@@ -55,23 +64,23 @@ public class FuzzyEdgeOrchestrator extends EdgeOrchestrator {
 		} catch (RecognitionException e) {
 			SimLogger.printLine("Cannot generate FIS! Terminating simulation...");
 			e.printStackTrace();
-			System.exit(0);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		}
 	}
 
 	/**
-	 * Determines the optimal device for task offloading using fuzzy logic-based decision making.
+	 * Selects an offloading tier by evaluating the configured fuzzy rule bases.
 	 * Implements a two-stage fuzzy inference system for edge vs cloud and local vs remote edge decisions.
-	 * 
+	 *
 	 * @param task The task to be offloaded
 	 * @return Device ID where the task should be executed (cloud datacenter ID or edge host ID)
 	 */
 	@Override
 	public int getDeviceToOffload(Task task) {
 		int result = 0;
-		
-		// Determine optimal execution location based on fuzzy logic algorithms
-		
+
+		// Select an execution location by evaluating the fuzzy rules.
+
 		// Single-tier scenario: all tasks go to edge devices
 		if(simScenario.equals("SINGLE_TIER")){
 			result = SimSettings.GENERIC_EDGE_DEVICE_ID;
@@ -81,10 +90,10 @@ public class FuzzyEdgeOrchestrator extends EdgeOrchestrator {
 			int bestRemoteEdgeHostIndex = 0;
 			int nearestEdgeHostIndex = 0;
 			double nearestEdgeUtilization = 0;
-			
+
 			// Create dummy task with 1 Mbit (128 KB) file size to measure network capacity
 			Task dummyTask = new Task(0, 0, 0, 0, 128, 128, new UtilizationModelFull(), new UtilizationModelFull(), new UtilizationModelFull());
-			
+
 			// Measure WAN upload delay and calculate bandwidth in Mbps
 			double wanDelay = SimManager.getInstance().getNetworkModel().getUploadDelay(task.getMobileDeviceId(),
 					SimSettings.CLOUD_DATACENTER_ID, dummyTask);
@@ -93,25 +102,25 @@ public class FuzzyEdgeOrchestrator extends EdgeOrchestrator {
 			// Measure MAN delay for edge-to-edge communication
 			double manDelay = SimManager.getInstance().getNetworkModel().getUploadDelay(SimSettings.GENERIC_EDGE_DEVICE_ID,
 					SimSettings.GENERIC_EDGE_DEVICE_ID, dummyTask);
-			
+
 			// Get average utilization across all edge servers
 			double edgeUtilization = SimManager.getInstance().getEdgeServerManager().getAvgUtilization();
-			
+
 			// Find the least loaded neighbor edge host and identify nearest edge server
 			double bestRemoteEdgeUtilization = 100; // Start with maximum value (100% utilization)
 			for(int hostIndex=0; hostIndex<numberOfHost; hostIndex++){
 				List<EdgeVM> vmArray = SimManager.getInstance().getEdgeServerManager().getVmList(hostIndex);
-	
+
 				// Calculate total CPU utilization across all VMs on this host
 				double totalUtilization=0;
 				for(int vmIndex=0; vmIndex<vmArray.size(); vmIndex++){
 					totalUtilization += vmArray.get(vmIndex).getCloudletScheduler().getTotalUtilizationOfCpu(CloudSim.clock());
 				}
-				
+
 				double avgUtilization = (totalUtilization / (double)(vmArray.size()));
-				
+
 				EdgeHost host = (EdgeHost)(vmArray.get(0).getHost()); // All VMs share the same host
-				
+
 				// Check if this is the nearest edge server (same WLAN coverage area)
 				if(host.getLocation().getServingWlanId() == task.getSubmittedLocation().getServingWlanId()){
 					nearestEdgeUtilization = totalUtilization / (double)(vmArray.size());
@@ -128,16 +137,16 @@ public class FuzzyEdgeOrchestrator extends EdgeOrchestrator {
 			if(policy.equals("FUZZY_BASED")){
 				int bestHostIndex = nearestEdgeHostIndex;
 				double bestHostUtilization = nearestEdgeUtilization;
-				
+
 		        // Stage 1: FIS2 decides between nearest and remote edge servers
 		        // Set input variables for edge server selection
 		        fis2.setVariable("man_delay", manDelay);
 		        fis2.setVariable("nearest_edge_uitl", nearestEdgeUtilization);
 		        fis2.setVariable("best_remote_edge_uitl", bestRemoteEdgeUtilization);
-		        
+
 		        // Evaluate fuzzy inference system 2
 		        fis2.evaluate();
-		        
+
 		        // Debug output for FIS2 (commented out for performance)
 		        /*
 		        SimLogger.printLine("########################################");
@@ -147,13 +156,13 @@ public class FuzzyEdgeOrchestrator extends EdgeOrchestrator {
 		        SimLogger.printLine("offload_decision: " + fis2.getVariable("offload_decision").getValue());
 		        SimLogger.printLine("########################################");
 				*/
-		        
+
 		        // If FIS2 output > 50, choose remote edge server; otherwise use nearest
 				if(fis2.getVariable("offload_decision").getValue() > 50){
 					bestHostIndex = bestRemoteEdgeHostIndex;
 					bestHostUtilization = bestRemoteEdgeUtilization;
 				}
-				
+
 				// Get task delay sensitivity from lookup table
 				double delay_sensitivity = SimSettings.getInstance().getTaskLookUpTable()[task.getTaskType()][12];
 
@@ -163,21 +172,21 @@ public class FuzzyEdgeOrchestrator extends EdgeOrchestrator {
 		        fis1.setVariable("task_size", task.getCloudletLength());
 		        fis1.setVariable("delay_sensitivity", delay_sensitivity);
 		        fis1.setVariable("avg_edge_util", bestHostUtilization);
-		        
+
 		        // Evaluate fuzzy inference system 1
 		        fis1.evaluate();
-		        
+
 		        // Debug output for FIS1 (commented out for performance)
 		        /*
 		        SimLogger.printLine("########################################");
 		        SimLogger.printLine("wan bw: " + wanBW);
 		        SimLogger.printLine("task_size: " + task.getCloudletLength());
 		        SimLogger.printLine("delay_sensitivity: " + delay_sensitivity);
-		        SimLogger.printLine("avg_edge_util: " + bestHostUtilization);  
+		        SimLogger.printLine("avg_edge_util: " + bestHostUtilization);
 		        SimLogger.printLine("offload_decision: " + fis1.getVariable("offload_decision").getValue());
 		        SimLogger.printLine("########################################");
 		        */
-		        
+
 		        // If FIS1 output > 50, offload to cloud; otherwise use selected edge server
 		        if(fis1.getVariable("offload_decision").getValue() > 50){
 					result = SimSettings.CLOUD_DATACENTER_ID;
@@ -193,28 +202,28 @@ public class FuzzyEdgeOrchestrator extends EdgeOrchestrator {
 	        	double videoExecution = SimSettings.getInstance().getTaskLookUpTable()[task.getTaskType()][12];
 	        	double dataSize = task.getCloudletFileSize() + task.getCloudletOutputSize();
 	        	double normalizedDataSize = Math.min(MAX_DATA_SIZE, dataSize)/MAX_DATA_SIZE;
-	        	
+
 		        // Use FIS3 for video processing offload decisions
 		        // Set input variables for video processing fuzzy logic
 		        fis3.setVariable("wan_bw", wanBW);
 		        fis3.setVariable("cpu_speed", cpuSpeed);
 		        fis3.setVariable("video_execution", videoExecution);
 		        fis3.setVariable("data_size", normalizedDataSize);
-		        
+
 		        // Evaluate fuzzy inference system 3
 		        fis3.evaluate();
-		        
+
 		        // Debug output for FIS3 (commented out for performance)
 		        /*
 		        SimLogger.printLine("########################################");
 		        SimLogger.printLine("wan bw: " + wanBW);
 		        SimLogger.printLine("cpu_speed: " + cpuSpeed);
 		        SimLogger.printLine("video_execution: " + videoExecution);
-		        SimLogger.printLine("data_size: " + normalizedDataSize);  
+		        SimLogger.printLine("data_size: " + normalizedDataSize);
 		        SimLogger.printLine("offload_decision: " + fis3.getVariable("offload_decision").getValue());
 		        SimLogger.printLine("########################################");
 				*/
-		        
+
 		        // Decision based on FIS3 output for video processing tasks
 		        if(fis3.getVariable("offload_decision").getValue() > 50)
 					result = SimSettings.CLOUD_DATACENTER_ID;
@@ -246,20 +255,20 @@ public class FuzzyEdgeOrchestrator extends EdgeOrchestrator {
 			}
 			else {
 				SimLogger.printLine("Unknown edge orchestrator policy! Terminating simulation...");
-				System.exit(0);
+				edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 			}
 		}
 		else {
 			SimLogger.printLine("Unknown simulation scenario! Terminating simulation...");
-			System.exit(0);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		}
 		return result;
 	}
 
 	/**
-	 * Selects the optimal VM for task execution using Least Loaded algorithm.
+	 * Selects a VM with the least-loaded policy.
 	 * Finds the VM with highest available capacity that can accommodate the task.
-	 * 
+	 *
 	 * @param task The task to be executed
 	 * @param deviceId The target device ID (cloud or edge server)
 	 * @return Selected VM for task execution or null if no suitable VM found
@@ -267,7 +276,7 @@ public class FuzzyEdgeOrchestrator extends EdgeOrchestrator {
 	@Override
 	public Vm getVmToOffload(Task task, int deviceId) {
 		Vm selectedVM = null;
-		
+
 		// Cloud datacenter VM selection
 		if(deviceId == SimSettings.CLOUD_DATACENTER_ID){
 			// Use Least Loaded algorithm for cloud VM selection
@@ -307,7 +316,7 @@ public class FuzzyEdgeOrchestrator extends EdgeOrchestrator {
 		else{
 			// Use specified host for VM selection
 			List<EdgeVM> vmArray = SimManager.getInstance().getEdgeServerManager().getVmList(deviceId);
-			
+
 			// Use Least Loaded algorithm on the specific edge server
 			double selectedVmCapacity = 0; // Start with minimum capacity requirement
 			for(int vmIndex=0; vmIndex<vmArray.size(); vmIndex++){
@@ -325,17 +334,17 @@ public class FuzzyEdgeOrchestrator extends EdgeOrchestrator {
 
 	@Override
 	public void processEvent(SimEvent arg0) {
-		// Nothing to do!
+		// No action is required for this event.
 	}
 
 	@Override
 	public void shutdownEntity() {
-		// Nothing to do!
+		// No action is required for this event.
 	}
 
 	@Override
 	public void startEntity() {
-		// Nothing to do!
+		// No action is required for this event.
 	}
 
 }

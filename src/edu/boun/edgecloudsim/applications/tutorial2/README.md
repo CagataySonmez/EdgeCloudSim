@@ -35,7 +35,7 @@ This tutorial implements and compares three distinct approaches for task offload
 
 ### 1. Random Decision
 - **Strategy**: Makes random decisions for task placement
-- **Characteristics**: 
+- **Characteristics**:
   - No optimization criteria or intelligence
   - Provides baseline performance metrics for comparison
   - Equal probability for local execution and edge offloading
@@ -65,4 +65,4 @@ This tutorial implements and compares three distinct approaches for task offload
 
 ---
 
-**Note**: This tutorial provides fundamental insights into task offloading decision making. Real-world deployments should consider additional factors such as network conditions, task dependencies, security requirements, and user mobility patterns.
+**Note**: This tutorial provides fundamental insights into task offloading decision-making. Real-world deployments should consider additional factors such as network conditions, task dependencies, security requirements, and user mobility patterns.

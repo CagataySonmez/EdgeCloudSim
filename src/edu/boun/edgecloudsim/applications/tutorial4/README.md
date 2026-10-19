@@ -46,7 +46,7 @@ This tutorial implements and compares three distinct approaches for edge server 
 ### 1. Random Capacity Allocation
 - **Strategy**: Randomly distributes total computational capacity across edge servers
 - **Total System Capacity**: 220 GIPS (Giga Instructions Per Second)
-- **Characteristics**: 
+- **Characteristics**:
   - No optimization criteria or traffic awareness
   - Provides baseline performance metrics for comparison
   - Random distribution may lead to resource imbalances

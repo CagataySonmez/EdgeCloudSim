@@ -1,8 +1,9 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Sample Application
- * 
+ *
  * Description:  Sample application for Vehicular App
- *               
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -11,6 +12,8 @@ package edu.boun.edgecloudsim.applications.sample_app5;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Calendar;
 import java.util.Date;
 
@@ -23,12 +26,17 @@ import edu.boun.edgecloudsim.core.SimSettings;
 import edu.boun.edgecloudsim.utils.SimLogger;
 import edu.boun.edgecloudsim.utils.SimUtils;
 
+/** Command-line entry point for the vehicular sample application. */
 public class VehicularMainApp {
+
+	/** Creates an entry-point object; invoking {@link #main(String[])} is preferred. */
+	public VehicularMainApp() {
+	}
 
 	/**
 	 * Main entry point for the vehicular edge computing simulation.
 	 * Configures and runs simulation scenarios with different policies and device counts.
-	 * 
+	 *
 	 * @param args command line arguments: [configFile, edgeDevicesFile, applicationsFile, outputFolder, iterationNumber]
 	 */
 	public static void main(String[] args) {
@@ -44,7 +52,7 @@ public class VehicularMainApp {
 		String outputFolder = "";
 		String edgeDevicesFile = "";
 		String applicationsFile = "";
-		
+
 		// Parse command line arguments if provided
 		if (args.length == 5){
 			configFile = args[0];
@@ -81,10 +89,16 @@ public class VehicularMainApp {
 		Date SimulationStartDate = Calendar.getInstance().getTime();
 		String now = df.format(SimulationStartDate);
 		SimLogger.printLine("Simulation started at " + now);
+		SimLogger.printLine("Simulation seed: " + SimUtils.getSeed());
 		SimLogger.printLine("----------------------------------------------------------------------");
 
 		// Initialize machine learning models for AI-based orchestration
-		String wekaModelsFolder = configFile.substring(0, configFile.lastIndexOf('/')) + "/weka/";
+		Path configPath = Paths.get(configFile).toAbsolutePath().normalize();
+		Path configDirectory = configPath.getParent();
+		if (configDirectory == null) {
+			throw new IllegalArgumentException("Configuration file must have a parent directory: " + configFile);
+		}
+		String wekaModelsFolder = configDirectory.resolve("weka").toString();
 		WekaWrapper.getInstance().initialize("MultilayerPerceptron", "LinearRegression", wekaModelsFolder);
 
 		// Run simulation scenarios with different configurations
@@ -168,6 +182,5 @@ public class VehicularMainApp {
 		SimLogger.printLine("----------------------------------------------------------------------");
 
 		// Suggest garbage collection to reduce memory usage
-		System.gc();
 	}//End of scenarios loop
 }

@@ -1,9 +1,12 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 package edu.boun.edgecloudsim.applications.sample_app5;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -27,7 +30,7 @@ public class OrchestratorTrainerLogger {
 	private static final double STAT_WINDOW = 1; // Statistics window size in seconds
 	private static final String DELIMITER = ",";
 	private Map<Integer, TrainerItem> trainerMap;
-	private List<Double>[] TaskOffloadStats;
+	private final List<List<Double>> taskOffloadStats;
 
 	private BufferedWriter learnerBW = null;
 
@@ -67,16 +70,15 @@ public class OrchestratorTrainerLogger {
 	/**
 	 * Constructor initializes data structures for training data collection
 	 */
-	@SuppressWarnings("unchecked")
 	public OrchestratorTrainerLogger() {
 		// Map to store temporary training items until task completion
 		trainerMap = new HashMap<Integer, TrainerItem>();
 
 		// Statistics for each datacenter type (Edge, Cloud via RSU, Cloud via GSM)
-		TaskOffloadStats = (ArrayList<Double>[])new ArrayList[3];
-		TaskOffloadStats[0] = new ArrayList<Double>(); // Edge datacenter stats
-		TaskOffloadStats[1] = new ArrayList<Double>(); // Cloud via RSU stats  
-		TaskOffloadStats[2] = new ArrayList<Double>(); // Cloud via GSM stats
+		taskOffloadStats = new ArrayList<List<Double>>(3);
+		taskOffloadStats.add(new ArrayList<Double>()); // Edge datacenter stats
+		taskOffloadStats.add(new ArrayList<Double>()); // Cloud via RSU stats
+		taskOffloadStats.add(new ArrayList<Double>()); // Cloud via GSM stats
 	}
 
 	/**
@@ -89,8 +91,8 @@ public class OrchestratorTrainerLogger {
 			String learnerOutputFile = SimLogger.getInstance().getOutputFolder() +
 					"/" + numOfMobileDevices + "_learnerOutputFile.cvs";
 			File learnerFile = new File(learnerOutputFile);
-			FileWriter learnerFW = new FileWriter(learnerFile);
-			learnerBW = new BufferedWriter(learnerFW);
+			learnerBW = new BufferedWriter(new OutputStreamWriter(
+					new FileOutputStream(learnerFile), StandardCharsets.UTF_8));
 
 			// Create CSV header with all features used for ML training
 			String line = "Decision"              // Target variable: orchestration decision
@@ -120,18 +122,21 @@ public class OrchestratorTrainerLogger {
 
 		} catch (IOException e) {
 			e.printStackTrace();
-			System.exit(1);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		}
 	}
 	/**
 	 * Closes the training data output file
 	 */
 	public void closeTrainerOutputFile() {
+		if (learnerBW == null) {
+			return;
+		}
 		try {
 			learnerBW.close();
 		} catch (IOException e) {
 			e.printStackTrace();
-			System.exit(1);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		}
 	}
 
@@ -144,6 +149,12 @@ public class OrchestratorTrainerLogger {
 	 */
 	public void saveStat(TrainerItem trainerItem, Task task,
 			boolean result, double serviceTime) {
+		if (trainerItem == null) {
+			throw new IllegalStateException("No trainer context exists for task " + task.getCloudletId());
+		}
+		if (learnerBW == null) {
+			throw new IllegalStateException("Trainer output file has not been opened");
+		}
 		String line = "";
 
 		// Convert datacenter ID to human-readable string
@@ -158,9 +169,7 @@ public class OrchestratorTrainerLogger {
 			line = "CLOUD_VIA_GSM";
 			break;
 		default:
-			SimLogger.printLine("Unknown datacenter type");
-			System.exit(1);
-			break;
+			throw new IllegalArgumentException("Unknown datacenter type: " + trainerItem.selectedDatacenter);
 		}
 
 		// Extract task execution details
@@ -194,7 +203,7 @@ public class OrchestratorTrainerLogger {
 			learnerBW.newLine();
 		} catch (IOException e) {
 			e.printStackTrace();
-			System.exit(1);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		}
 	}
 
@@ -203,7 +212,7 @@ public class OrchestratorTrainerLogger {
 	 * @param id Task ID for later matching with completion/failure
 	 * @param selectedDatacenter Orchestrator's decision
 	 * @param wanUploadDelay WAN upload delay estimate
-	 * @param wanDownloadDelay WAN download delay estimate  
+	 * @param wanDownloadDelay WAN download delay estimate
 	 * @param gsmUploadDelay GSM upload delay estimate
 	 * @param gsmDownloadDelay GSM download delay estimate
 	 * @param wlanUploadDelay WLAN upload delay estimate
@@ -215,8 +224,10 @@ public class OrchestratorTrainerLogger {
 			double wlanUploadDelay, double wlanDownloadDelay){
 
 		// Update offload statistics for this datacenter type
-		addOffloadStat(selectedDatacenter-1);
-		int numOffloadedTasks = getOffloadStat(selectedDatacenter-1);
+		int datacenterIndex = selectedDatacenter - 1;
+		validateDatacenterIndex(datacenterIndex);
+		addOffloadStat(datacenterIndex);
+		int numOffloadedTasks = getOffloadStat(datacenterIndex);
 
 		// Calculate current edge utilization across all hosts
 		int numberOfHost = SimSettings.getInstance().getNumOfEdgeHosts();
@@ -231,10 +242,11 @@ public class OrchestratorTrainerLogger {
 			}
 			totalUtlization += utilization;
 
-			edgeUtilizations[hostIndex] = utilization / (double)(vmArray.size());
+			edgeUtilizations[hostIndex] = vmArray.isEmpty() ? 0 : utilization / vmArray.size();
 		}
 
-		double avgEdgeUtilization = totalUtlization / SimSettings.getInstance().getNumOfEdgeVMs();
+		int numberOfEdgeVms = SimSettings.getInstance().getNumOfEdgeVMs();
+		double avgEdgeUtilization = numberOfEdgeVms == 0 ? 0 : totalUtlization / numberOfEdgeVms;
 
 		// Store training context for later retrieval when task completes
 		trainerMap.put(id,
@@ -271,15 +283,16 @@ public class OrchestratorTrainerLogger {
 	 * @param datacenterIdx Index of datacenter (0=edge, 1=cloud via RSU, 2=cloud via GSM)
 	 */
 	public synchronized void addOffloadStat(int datacenterIdx) {
+		validateDatacenterIndex(datacenterIdx);
 		double time = CloudSim.clock();
 		// Remove old entries outside the statistics window
-		for (Iterator<Double> iter = TaskOffloadStats[datacenterIdx].iterator(); iter.hasNext(); ) {
+		for (Iterator<Double> iter = taskOffloadStats.get(datacenterIdx).iterator(); iter.hasNext(); ) {
 			if (iter.next() + STAT_WINDOW < time)
 				iter.remove();
 			else
 				break;
 		}
-		TaskOffloadStats[datacenterIdx].add(time);
+		taskOffloadStats.get(datacenterIdx).add(time);
 	}
 
 	/**
@@ -288,6 +301,13 @@ public class OrchestratorTrainerLogger {
 	 * @return Number of tasks offloaded to this datacenter in recent time window
 	 */
 	public synchronized int getOffloadStat(int datacenterIdx) {
-		return TaskOffloadStats[datacenterIdx].size();
+		validateDatacenterIndex(datacenterIdx);
+		return taskOffloadStats.get(datacenterIdx).size();
+	}
+
+	private void validateDatacenterIndex(int datacenterIdx) {
+		if (datacenterIdx < 0 || datacenterIdx >= taskOffloadStats.size()) {
+			throw new IllegalArgumentException("Unknown datacenter index: " + datacenterIdx);
+		}
 	}
 }

@@ -1,15 +1,12 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Custom VM Cpu Utilization Model
- * 
- * Description: 
- * CpuUtilizationModel_Custom implements UtilizationModel and used for
- * VM CPU utilization model. In CloudSim, the CPU utilization of the VM
- * is a simple counter. We provide more realistic utilization model
- * which decide CPU utilization of each application by using the
- * values defined in the applications.xml file. For those who wants to
- * add another VM Cpu Utilization Model to EdgeCloudSim should provide
- * another concrete instance of UtilizationModel via ScenarioFactory
- *               
+ *
+ * Description:
+ * Implements the VM CPU-utilization model by reading the application- and
+ * execution-tier-specific percentages from applications.xml. Alternative
+ * implementations can be supplied through ScenarioFactory.
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -22,24 +19,24 @@ import edu.boun.edgecloudsim.core.SimSettings;
 import edu.boun.edgecloudsim.utils.SimLogger;
 
 /**
- * Custom CPU utilization model for EdgeCloudSim that provides realistic VM resource utilization.
+ * Returns the per-application CPU utilization configured for each execution tier.
  * Unlike CloudSim's simple counter-based approach, this model uses application-specific
  * utilization values defined in the applications.xml configuration file.
  */
 public class CpuUtilizationModel_Custom implements UtilizationModel {
 	private Task task;
-	
+
 	/**
 	 * Constructor for custom CPU utilization model.
 	 */
 	public CpuUtilizationModel_Custom(){
 	}
-	
+
 	/**
 	 * Gets the CPU utilization for the associated task at a given time.
 	 * Utilization is determined based on task type and target datacenter type
 	 * using values from the task lookup table configuration.
-	 * 
+	 *
 	 * @param time Simulation time (unused in this implementation)
 	 * @return CPU utilization percentage (0.0 to 1.0) for this task
 	 */
@@ -53,7 +50,7 @@ public class CpuUtilizationModel_Custom implements UtilizationModel {
 
 		return SimSettings.getInstance().getTaskLookUpTable()[task.getTaskType()][index];
 	}
-	
+
 	/**
 	 * Associates this utilization model with a specific task.
 	 * Required for retrieving task-specific utilization parameters.
@@ -62,11 +59,11 @@ public class CpuUtilizationModel_Custom implements UtilizationModel {
 	public void setTask(Task _task){
 		task=_task;
 	}
-	
+
 	/**
 	 * Predicts CPU utilization for a given VM type without task execution.
 	 * Used by orchestrators for making offloading decisions before task assignment.
-	 * 
+	 *
 	 * @param _vmType The type of VM to predict utilization for
 	 * @return Predicted CPU utilization percentage (0.0 to 1.0)
 	 */
@@ -80,7 +77,7 @@ public class CpuUtilizationModel_Custom implements UtilizationModel {
 			index = 11;  // Mobile VM utilization index
 		else{
 			SimLogger.printLine("Unknown VM Type! Terminating simulation...");
-			System.exit(1);
+			edu.boun.edgecloudsim.utils.SimUtils.terminateSimulation();
 		}
 		return SimSettings.getInstance().getTaskLookUpTable()[task.getTaskType()][index];
 	}

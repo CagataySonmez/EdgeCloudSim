@@ -1,8 +1,9 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Main Application
- * 
+ *
  * Description:  Main application for Sample App3
- *               
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -29,27 +30,30 @@ import edu.boun.edgecloudsim.utils.SimUtils;
  * local processing alongside edge server offloading for hybrid computing scenarios.
  */
 public class MainApp {
-	
+	/** Creates an entry-point object; invoking {@link #main(String[])} is preferred. */
+	public MainApp() {
+	}
+
 	/**
 	 * Main entry point for the mobile-edge hybrid processing simulation.
 	 * Supports command-line arguments for configuration files and output settings.
-	 * 
+	 *
 	 * @param args Command line arguments: [configFile, edgeDevicesFile, applicationsFile, outputFolder, iterationNumber]
 	 */
 	public static void main(String[] args) {
 		// Disable console output of CloudSim library to reduce noise
 		Log.disable();
-		
+
 		// Enable console and file logging for this EdgeCloudSim application
 		SimLogger.enablePrintLog();
-		
+
 		// Initialize simulation parameters with default values
 		int iterationNumber = 1;
 		String configFile = "";
 		String outputFolder = "";
 		String edgeDevicesFile = "";
 		String applicationsFile = "";
-		
+
 		// Parse command line arguments for custom configuration
 		if (args.length == 5){
 			configFile = args[0];          // Configuration properties file
@@ -71,24 +75,25 @@ public class MainApp {
 		SimSettings SS = SimSettings.getInstance();
 		if(SS.initialize(configFile, edgeDevicesFile, applicationsFile) == false){
 			SimLogger.printLine("cannot initialize simulation settings!");
-			System.exit(0);
+			System.exit(1);
 		}
-		
+
 		// Setup file logging and clean output directory if file logging is enabled
 		if(SS.getFileLoggingEnabled()){
 			SimLogger.enableFileLog();
 			SimUtils.cleanOutputFolder(outputFolder);
 		}
-		
+
 		DateFormat df = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 		Date SimulationStartDate = Calendar.getInstance().getTime();
 		String now = df.format(SimulationStartDate);
 		SimLogger.printLine("Simulation started at " + now);
+		SimLogger.printLine("Simulation seed: " + SimUtils.getSeed());
 		SimLogger.printLine("----------------------------------------------------------------------");
 
-		// Triple nested loop for comprehensive simulation coverage:
+		// Evaluate every configured device count, scenario, and policy combination.
 		// 1. Mobile device count variations
-		// 2. Different simulation scenarios 
+		// 2. Different simulation scenarios
 		// 3. Various orchestrator policies (ONLY_EDGE, ONLY_MOBILE, HYBRID)
 		for(int j=SS.getMinNumOfMobileDev(); j<=SS.getMaxNumOfMobileDev(); j+=SS.getMobileDevCounterSize())
 		{
@@ -105,23 +110,23 @@ public class MainApp {
 					SimLogger.printLine("Scenario: " + simScenario + " - Policy: " + orchestratorPolicy + " - #iteration: " + iterationNumber);
 					SimLogger.printLine("Duration: " + SS.getSimulationTime()/60 + " min (warm up period: "+ SS.getWarmUpPeriod()/60 +" min) - #devices: " + j);
 					SimLogger.getInstance().simStarted(outputFolder,"SIMRESULT_" + simScenario + "_"  + orchestratorPolicy + "_" + j + "DEVICES");
-					
+
 					try
 					{
 						// Initialize the CloudSim simulation framework
 						int num_user = 2;   // Number of CloudSim users (brokers)
 						Calendar calendar = Calendar.getInstance();
 						boolean trace_flag = false;  // Disable event tracing for performance
-				
+
 						// Initialize CloudSim with timing precision and user settings
 						CloudSim.init(num_user, calendar, trace_flag, 0.01);
-						
+
 						// Create scenario factory for mobile-edge hybrid processing
 						ScenarioFactory sampleFactory = new SampleScenarioFactory(j,SS.getSimulationTime(), orchestratorPolicy, simScenario);
-						
+
 						// Initialize EdgeCloudSim simulation manager with mobile device support
 						SimManager manager = new SimManager(sampleFactory, j, simScenario, orchestratorPolicy);
-						
+
 						// Execute the mobile-edge hybrid simulation
 						manager.startSimulation();
 					}
@@ -129,9 +134,9 @@ public class MainApp {
 					{
 						SimLogger.printLine("The simulation has been terminated due to an unexpected error");
 						e.printStackTrace();
-						System.exit(0);
+						System.exit(1);
 					}
-					
+
 					Date ScenarioEndDate = Calendar.getInstance().getTime();
 					now = df.format(ScenarioEndDate);
 					SimLogger.printLine("Scenario finished at " + now +  ". It took " + SimUtils.getTimeDifference(ScenarioStartDate,ScenarioEndDate));

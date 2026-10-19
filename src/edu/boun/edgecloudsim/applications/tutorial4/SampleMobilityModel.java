@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Mobility model implementation
- * 
- * Description: 
+ *
+ * Description:
  * VehicularMobilityModel implements basic vehicular mobility model
- * 
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -20,6 +21,7 @@ import edu.boun.edgecloudsim.mobility.MobilityModel;
 import edu.boun.edgecloudsim.utils.Location;
 import edu.boun.edgecloudsim.utils.SimUtils;
 
+/** Models cyclic device movement used by tutorial 4. */
 public class SampleMobilityModel extends MobilityModel {
 	// SPEED_FOR_PLACES[index] = km/h associated with attractiveness level (0..2)
 	private final double SPEED_FOR_PLACES[] = {20, 40, 60}; //km per hour
@@ -28,9 +30,8 @@ public class SampleMobilityModel extends MobilityModel {
 	private double totalTimeForLoop; //seconds
 	private int[] locationTypes;
 
-	//prepare following arrays to decrease computation on getLocation() function
-	//NOTE: if the number of clients is high, keeping following values in RAM
-	//      may be expensive. In that case sacrifice computational resources!
+	// Cache trajectory values to reduce computation in getLocation(). For large
+	// populations, an on-demand implementation can trade CPU time for lower memory use.
 	private int[] initialLocationIndexArray;
 	private int[] initialPositionArray; //in meters unit
 	private double[] timeToDriveLocationArray;//in seconds unit
@@ -43,9 +44,14 @@ public class SampleMobilityModel extends MobilityModel {
 	// - Precomputes initial position, segment index, and time to next boundary per device
 	//   to keep getLocation() O(number_of_crossed_segments) instead of O(total_segments).
 
+	/**
+	 * Creates a cyclic mobility model.
+	 *
+	 * @param _numberOfMobileDevices number of device trajectories to generate
+	 * @param _simulationTime simulation duration in seconds
+	 */
 	public SampleMobilityModel(int _numberOfMobileDevices, double _simulationTime) {
 		super(_numberOfMobileDevices, _simulationTime);
-		// TODO Auto-generated constructor stub
 	}
 
 	@Override
@@ -69,7 +75,7 @@ public class SampleMobilityModel extends MobilityModel {
 			locationTypes[i] = Integer.parseInt(locationElement.getElementsByTagName("attractiveness").item(0).getTextContent());
 
 			//(3600 * lengthOfSegment) / (SPEED_FOR_PLACES[x] * 1000);
-			timeToDriveLocationArray[i] = ((double)3.6 * (double)lengthOfSegment) /
+			timeToDriveLocationArray[i] = (3.6 * lengthOfSegment) /
 					(SPEED_FOR_PLACES[locationTypes[i]]);
 
 			//find the time required to loop in the road
@@ -83,7 +89,7 @@ public class SampleMobilityModel extends MobilityModel {
 		for(int i=0; i<numberOfMobileDevices; i++) {
 			initialPositionArray[i] = SimUtils.getRandomNumber(0, totalLengthOfRoad-1);
 			initialLocationIndexArray[i] = initialPositionArray[i] / lengthOfSegment;
-			timeToReachNextLocationArray[i] = ((double)3.6 *
+			timeToReachNextLocationArray[i] = (3.6 *
 					(double)(lengthOfSegment - (initialPositionArray[i] % lengthOfSegment))) /
 					(SPEED_FOR_PLACES[locationTypes[initialLocationIndexArray[i]]]);
 		}
@@ -98,14 +104,14 @@ public class SampleMobilityModel extends MobilityModel {
 		// Phase 2: advance whole segments using modulo of loop time, subtract segment times.
 		// Linear interpolation inside current segment: distance = speed(km/h)*time / 3.6
 
-		int ofset = 0;
+		int offset = 0;
 		double remainingTime = 0;
 
 		int locationIndex = initialLocationIndexArray[deviceId];
 		double timeToReachNextLocation = timeToReachNextLocationArray[deviceId];
 
 		if(time < timeToReachNextLocation){
-			ofset = initialPositionArray[deviceId];
+			offset = initialPositionArray[deviceId];
 			remainingTime = time;
 		}
 		else{
@@ -120,13 +126,13 @@ public class SampleMobilityModel extends MobilityModel {
 				locationIndex =  (locationIndex+1) % locationTypes.length;
 			}
 
-			ofset = locationIndex * lengthOfSegment;
+			offset = locationIndex * lengthOfSegment;
 		}
 
 		// x_pos computed as starting offset of segment plus distance progressed in current segment.
 		// y dimension is fixed (0) in this linear scenario model.
-		int x_pos = (int) (ofset + ( (SPEED_FOR_PLACES[locationTypes[locationIndex]] * remainingTime) / (double)3.6));
+		int xPos = (int) (offset + (SPEED_FOR_PLACES[locationTypes[locationIndex]] * remainingTime / 3.6));
 
-		return new Location(locationTypes[locationIndex], locationIndex, x_pos, 0);
+		return new Location(locationTypes[locationIndex], locationIndex, xPos, 0);
 	}
 }

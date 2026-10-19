@@ -1,13 +1,12 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - MobileHost
- * 
- * Description: 
+ *
+ * Description:
  * MobileHost adds associated mobile device id information over CloudSim's Host class
  *
- * Please note that the mobile processing units are simulated via
- * CloudSim. It is assumed that the mobile devices operate Hosts
- * and VMs like a server. That is why the class names are similar
- * to other Cloud and Edge components (to provide consistency).
+ * Mobile processing units are represented by CloudSim hosts and VMs,
+ * following the same abstraction used for the cloud and edge tiers.
  *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
@@ -30,10 +29,10 @@ import org.cloudbus.cloudsim.provisioners.RamProvisioner;
  */
 public class MobileHost extends Host {
 	private int mobileDeviceId;
-	
+
 	/**
 	 * Constructor for MobileHost with specified resource parameters.
-	 * 
+	 *
 	 * @param id Unique identifier for this mobile host
 	 * @param ramProvisioner RAM resource provisioner for this host
 	 * @param bwProvisioner Bandwidth resource provisioner for this host
@@ -47,7 +46,7 @@ public class MobileHost extends Host {
 		super(id, ramProvisioner, bwProvisioner, storage, peList, vmScheduler);
 
 	}
-	
+
 	/**
 	 * Associates this host with a specific mobile device.
 	 * @param _mobileDeviceId The ID of the mobile device this host represents
@@ -55,7 +54,7 @@ public class MobileHost extends Host {
 	public void setMobileDeviceId(int _mobileDeviceId){
 		mobileDeviceId=_mobileDeviceId;
 	}
-	
+
 	/**
 	 * Gets the mobile device ID associated with this host.
 	 * @return The ID of the mobile device this host represents

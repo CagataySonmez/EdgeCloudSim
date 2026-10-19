@@ -1,12 +1,13 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Simulation Settings class
- * 
- * Description: 
+ *
+ * Description:
  * SimSettings provides system wide simulation settings. It is a
  * singleton class and provides all necessary information to other modules.
  * If you need to use another simulation setting variable in your
  * config file, add related getter method in this class.
- *               
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -19,8 +20,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -42,16 +45,35 @@ public class SimSettings {
 	/** Simulation time when client activities begin (in seconds) */
 	public static final double CLIENT_ACTIVITY_START_TIME = 10;
 
-	/** Enumeration for different types of virtual machines in the simulation */
-	public static enum VM_TYPES { MOBILE_VM, EDGE_VM, CLOUD_VM }
+	/** Identifies the execution tier of a virtual machine. */
+	public static enum VM_TYPES {
+		/** Virtual machine hosted by a mobile device. */
+		MOBILE_VM,
+		/** Virtual machine hosted by an edge server. */
+		EDGE_VM,
+		/** Virtual machine hosted by the cloud datacenter. */
+		CLOUD_VM
+	}
 
-	/** Enumeration for different types of network delays in edge computing */
-	public static enum NETWORK_DELAY_TYPES { WLAN_DELAY, MAN_DELAY, WAN_DELAY, GSM_DELAY }
+	/** Identifies the network segment associated with a measured delay. */
+	public static enum NETWORK_DELAY_TYPES {
+		/** Wireless-local-area-network delay. */
+		WLAN_DELAY,
+		/** Metropolitan-area-network delay. */
+		MAN_DELAY,
+		/** Wide-area-network delay. */
+		WAN_DELAY,
+		/** Cellular-network delay. */
+		GSM_DELAY
+	}
 
-	/** Predefined component IDs for different simulation entities */
+	/** Cloud datacenter entity identifier. */
 	public static final int CLOUD_DATACENTER_ID = 1000;
+	/** Mobile datacenter entity identifier. */
 	public static final int MOBILE_DATACENTER_ID = 1001;
+	/** Edge orchestrator entity identifier. */
 	public static final int EDGE_ORCHESTRATOR_ID = 1002;
+	/** Generic edge-device entity identifier. */
 	public static final int GENERIC_EDGE_DEVICE_ID = 1003;
 
 	/** Delimiter used in output files for data separation */
@@ -63,7 +85,7 @@ public class SimSettings {
 	private double INTERVAL_TO_GET_VM_LOAD_LOG;
 	private double INTERVAL_TO_GET_LOCATION_LOG;
 	private double INTERVAL_TO_GET_AP_DELAY_LOG;
-	
+
 	// Logging configuration parameters
 	private boolean FILE_LOG_ENABLED;
 	private boolean DEEP_FILE_LOG_ENABLED;
@@ -84,10 +106,10 @@ public class SimSettings {
 	private double WAN_PROPAGATION_DELAY;  // Wide Area Network delay (seconds)
 	private double GSM_PROPAGATION_DELAY;  // GSM network delay (seconds)
 	private double LAN_INTERNAL_DELAY;     // Local Area Network delay (seconds)
-	private int BANDWITH_WLAN;             // WLAN bandwidth (Mbps)
-	private int BANDWITH_MAN;              // Metropolitan Area Network bandwidth (Mbps)
-	private int BANDWITH_WAN;              // Wide Area Network bandwidth (Mbps)
-	private int BANDWITH_GSM;              // GSM network bandwidth (Mbps)
+	private int bandwidthWlan;              // WLAN bandwidth (Kbps)
+	private int bandwidthMan;               // Metropolitan Area Network bandwidth (Kbps)
+	private int bandwidthWan;               // Wide Area Network bandwidth (Kbps)
+	private int bandwidthGsm;               // GSM network bandwidth (Kbps)
 
 	// Cloud infrastructure configuration parameters
 	private int NUM_OF_HOST_ON_CLOUD_DATACENTER;
@@ -116,7 +138,7 @@ public class SimSettings {
 	// Mobility model configuration - mean waiting time (minutes) for each place type
 	private double[] mobilityLookUpTable;
 
-	/** 
+	/**
 	 * Application task lookup table storing parameters for each application type defined in applications.xml
 	 * Array indices represent different application characteristics:
 	 * [0] Usage percentage (%)
@@ -149,7 +171,7 @@ public class SimSettings {
 	/**
 	 * Gets the singleton instance of SimSettings.
 	 * Creates a new instance if one doesn't already exist (lazy initialization).
-	 * 
+	 *
 	 * @return The singleton SimSettings instance for global configuration access
 	 */
 	public static SimSettings getInstance() {
@@ -163,17 +185,14 @@ public class SimSettings {
 	 * Initializes simulation settings from configuration files.
 	 * Loads properties from the main configuration file, edge device definitions,
 	 * and application specifications to configure the simulation environment.
-	 * 
+	 *
 	 * @param propertiesFile Path to the main simulation properties file
 	 * @param edgeDevicesFile Path to the edge devices configuration XML file
 	 * @param applicationsFile Path to the applications configuration XML file
 	 * @return true if all configuration files loaded successfully, false otherwise
 	 */
 	public boolean initialize(String propertiesFile, String edgeDevicesFile, String applicationsFile){
-		boolean result = false;
-		InputStream input = null;
-		try {
-			input = new FileInputStream(propertiesFile);
+		try (InputStream input = new FileInputStream(propertiesFile)) {
 
 			// load a properties file
 			Properties prop = new Properties();
@@ -183,7 +202,7 @@ public class SimSettings {
 			WARM_UP_PERIOD = (double)60 * Double.parseDouble(prop.getProperty("warm_up_period")); //seconds
 			INTERVAL_TO_GET_VM_LOAD_LOG = (double)60 * Double.parseDouble(prop.getProperty("vm_load_check_interval")); //seconds
 			INTERVAL_TO_GET_LOCATION_LOG = (double)60 * Double.parseDouble(prop.getProperty("location_check_interval")); //seconds
-			INTERVAL_TO_GET_AP_DELAY_LOG = (double)60 * Double.parseDouble(prop.getProperty("ap_delay_check_interval", "0")); //seconds		
+			INTERVAL_TO_GET_AP_DELAY_LOG = (double)60 * Double.parseDouble(prop.getProperty("ap_delay_check_interval", "0")); //seconds
 			FILE_LOG_ENABLED = Boolean.parseBoolean(prop.getProperty("file_log_enabled"));
 			DEEP_FILE_LOG_ENABLED = Boolean.parseBoolean(prop.getProperty("deep_file_log_enabled"));
 
@@ -195,10 +214,10 @@ public class SimSettings {
 			WAN_PROPAGATION_DELAY = Double.parseDouble(prop.getProperty("wan_propagation_delay", "0"));
 			GSM_PROPAGATION_DELAY = Double.parseDouble(prop.getProperty("gsm_propagation_delay", "0"));
 			LAN_INTERNAL_DELAY = Double.parseDouble(prop.getProperty("lan_internal_delay", "0"));
-			BANDWITH_WLAN = 1000 * Integer.parseInt(prop.getProperty("wlan_bandwidth"));
-			BANDWITH_MAN = 1000 * Integer.parseInt(prop.getProperty("man_bandwidth", "0"));
-			BANDWITH_WAN = 1000 * Integer.parseInt(prop.getProperty("wan_bandwidth", "0"));
-			BANDWITH_GSM =  1000 * Integer.parseInt(prop.getProperty("gsm_bandwidth", "0"));
+			bandwidthWlan = 1000 * Integer.parseInt(prop.getProperty("wlan_bandwidth"));
+			bandwidthMan = 1000 * Integer.parseInt(prop.getProperty("man_bandwidth", "0"));
+			bandwidthWan = 1000 * Integer.parseInt(prop.getProperty("wan_bandwidth", "0"));
+			bandwidthGsm =  1000 * Integer.parseInt(prop.getProperty("gsm_bandwidth", "0"));
 
 			NUM_OF_HOST_ON_CLOUD_DATACENTER = Integer.parseInt(prop.getProperty("number_of_host_on_cloud_datacenter"));
 			NUM_OF_VM_ON_CLOUD_HOST = Integer.parseInt(prop.getProperty("number_of_vm_on_cloud_host"));
@@ -212,9 +231,9 @@ public class SimSettings {
 			MIPS_FOR_VM = Integer.parseInt(prop.getProperty("mips_for_mobile_vm"));
 			STORAGE_FOR_VM = Integer.parseInt(prop.getProperty("storage_for_mobile_vm"));
 
-			ORCHESTRATOR_POLICIES = prop.getProperty("orchestrator_policies").split(",");
+			ORCHESTRATOR_POLICIES = splitAndTrim(prop.getProperty("orchestrator_policies"));
 
-			SIMULATION_SCENARIOS = prop.getProperty("simulation_scenarios").split(",");
+			SIMULATION_SCENARIOS = splitAndTrim(prop.getProperty("simulation_scenarios"));
 
 			NORTHERN_BOUND = Double.parseDouble(prop.getProperty("northern_bound", "0"));
 			SOUTHERN_BOUND = Double.parseDouble(prop.getProperty("southern_bound", "0"));
@@ -233,27 +252,88 @@ public class SimSettings {
 					place3_mean_waiting_time  //ATTRACTIVENESS_L3
 			};
 
+			validateConfiguration();
+			parseApplicationsXML(applicationsFile);
+			validateApplicationTable();
+			NUM_OF_EDGE_DATACENTERS = 0;
+			NUM_OF_EDGE_HOSTS = 0;
+			NUM_OF_EDGE_VMS = 0;
+			NUM_OF_PLACE_TYPES = 0;
+			parseEdgeDevicesXML(edgeDevicesFile);
+			if (NUM_OF_EDGE_DATACENTERS <= 0 || NUM_OF_EDGE_HOSTS <= 0 || NUM_OF_EDGE_VMS <= 0) {
+				throw new IllegalArgumentException("Edge-device XML must define at least one datacenter, host, and VM");
+			}
+			if (NUM_OF_PLACE_TYPES > mobilityLookUpTable.length) {
+				throw new IllegalArgumentException("Edge-device attractiveness index exceeds the configured mobility levels");
+			}
+			return true;
+		} catch (IOException | RuntimeException exception) {
+			SimLogger.printLine("Simulation settings cannot be initialized: " + exception.getMessage());
+			return false;
+		}
+	}
 
-		} catch (IOException ex) {
-			ex.printStackTrace();
-		} finally {
-			if (input != null) {
-				try {
-					input.close();
-					result = true;
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+	private static String[] splitAndTrim(String value) {
+		if (value == null || value.trim().isEmpty()) {
+			throw new IllegalArgumentException("Scenario and policy lists cannot be empty");
+		}
+		String[] values = value.split(",");
+		for (int i = 0; i < values.length; i++) {
+			values[i] = values[i].trim();
+			if (values[i].isEmpty()) {
+				throw new IllegalArgumentException("Scenario and policy list entries cannot be empty");
 			}
 		}
-		parseApplicationsXML(applicationsFile);
-		parseEdgeDevicesXML(edgeDevicesFile);
+		return values;
+	}
 
-		return result;
+	private void validateConfiguration() {
+		if (SIMULATION_TIME <= 0 || WARM_UP_PERIOD < 0 || WARM_UP_PERIOD >= SIMULATION_TIME) {
+			throw new IllegalArgumentException("Simulation time must be positive and exceed the warm-up period");
+		}
+		if (MIN_NUM_OF_MOBILE_DEVICES < 0 || MAX_NUM_OF_MOBILE_DEVICES < MIN_NUM_OF_MOBILE_DEVICES
+				|| MOBILE_DEVICE_COUNTER_SIZE <= 0) {
+			throw new IllegalArgumentException("Mobile-device count settings are inconsistent");
+		}
+		if (bandwidthWlan < 0 || bandwidthMan < 0 || bandwidthWan < 0 || bandwidthGsm < 0
+				|| NUM_OF_HOST_ON_CLOUD_DATACENTER <= 0
+				|| NUM_OF_VM_ON_CLOUD_HOST <= 0 || CORE_FOR_CLOUD_VM <= 0
+				|| MIPS_FOR_CLOUD_VM <= 0 || RAM_FOR_CLOUD_VM <= 0 || STORAGE_FOR_CLOUD_VM <= 0) {
+			throw new IllegalArgumentException("Bandwidths cannot be negative and cloud resource values must be positive");
+		}
+	}
+
+	private void validateApplicationTable() {
+		if (taskLookUpTable == null || taskLookUpTable.length == 0) {
+			throw new IllegalArgumentException("Applications XML must define at least one application");
+		}
+		double totalUsagePercentage = 0;
+		for (int i = 0; i < taskLookUpTable.length; i++) {
+			double[] application = taskLookUpTable[i];
+			totalUsagePercentage += application[0];
+			if (application[0] < 0 || application[0] > 100
+					|| application[1] < 0 || application[1] > 100
+					|| application[2] <= 0 || application[3] <= 0 || application[4] < 0
+					|| application[5] <= 0 || application[6] <= 0 || application[7] <= 0
+					|| application[8] <= 0
+					|| application[9] < 0 || application[9] > 100
+					|| application[10] < 0 || application[10] > 100
+					|| application[11] < 0 || application[11] > 100
+					|| application[12] < 0 || application[12] > 1
+					|| application[13] < 0) {
+				throw new IllegalArgumentException("Invalid numeric value for application " + taskNames[i]);
+			}
+		}
+		if (Math.abs(totalUsagePercentage - 100) > 1.0e-9) {
+			throw new IllegalArgumentException("Application usage percentages must sum to 100, but sum to "
+					+ totalUsagePercentage);
+		}
 	}
 
 	/**
-	 * returns the parsed XML document for edge_devices.xml
+	 * Returns the parsed edge-device configuration.
+	 *
+	 * @return DOM document loaded from {@code edge_devices.xml}
 	 */
 	public Document getEdgeDevicesDocument(){
 		return edgeDevicesDoc;
@@ -261,7 +341,9 @@ public class SimSettings {
 
 
 	/**
-	 * returns simulation time (in seconds unit) from properties file
+	 * Returns the configured simulation duration.
+	 *
+	 * @return simulation duration in seconds
 	 */
 	public double getSimulationTime()
 	{
@@ -269,55 +351,69 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns warm up period (in seconds unit) from properties file
+	 * Returns the warm-up period excluded from steady-state statistics.
+	 *
+	 * @return warm-up duration in seconds
 	 */
 	public double getWarmUpPeriod()
 	{
-		return WARM_UP_PERIOD; 
+		return WARM_UP_PERIOD;
 	}
 
 	/**
-	 * returns VM utilization log collection interval (in seconds unit) from properties file
+	 * Returns the VM-utilization sampling interval.
+	 *
+	 * @return sampling interval in seconds
 	 */
 	public double getVmLoadLogInterval()
 	{
-		return INTERVAL_TO_GET_VM_LOAD_LOG; 
+		return INTERVAL_TO_GET_VM_LOAD_LOG;
 	}
 
 	/**
-	 * returns VM location log collection interval (in seconds unit) from properties file
+	 * Returns the device-location sampling interval.
+	 *
+	 * @return sampling interval in seconds
 	 */
 	public double getLocationLogInterval()
 	{
-		return INTERVAL_TO_GET_LOCATION_LOG; 
+		return INTERVAL_TO_GET_LOCATION_LOG;
 	}
 
 	/**
-	 * returns VM location log collection interval (in seconds unit) from properties file
+	 * Returns the access-point-delay sampling interval.
+	 *
+	 * @return sampling interval in seconds
 	 */
 	public double getApDelayLogInterval()
 	{
-		return INTERVAL_TO_GET_AP_DELAY_LOG; 
+		return INTERVAL_TO_GET_AP_DELAY_LOG;
 	}
 
 	/**
-	 * returns deep statistics logging status from properties file
+	 * Reports whether detailed file logging is enabled.
+	 *
+	 * @return {@code true} only when both file logging and detailed logging are enabled
 	 */
 	public boolean getDeepFileLoggingEnabled()
 	{
-		return FILE_LOG_ENABLED && DEEP_FILE_LOG_ENABLED; 
+		return FILE_LOG_ENABLED && DEEP_FILE_LOG_ENABLED;
 	}
 
 	/**
-	 * returns deep statistics logging status from properties file
+	 * Reports whether file logging is enabled.
+	 *
+	 * @return {@code true} when simulation results are written to files
 	 */
 	public boolean getFileLoggingEnabled()
 	{
-		return FILE_LOG_ENABLED; 
+		return FILE_LOG_ENABLED;
 	}
 
 	/**
-	 * returns WAN propagation delay (in second unit) from properties file
+	 * Returns the configured WAN propagation delay.
+	 *
+	 * @return WAN propagation delay in seconds
 	 */
 	public double getWanPropagationDelay()
 	{
@@ -325,7 +421,9 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns GSM propagation delay (in second unit) from properties file
+	 * Returns the configured cellular-network propagation delay.
+	 *
+	 * @return cellular-network propagation delay in seconds
 	 */
 	public double getGsmPropagationDelay()
 	{
@@ -333,7 +431,9 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns internal LAN propagation delay (in second unit) from properties file
+	 * Returns the configured internal-LAN propagation delay.
+	 *
+	 * @return internal-LAN propagation delay in seconds
 	 */
 	public double getInternalLanDelay()
 	{
@@ -341,39 +441,49 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns WLAN bandwidth (in Mbps unit) from properties file
+	 * Returns the configured WLAN bandwidth.
+	 *
+	 * @return WLAN bandwidth in kilobits per second
 	 */
 	public int getWlanBandwidth()
 	{
-		return BANDWITH_WLAN;
+		return bandwidthWlan;
 	}
 
 	/**
-	 * returns MAN bandwidth (in Mbps unit) from properties file
+	 * Returns the configured MAN bandwidth.
+	 *
+	 * @return MAN bandwidth in kilobits per second
 	 */
 	public int getManBandwidth()
 	{
-		return BANDWITH_MAN;
+		return bandwidthMan;
 	}
 
 	/**
-	 * returns WAN bandwidth (in Mbps unit) from properties file
+	 * Returns the configured WAN bandwidth.
+	 *
+	 * @return WAN bandwidth in kilobits per second
 	 */
 	public int getWanBandwidth()
 	{
-		return BANDWITH_WAN; 
+		return bandwidthWan;
 	}
 
 	/**
-	 * returns GSM bandwidth (in Mbps unit) from properties file
+	 * Returns the configured cellular-network bandwidth.
+	 *
+	 * @return cellular-network bandwidth in kilobits per second
 	 */
 	public int getGsmBandwidth()
 	{
-		return BANDWITH_GSM;
+		return bandwidthGsm;
 	}
 
 	/**
-	 * returns the minimum number of the mobile devices used in the simulation
+	 * Returns the lower bound of the configured mobile-device sweep.
+	 *
+	 * @return minimum number of mobile devices
 	 */
 	public int getMinNumOfMobileDev()
 	{
@@ -381,7 +491,9 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns the maximum number of the mobile devices used in the simulation
+	 * Returns the upper bound of the configured mobile-device sweep.
+	 *
+	 * @return maximum number of mobile devices
 	 */
 	public int getMaxNumOfMobileDev()
 	{
@@ -389,8 +501,9 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns the number of increase on mobile devices
-	 * while iterating from min to max mobile device
+	 * Returns the increment used by the mobile-device sweep.
+	 *
+	 * @return device-count increment
 	 */
 	public int getMobileDevCounterSize()
 	{
@@ -398,7 +511,9 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns edge device range in meter
+	 * Returns the configured WLAN coverage range.
+	 *
+	 * @return coverage range in metres
 	 */
 	public int getWlanRange()
 	{
@@ -406,7 +521,9 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns the number of edge datacenters
+	 * Returns the number of edge datacenters parsed from the configuration.
+	 *
+	 * @return number of edge datacenters
 	 */
 	public int getNumOfEdgeDatacenters()
 	{
@@ -414,7 +531,9 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns the number of edge hosts running on the datacenters
+	 * Returns the total number of configured edge hosts.
+	 *
+	 * @return number of edge hosts
 	 */
 	public int getNumOfEdgeHosts()
 	{
@@ -422,7 +541,9 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns the number of edge VMs running on the hosts
+	 * Returns the total number of configured edge VMs.
+	 *
+	 * @return number of edge VMs
 	 */
 	public int getNumOfEdgeVMs()
 	{
@@ -430,7 +551,9 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns the number of different place types
+	 * Returns the number of configured place types.
+	 *
+	 * @return number of place types
 	 */
 	public int getNumOfPlaceTypes()
 	{
@@ -438,7 +561,9 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns the number of cloud datacenters
+	 * Returns the number of hosts in the cloud datacenter.
+	 *
+	 * @return number of cloud hosts
 	 */
 	public int getNumOfCloudHost()
 	{
@@ -446,7 +571,9 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns the number of cloud VMs per Host
+	 * Returns the number of VMs assigned to each cloud host.
+	 *
+	 * @return number of VMs per cloud host
 	 */
 	public int getNumOfCloudVMsPerHost()
 	{
@@ -454,7 +581,9 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns the total number of cloud VMs
+	 * Returns the total number of configured cloud VMs.
+	 *
+	 * @return product of the cloud-host and per-host VM counts
 	 */
 	public int getNumOfCloudVMs()
 	{
@@ -462,7 +591,9 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns the number of cores for cloud VMs
+	 * Returns the number of processing elements assigned to each cloud VM.
+	 *
+	 * @return processing-element count
 	 */
 	public int getCoreForCloudVM()
 	{
@@ -470,7 +601,9 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns MIPS of the central cloud VMs
+	 * Returns the processing capacity of each cloud VM.
+	 *
+	 * @return capacity in million instructions per second
 	 */
 	public int getMipsForCloudVM()
 	{
@@ -478,7 +611,9 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns RAM of the central cloud VMs
+	 * Returns the memory capacity of each cloud VM.
+	 *
+	 * @return memory in megabytes
 	 */
 	public int getRamForCloudVM()
 	{
@@ -487,7 +622,7 @@ public class SimSettings {
 
 	/**
 	 * Returns storage capacity of the central cloud VMs.
-	 * 
+	 *
 	 * @return Storage allocation for cloud VMs in bytes
 	 */
 	public int getStorageForCloudVM()
@@ -496,7 +631,9 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns RAM of the mobile (processing unit) VMs
+	 * Returns the memory capacity of each mobile VM.
+	 *
+	 * @return memory in megabytes
 	 */
 	public int getRamForMobileVM()
 	{
@@ -504,7 +641,9 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns the number of cores for mobile VMs
+	 * Returns the number of processing elements assigned to each mobile VM.
+	 *
+	 * @return processing-element count
 	 */
 	public int getCoreForMobileVM()
 	{
@@ -512,7 +651,9 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns MIPS of the mobile (processing unit) VMs
+	 * Returns the processing capacity of each mobile VM.
+	 *
+	 * @return capacity in million instructions per second
 	 */
 	public int getMipsForMobileVM()
 	{
@@ -521,7 +662,7 @@ public class SimSettings {
 
 	/**
 	 * Returns storage capacity of the mobile (processing unit) VMs.
-	 * 
+	 *
 	 * @return Storage allocation for mobile VMs in bytes
 	 */
 	public int getStorageForMobileVM()
@@ -530,7 +671,9 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns simulation screnarios as string
+	 * Returns the configured simulation scenario identifiers.
+	 *
+	 * @return scenario identifiers in configuration order
 	 */
 	public String[] getSimulationScenarios()
 	{
@@ -538,7 +681,9 @@ public class SimSettings {
 	}
 
 	/**
-	 * returns orchestrator policies as string
+	 * Returns the configured orchestration-policy identifiers.
+	 *
+	 * @return policy identifiers in configuration order
 	 */
 	public String[] getOrchestratorPolicies()
 	{
@@ -546,18 +691,38 @@ public class SimSettings {
 	}
 
 
+	/**
+	 * Returns the northern coordinate bound.
+	 *
+	 * @return northern coordinate bound of the simulation area
+	 */
 	public double getNorthernBound() {
 		return NORTHERN_BOUND;
 	}
 
+	/**
+	 * Returns the eastern coordinate bound.
+	 *
+	 * @return eastern coordinate bound of the simulation area
+	 */
 	public double getEasternBound() {
 		return EASTERN_BOUND;
 	}
 
+	/**
+	 * Returns the southern coordinate bound.
+	 *
+	 * @return southern coordinate bound of the simulation area
+	 */
 	public double getSouthernBound() {
 		return SOUTHERN_BOUND;
 	}
 
+	/**
+	 * Returns the western coordinate bound.
+	 *
+	 * @return western coordinate bound of the simulation area
+	 */
 	public double getWesternBound() {
 		return WESTERN_BOUND;
 	}
@@ -565,9 +730,9 @@ public class SimSettings {
 	/**
 	 * Returns mobility characteristics lookup table.
 	 * Contains mean waiting time (in minutes) for each place type in the mobility model.
-	 * 
+	 *
 	 * @return Array of waiting times indexed by place type
-	 */ 
+	 */
 	public double[] getMobilityLookUpTable()
 	{
 		return mobilityLookUpTable;
@@ -590,9 +755,9 @@ public class SimSettings {
 	 * [11] VM utilization on mobile devices (%)
 	 * [12] Delay sensitivity factor [0-1]
 	 * [13] Maximum delay requirement (seconds)
-	 * 
+	 *
 	 * @return Two-dimensional array containing task characteristics for all application types
-	 */ 
+	 */
 	public double[][] getTaskLookUpTable()
 	{
 		return taskLookUpTable;
@@ -601,7 +766,7 @@ public class SimSettings {
 	/**
 	 * Returns task properties for a specific application type by name.
 	 * Searches through the task names array to find matching application.
-	 * 
+	 *
 	 * @param taskName Name of the application type to retrieve properties for
 	 * @return Array of task characteristics, or null if taskName not found
 	 */
@@ -623,7 +788,7 @@ public class SimSettings {
 
 	/**
 	 * Returns the application name for a given task type index.
-	 * 
+	 *
 	 * @param taskType Index of the task type in the lookup table
 	 * @return Name of the application type
 	 */
@@ -635,14 +800,14 @@ public class SimSettings {
 	/**
 	 * Validates that a required attribute exists in an XML element.
 	 * Throws exception if the attribute is missing or empty.
-	 * 
+	 *
 	 * @param element XML element to check
 	 * @param key Attribute name to validate
 	 * @throws IllegalArgumentException if attribute is missing or empty
 	 */
 	private void isAttributePresent(Element element, String key) {
 		String value = element.getAttribute(key);
-		if (value.isEmpty() || value == null){
+		if (value.trim().isEmpty()){
 			throw new IllegalArgumentException("Attribute '" + key + "' is not found in '" + element.getNodeName() +"'");
 		}
 	}
@@ -650,42 +815,43 @@ public class SimSettings {
 	/**
 	 * Validates that a required child element exists in an XML element.
 	 * Throws exception if the child element is missing or empty.
-	 * 
+	 *
 	 * @param element Parent XML element to check
 	 * @param key Child element name to validate
 	 * @throws IllegalArgumentException if child element is missing or empty
 	 */
 	private void isElementPresent(Element element, String key) {
-		try {
-			String value = element.getElementsByTagName(key).item(0).getTextContent();
-			if (value.isEmpty() || value == null){
-				throw new IllegalArgumentException("Element '" + key + "' is not found in '" + element.getNodeName() +"'");
-			}
-		} catch (Exception e) {
+		Node node = element.getElementsByTagName(key).item(0);
+		if (node == null || node.getTextContent().trim().isEmpty()) {
 			throw new IllegalArgumentException("Element '" + key + "' is not found in '" + element.getNodeName() +"'");
 		}
 	}
 
-	private Boolean checkElement(Element element, String key) {
-		Boolean result = true;
-		try {
-			String value = element.getElementsByTagName(key).item(0).getTextContent();
-			if (value.isEmpty() || value == null){
-				result = false;
-			}
-		} catch (Exception e) {
-			result = false;
-		}
+	private boolean checkElement(Element element, String key) {
+		Node node = element.getElementsByTagName(key).item(0);
+		return node != null && !node.getTextContent().trim().isEmpty();
+	}
 
-		return result;
+	private DocumentBuilderFactory createSecureDocumentBuilderFactory()
+			throws ParserConfigurationException {
+		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+		factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+		factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+		factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+		factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+		factory.setXIncludeAware(false);
+		factory.setExpandEntityReferences(false);
+		factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+		factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+		return factory;
 	}
 
 	private void parseApplicationsXML(String filePath)
 	{
 		Document doc = null;
-		try {	
+		try {
 			File devicesFile = new File(filePath);
-			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+			DocumentBuilderFactory dbFactory = createSecureDocumentBuilderFactory();
 			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
 			doc = dBuilder.parse(devicesFile);
 			doc.getDocumentElement().normalize();
@@ -736,17 +902,15 @@ public class SimSettings {
 				}
 			}
 		} catch (Exception e) {
-			SimLogger.printLine("Edge Devices XML cannot be parsed! Terminating simulation...");
-			e.printStackTrace();
-			System.exit(1);
+			throw new IllegalArgumentException("Applications XML cannot be parsed: " + filePath, e);
 		}
 	}
 
 	private void parseEdgeDevicesXML(String filePath)
 	{
-		try {	
+		try {
 			File devicesFile = new File(filePath);
-			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+			DocumentBuilderFactory dbFactory = createSecureDocumentBuilderFactory();
 			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
 			edgeDevicesDoc = dBuilder.parse(devicesFile);
 			edgeDevicesDoc.getDocumentElement().normalize();
@@ -803,9 +967,7 @@ public class SimSettings {
 			}
 
 		} catch (Exception e) {
-			SimLogger.printLine("Edge Devices XML cannot be parsed! Terminating simulation...");
-			e.printStackTrace();
-			System.exit(1);
+			throw new IllegalArgumentException("Edge devices XML cannot be parsed: " + filePath, e);
 		}
 	}
 }

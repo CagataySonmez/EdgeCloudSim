@@ -1,8 +1,9 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Main Application
- * 
+ *
  * Description:  Main application for Simple App
- *               
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -23,16 +24,21 @@ import edu.boun.edgecloudsim.core.SimSettings;
 import edu.boun.edgecloudsim.utils.SimLogger;
 import edu.boun.edgecloudsim.utils.SimUtils;
 
+/** Command-line entry point for the baseline sample application. */
 public class MainApp {
-	
+
+	/** Creates an entry-point object; invoking {@link #main(String[])} is preferred. */
+	public MainApp() {
+	}
+
 	/**
 	 * Main entry point for the EdgeCloudSim Simple App simulation.
 	 * Executes multiple simulation scenarios with different device counts,
 	 * orchestration policies, and simulation scenarios.
-	 * 
+	 *
 	 * @param args Command line arguments:
 	 *             [0] - Configuration file path
-	 *             [1] - Edge devices file path  
+	 *             [1] - Edge devices file path
 	 *             [2] - Applications file path
 	 *             [3] - Output folder path
 	 *             [4] - Iteration number
@@ -40,17 +46,17 @@ public class MainApp {
 	public static void main(String[] args) {
 		// Disable console output of CloudSim library for cleaner logs
 		Log.disable();
-		
+
 		// Enable console output and file output of this application
 		SimLogger.enablePrintLog();
-		
+
 		// Initialize simulation parameters with default values
 		int iterationNumber = 1;
 		String configFile = "";
 		String outputFolder = "";
 		String edgeDevicesFile = "";
 		String applicationsFile = "";
-		
+
 		// Parse command line arguments or use default configuration files
 		if (args.length == 5){
 			configFile = args[0];
@@ -71,20 +77,21 @@ public class MainApp {
 		SimSettings SS = SimSettings.getInstance();
 		if(SS.initialize(configFile, edgeDevicesFile, applicationsFile) == false){
 			SimLogger.printLine("cannot initialize simulation settings!");
-			System.exit(0);
+			System.exit(1);
 		}
-		
+
 		// Enable file logging and prepare output directory if configured
 		if(SS.getFileLoggingEnabled()){
 			SimLogger.enableFileLog();
 			SimUtils.cleanOutputFolder(outputFolder);
 		}
-		
+
 		// Initialize date formatter and log simulation start time
 		DateFormat df = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 		Date SimulationStartDate = Calendar.getInstance().getTime();
 		String now = df.format(SimulationStartDate);
 		SimLogger.printLine("Simulation started at " + now);
+		SimLogger.printLine("Simulation seed: " + SimUtils.getSeed());
 		SimLogger.printLine("----------------------------------------------------------------------");
 
 		// Triple nested loop to run all combinations of mobile devices, scenarios, and policies
@@ -99,29 +106,29 @@ public class MainApp {
 					String orchestratorPolicy = SS.getOrchestratorPolicies()[i];
 					Date ScenarioStartDate = Calendar.getInstance().getTime();
 					now = df.format(ScenarioStartDate);
-					
+
 					// Log scenario details and parameters
 					SimLogger.printLine("Scenario started at " + now);
 					SimLogger.printLine("Scenario: " + simScenario + " - Policy: " + orchestratorPolicy + " - #iteration: " + iterationNumber);
 					SimLogger.printLine("Duration: " + SS.getSimulationTime()/3600 + " hour(s) - Poisson: " + SS.getTaskLookUpTable()[0][2] + " - #devices: " + j);
 					SimLogger.getInstance().simStarted(outputFolder,"SIMRESULT_" + simScenario + "_"  + orchestratorPolicy + "_" + j + "DEVICES");
-					
+
 					try
 					{
 						// Initialize the CloudSim package - must be called before creating any entities
 						int num_user = 2;   // Number of grid users for CloudSim
 						Calendar calendar = Calendar.getInstance();
 						boolean trace_flag = false;  // Disable trace events for performance
-				
+
 						// Initialize the CloudSim library with simulation parameters
 						CloudSim.init(num_user, calendar, trace_flag, 0.01);
-						
+
 						// Create EdgeCloudSim scenario factory with current parameters
 						ScenarioFactory sampleFactory = new SampleScenarioFactory(j,SS.getSimulationTime(), orchestratorPolicy, simScenario);
-						
+
 						// Create EdgeCloudSim simulation manager
 						SimManager manager = new SimManager(sampleFactory, j, simScenario, orchestratorPolicy);
-						
+
 						// Execute the simulation
 						manager.startSimulation();
 					}
@@ -129,9 +136,9 @@ public class MainApp {
 					{
 						SimLogger.printLine("The simulation has been terminated due to an unexpected error");
 						e.printStackTrace();
-						System.exit(0);
+						System.exit(1);
 					}
-					
+
 					// Log scenario completion time and duration
 					Date ScenarioEndDate = Calendar.getInstance().getTime();
 					now = df.format(ScenarioEndDate);

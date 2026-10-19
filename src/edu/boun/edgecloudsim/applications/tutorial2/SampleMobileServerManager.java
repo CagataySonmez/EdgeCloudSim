@@ -1,10 +1,11 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Mobile Server Manager
- * 
- * Description: 
- * VehicularDefaultMobileServerManager is responsible for creating
- * mobile datacenters, hosts and VMs.
- * 
+ *
+ * Description:
+ * SampleMobileServerManager creates the mobile datacenter, hosts, and VMs
+ * used by tutorial 2.
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -46,9 +47,15 @@ import edu.boun.edgecloudsim.edge_client.mobile_processing_unit.MobileVmAllocati
  * Extension points: override createHosts/createVmList for heterogeneous devices.
  */
 
+/** Provisions the mobile processing tier used by tutorial 2. */
 public class SampleMobileServerManager extends MobileServerManager{
 	private int numOfMobileDevices=0; // total mobile devices => also number of mobile hosts/VMs
-	
+
+	/**
+	 * Creates a mobile-server manager.
+	 *
+	 * @param _numOfMobileDevices number of mobile hosts to provision
+	 */
 	public SampleMobileServerManager(int _numOfMobileDevices) {
 		numOfMobileDevices=_numOfMobileDevices; // store population size
 	}
@@ -56,7 +63,7 @@ public class SampleMobileServerManager extends MobileServerManager{
 	@Override
 	public void initialize() {
 	}
-	
+
 	@Override
 	public VmAllocationPolicy getVmAllocationPolicy(List<? extends Host> list, int dataCenterIndex) {
 		return new MobileVmAllocationPolicy_Custom(list, dataCenterIndex);
@@ -78,9 +85,9 @@ public class SampleMobileServerManager extends MobileServerManager{
 		// VM IDs must be globally unique: offset after edge + cloud VMs
 		// One MobileVM per device (index aligned with device id)
 		int vmCounter=SimSettings.getInstance().getNumOfEdgeVMs() + SimSettings.getInstance().getNumOfCloudVMs();
-		
+
 		//Create VMs for each hosts
-		//Note that each mobile device has one host with one VM!
+		// Each mobile device is represented by one host containing one VM.
 		for (int i = 0; i < numOfMobileDevices; i++) {
 			vmList.add(i, new ArrayList<MobileVM>());
 
@@ -90,8 +97,8 @@ public class SampleMobileServerManager extends MobileServerManager{
 			int ram = SimSettings.getInstance().getRamForMobileVM();
 			long storage = SimSettings.getInstance().getStorageForMobileVM();
 			long bandwidth = 0;
-			
-			//VM Parameters		
+
+			//VM Parameters
 			MobileVM vm = new MobileVM(vmCounter, brokerId, mips, numOfCores, ram, bandwidth, storage, vmm, new CloudletSchedulerTimeShared());
 			vmList.get(i).add(vm);
 			vmCounter++;
@@ -118,6 +125,12 @@ public class SampleMobileServerManager extends MobileServerManager{
 		return totalUtilization / vmCounter;
 	}
 
+	/**
+	 * Returns a mobile host's mean processor utilization.
+	 *
+	 * @param hostIndex index of the mobile host to inspect
+	 * @return mean CPU utilization of the host's processing elements
+	 */
 	public double getAvgHostUtilization(int hostIndex) {
 		// Mean utilization across VMs on a specific mobile host (currently always 1 VM)
 		double totalUtilization = 0;
@@ -129,7 +142,7 @@ public class SampleMobileServerManager extends MobileServerManager{
 			totalUtilization += vmArray.get(vmIndex).getCloudletScheduler().getTotalUtilizationOfCpu(CloudSim.clock());
 			vmCounter++;
 		}
-		
+
 		return totalUtilization / vmCounter;
 	}
 
@@ -142,9 +155,9 @@ public class SampleMobileServerManager extends MobileServerManager{
 		double costPerSec = 0;
 		double costPerMem = 0;
 		double costPerStorage = 0;
-		
+
 		List<MobileHost> hostList=createHosts();
-		
+
 		String name = "MobileDatacenter_" + Integer.toString(index);
 		double time_zone = 3.0;         // time zone this resource located
 		LinkedList<Storage> storageList = new LinkedList<Storage>();	//we are not adding SAN devices by now
@@ -158,13 +171,13 @@ public class SampleMobileServerManager extends MobileServerManager{
 
 		// 6. Finally, we need to create a PowerDatacenter object.
 		Datacenter datacenter = null;
-	
+
 		VmAllocationPolicy vm_policy = getVmAllocationPolicy(hostList,index);
 		datacenter = new Datacenter(name, characteristics, vm_policy, storageList, 0);
-		
+
 		return datacenter;
 	}
-	
+
 	private List<MobileHost> createHosts(){
 		// Creates one MobileHost per device; IDs offset after edge+cloud hosts
 		// Each host configured homogeneously using mobile VM settings
@@ -175,7 +188,7 @@ public class SampleMobileServerManager extends MobileServerManager{
 		// Here are the steps needed to create a PowerDatacenter:
 		// 1. We need to create a list to store one or more Machines
 		List<MobileHost> hostList = new ArrayList<MobileHost>();
-		
+
 		for (int i = 0; i < numOfMobileDevices; i++) {
 
 			int numOfCores = SimSettings.getInstance().getCoreForMobileVM();
@@ -183,7 +196,7 @@ public class SampleMobileServerManager extends MobileServerManager{
 			int ram = SimSettings.getInstance().getRamForMobileVM();
 			long storage = SimSettings.getInstance().getStorageForMobileVM();
 			long bandwidth = 0;
-			
+
 			// 2. A Machine contains one or more PEs or CPUs/Cores. Therefore, should
 			//    create a list to store these PEs before creating
 			//    a Machine.
@@ -194,7 +207,7 @@ public class SampleMobileServerManager extends MobileServerManager{
 			for(int j=0; j<numOfCores; j++){
 				peList.add(new Pe(j, new PeProvisionerSimple(mips))); // need to store Pe id and MIPS Rating
 			}
-			
+
 			//4. Create Hosts with its id and list of PEs and add them to the list of machines
 			MobileHost host = new MobileHost(
 					//Hosts should have unique IDs, so create Mobile Hosts after Edge+Cloud Hosts
@@ -205,12 +218,12 @@ public class SampleMobileServerManager extends MobileServerManager{
 					peList,
 					new VmSchedulerSpaceShared(peList)
 				);
-			
+
 			host.setMobileDeviceId(i);
 			hostList.add(host);
 		}
 
 		return hostList;
 	}
-	
+
 }

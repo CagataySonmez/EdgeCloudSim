@@ -1,9 +1,10 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Scenario Factory
- * 
+ *
  * Description:  Sample scenario factory providing the default
  *               instances of required abstract classes
- * 
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -38,10 +39,10 @@ public class SampleScenarioFactory implements ScenarioFactory {
 	private double simulationTime;
 	private String orchestratorPolicy;
 	private String simScenario;
-	
+
 	/**
 	 * Constructor for sample scenario factory.
-	 * 
+	 *
 	 * @param _numOfMobileDevice Number of mobile devices in the simulation
 	 * @param _simulationTime Total simulation time in seconds
 	 * @param _orchestratorPolicy Orchestrator policy for task offloading decisions
@@ -56,10 +57,10 @@ public class SampleScenarioFactory implements ScenarioFactory {
 		simulationTime = _simulationTime;
 		simScenario = _simScenario;
 	}
-	
+
 	/**
 	 * Creates load generator model for task generation patterns.
-	 * @return IdleActiveLoadGenerator with idle/active periods for realistic workload
+	 * @return load generator with configured active and idle periods
 	 */
 	@Override
 	public LoadGeneratorModel getLoadGeneratorModel() {
@@ -110,7 +111,7 @@ public class SampleScenarioFactory implements ScenarioFactory {
 	public CloudServerManager getCloudServerManager() {
 		return new DefaultCloudServerManager();
 	}
-	
+
 	/**
 	 * Creates mobile device manager for handling mobile device operations.
 	 * @return DefaultMobileDeviceManager for standard mobile device management

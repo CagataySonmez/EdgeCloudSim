@@ -1,10 +1,11 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Mobile Server Manager
- * 
- * Description: 
- * VehicularDefaultMobileServerManager is responsible for creating
- * mobile datacenters, hosts and VMs.
- * 
+ *
+ * Description:
+ * SampleMobileServerManager creates the mobile datacenter, hosts, and VMs
+ * used by sample application 3.
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -43,7 +44,7 @@ import edu.boun.edgecloudsim.edge_client.mobile_processing_unit.MobileVmAllocati
 public class SampleMobileServerManager extends MobileServerManager{
 	/** Number of mobile devices in the simulation */
 	private int numOfMobileDevices=0;
-	
+
 	/**
 	 * Constructor for sample mobile server manager.
 	 * @param _numOfMobileDevices Number of mobile devices to create processing units for
@@ -58,7 +59,7 @@ public class SampleMobileServerManager extends MobileServerManager{
 	@Override
 	public void initialize() {
 	}
-	
+
 	/**
 	 * Returns custom VM allocation policy for mobile device VMs.
 	 * @param list List of mobile hosts
@@ -99,7 +100,7 @@ public class SampleMobileServerManager extends MobileServerManager{
 	public void createVmList(int brokerId) {
 		// Ensure unique VM IDs by starting after edge and cloud VMs
 		int vmCounter=SimSettings.getInstance().getNumOfEdgeVMs() + SimSettings.getInstance().getNumOfCloudVMs();
-		
+
 		// Create one VM per mobile device for local task processing
 		for (int i = 0; i < numOfMobileDevices; i++) {
 			vmList.add(i, new ArrayList<MobileVM>());
@@ -111,8 +112,8 @@ public class SampleMobileServerManager extends MobileServerManager{
 			int ram = SimSettings.getInstance().getRamForMobileVM();
 			long storage = SimSettings.getInstance().getStorageForMobileVM();
 			long bandwidth = 0;
-			
-			// Create mobile VM with time-shared scheduling for multitasking		
+
+			// Create mobile VM with time-shared scheduling for multitasking
 			MobileVM vm = new MobileVM(vmCounter, brokerId, mips, numOfCores, ram, bandwidth, storage, vmm, new CloudletSchedulerTimeShared());
 			vmList.get(i).add(vm);
 			vmCounter++;
@@ -142,7 +143,7 @@ public class SampleMobileServerManager extends MobileServerManager{
 
 		return totalUtilization / vmCounter;
 	}
-	
+
 
 	/**
 	 * Create mobile datacenter with configured hosts and characteristics.
@@ -159,9 +160,9 @@ public class SampleMobileServerManager extends MobileServerManager{
 		double costPerSec = 0;     // No processing cost for mobile devices
 		double costPerMem = 0;     // No memory cost for mobile devices
 		double costPerStorage = 0; // No storage cost for mobile devices
-		
+
 		List<MobileHost> hostList=createHosts();
-		
+
 		String name = "MobileDatacenter_" + Integer.toString(index);
 		double time_zone = 3.0;    // Time zone for datacenter location
 		LinkedList<Storage> storageList = new LinkedList<Storage>(); // No SAN devices for mobile
@@ -172,13 +173,13 @@ public class SampleMobileServerManager extends MobileServerManager{
 
 		// Create mobile datacenter with custom VM allocation policy
 		Datacenter datacenter = null;
-	
+
 		VmAllocationPolicy vm_policy = getVmAllocationPolicy(hostList,index);
 		datacenter = new Datacenter(name, characteristics, vm_policy, storageList, 0);
-		
+
 		return datacenter;
 	}
-	
+
 	/**
 	 * Create mobile hosts representing individual mobile devices.
 	 * Each mobile device gets one host for local processing capabilities.
@@ -187,7 +188,7 @@ public class SampleMobileServerManager extends MobileServerManager{
 	private List<MobileHost> createHosts(){
 		// Create host list for mobile device processing units
 		List<MobileHost> hostList = new ArrayList<MobileHost>();
-		
+
 		// Create one host per mobile device
 		for (int i = 0; i < numOfMobileDevices; i++) {
 
@@ -197,7 +198,7 @@ public class SampleMobileServerManager extends MobileServerManager{
 			int ram = SimSettings.getInstance().getRamForMobileVM();
 			long storage = SimSettings.getInstance().getStorageForMobileVM();
 			long bandwidth = 0; // No bandwidth limitation for mobile processing
-			
+
 			// Create processing elements (cores) for mobile device
 			List<Pe> peList = new ArrayList<Pe>();
 
@@ -205,7 +206,7 @@ public class SampleMobileServerManager extends MobileServerManager{
 			for(int j=0; j<numOfCores; j++){
 				peList.add(new Pe(j, new PeProvisionerSimple(mips)));
 			}
-			
+
 			// Create mobile host with unique ID and resource provisioners
 			MobileHost host = new MobileHost(
 					// Ensure unique host IDs by offsetting after edge and cloud hosts
@@ -216,7 +217,7 @@ public class SampleMobileServerManager extends MobileServerManager{
 					peList,
 					new VmSchedulerSpaceShared(peList) // Space-shared scheduling for mobile VMs
 				);
-			
+
 			// Associate host with specific mobile device ID
 			host.setMobileDeviceId(i);
 			hostList.add(host);
@@ -224,5 +225,5 @@ public class SampleMobileServerManager extends MobileServerManager{
 
 		return hostList;
 	}
-	
+
 }

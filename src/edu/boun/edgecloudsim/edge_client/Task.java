@@ -1,10 +1,11 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
 /*
  * Title:        EdgeCloudSim - Task
- * 
- * Description: 
+ *
+ * Description:
  * Task adds app type, task submission location, mobile device id and host id
  * information to CloudSim's Cloudlet class.
- *               
+ *
  * Licence:      GPL - http://www.gnu.org/copyleft/gpl.html
  * Copyright (c) 2017, Bogazici University, Istanbul, Turkey
  */
@@ -33,13 +34,13 @@ public class Task extends Cloudlet {
 
 	/**
 	 * Constructor for Task with specified parameters.
-	 * 
+	 *
 	 * @param _mobileDeviceId ID of the mobile device that generated this task
 	 * @param cloudletId Unique identifier for this task/cloudlet
 	 * @param cloudletLength Processing length required in Million Instructions (MI)
 	 * @param pesNumber Number of processing elements required
-	 * @param cloudletFileSize Input data size in bytes
-	 * @param cloudletOutputSize Output data size in bytes
+	 * @param cloudletFileSize input data size in kilobytes, following EdgeCloudSim configuration units
+	 * @param cloudletOutputSize output data size in kilobytes, following EdgeCloudSim configuration units
 	 * @param utilizationModelCpu CPU utilization model for this task
 	 * @param utilizationModelRam RAM utilization model for this task
 	 * @param utilizationModelBw Bandwidth utilization model for this task
@@ -52,12 +53,12 @@ public class Task extends Cloudlet {
 		super(cloudletId, cloudletLength, pesNumber, cloudletFileSize,
 				cloudletOutputSize, utilizationModelCpu, utilizationModelRam,
 				utilizationModelBw);
-		
+
 		mobileDeviceId = _mobileDeviceId;
 		creationTime = CloudSim.clock();
 	}
 
-	
+
 	/**
 	 * Sets the location where this task was submitted.
 	 * @param _submittedLocation Geographic location of task submission
@@ -73,7 +74,7 @@ public class Task extends Cloudlet {
 	public void setAssociatedDatacenterId(int _datacenterId){
 		datacenterId=_datacenterId;
 	}
-	
+
 	/**
 	 * Associates this task with a specific host for execution.
 	 * @param _hostIndex ID of the host where this task will be executed
@@ -89,7 +90,7 @@ public class Task extends Cloudlet {
 	public void setAssociatedVmId(int _vmIndex){
 		vmIndex=_vmIndex;
 	}
-	
+
 	/**
 	 * Sets the application type of this task.
 	 * @param _type Task type identifier for application classification
@@ -105,7 +106,7 @@ public class Task extends Cloudlet {
 	public int getMobileDeviceId(){
 		return mobileDeviceId;
 	}
-	
+
 	/**
 	 * Gets the location where this task was submitted.
 	 * @return Geographic location of task submission
@@ -113,7 +114,7 @@ public class Task extends Cloudlet {
 	public Location getSubmittedLocation(){
 		return submittedLocation;
 	}
-	
+
 	/**
 	 * Gets the datacenter associated with this task's execution.
 	 * @return Datacenter ID where task is being processed
@@ -121,7 +122,7 @@ public class Task extends Cloudlet {
 	public int getAssociatedDatacenterId(){
 		return datacenterId;
 	}
-	
+
 	/**
 	 * Gets the host associated with this task's execution.
 	 * @return Host ID where task is being processed
@@ -137,7 +138,7 @@ public class Task extends Cloudlet {
 	public int getAssociatedVmId(){
 		return vmIndex;
 	}
-	
+
 	/**
 	 * Gets the application type of this task.
 	 * @return Task type identifier for application classification
@@ -145,7 +146,7 @@ public class Task extends Cloudlet {
 	public int getTaskType(){
 		return type;
 	}
-	
+
 	/**
 	 * Gets the simulation time when this task was created.
 	 * @return Creation timestamp in simulation time
