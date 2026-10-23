@@ -6,8 +6,7 @@ from config import get_configuration
 
 def plot_delay_reason(is_edge):
     """
-    Generates a stacked bar chart showing the proportion of service time 
-    due to processing time versus network delay (WLAN or WAN).
+    Generate a stacked bar chart of service-time components.
     """
     config = get_configuration()
     
@@ -63,7 +62,7 @@ def plot_delay_reason(is_edge):
     fig.set_size_inches(fig_pos_cm[2] / 2.54, fig_pos_cm[3] / 2.54)
     plt.rcParams.update({'font.family': 'Times New Roman', 'font.size': 12})
 
-    bar_width = 0.8 # Standard bar width
+    bar_width = step_devices * 0.8
     
     # Bottom bar (Processing Time)
     ax.bar(device_counts, results[:, 0], width=bar_width, color=[.45, .45, .45], label='processing time')
@@ -73,11 +72,11 @@ def plot_delay_reason(is_edge):
     # --- Labels and Legends ---
     if is_edge:
         ax.legend(['processing time', 'WLAN delay'], loc='upper left')
-        ax.set_ylabel('Service Time\nProportion on Edge (sec)')
+        ax.set_ylabel('Service Time Components\non Edge (sec)')
         filename = 'edge_delay_reason'
     else:
         ax.legend(['processing time', 'WAN delay'], loc='upper left')
-        ax.set_ylabel('Service Time\nProportion on Cloud (sec)')
+        ax.set_ylabel('Service Time Components\non Cloud (sec)')
         filename = 'cloud_delay_reason'
 
     ax.set_xlabel(config['x_axis_label'])

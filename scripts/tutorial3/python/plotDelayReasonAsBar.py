@@ -10,18 +10,22 @@ def plot_delay_reason(is_edge):
     num_simulations = config['num_iterations']
     start_devices, step_devices, end_devices = config['min_devices'], config['step_devices'], config['max_devices']
     device_counts = np.arange(start_devices, end_devices + 1, step_devices)
-    all_results = np.zeros((num_simulations, len(device_counts), 2))
+    all_results = np.full((num_simulations, len(device_counts), 2), np.nan)
 
     for s in range(1, num_simulations + 1):
         for j, num_devices in enumerate(device_counts):
             try:
-                file_name = f'SIMRESULT_DEFAULT_SCENARIO_RANDOM_FIT_{num_devices}DEVICES_ALL_APPS_GENERIC.log'
+                file_name = f'SIMRESULT_DEFAULT_SCENARIO_RANDOM_{num_devices}DEVICES_ALL_APPS_GENERIC.log'
                 file_path = os.path.join(folder_path, f'ite{s}', file_name)
                 data = pd.read_csv(file_path, sep=';', header=None, skiprows=1, nrows=5)
                 value1 = data.iloc[1, 5] if is_edge else data.iloc[2, 5]
                 value2 = data.iloc[4, 0] if is_edge else data.iloc[4, 2]
                 all_results[s-1, j, :] = [value1, value2]
-            except Exception:
+            except FileNotFoundError:
+                print(f"Warning: File not found -> {file_path}")
+                all_results[s-1, j, :] = np.nan
+            except Exception as error:
+                print(f"Error reading {file_path}: {error}")
                 all_results[s-1, j, :] = np.nan
 
     results = np.nanmean(all_results, axis=0)
@@ -35,11 +39,11 @@ def plot_delay_reason(is_edge):
 
     if is_edge:
         ax.legend(['processing time', 'WLAN delay'], loc='upper left')
-        ax.set_ylabel('Service Time\nProportion on Edge (sec)')
+        ax.set_ylabel('Service Time Components\non Edge (sec)')
         filename = 'edge_delay_reason'
     else:
         ax.legend(['processing time', 'WAN delay'], loc='upper left')
-        ax.set_ylabel('Service Time\nProportion on Cloud (sec)')
+        ax.set_ylabel('Service Time Components\non Cloud (sec)')
         filename = 'cloud_delay_reason'
 
     ax.set_xlabel(config['x_axis_label'])

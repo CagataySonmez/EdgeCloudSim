@@ -234,7 +234,12 @@ bundled configuration and WEKA model set, and checks Javadoc structure.
 
 
 ## Analyzing the Results
-At the end of each iteration, simulation results will be compressed in the *output/date/ite_n.tgz* files. When you extract these tgz files, you will see lots of log file in csv format. You can find matlab files which can plot graphics by using these files under *scripts/sample_application/matlab* folder. You can also write other scripts (e.g. python scripts) with the same manner of matlab plotter files.
+
+Completed iterations are stored as `iteN.tar.gz` archives under the selected
+application's timestamped output directory. See the
+[experiment and plotting guide](scripts/README.md) for the complete compilation,
+parallel execution, result extraction, Python environment, plotting API, metric
+schema, and reproducible-research workflow.
 
 ## Example Output of EdgeCloudSim
 You can plot lots of graphics by using the result of EdgeCloudSim. Some examples are given below:

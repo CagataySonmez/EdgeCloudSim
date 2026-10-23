@@ -20,9 +20,11 @@ def plot_stacked_bars(is_edge):
                 data = pd.read_csv(file_path, sep=';', header=None, skiprows=1, nrows=5)
                 value1 = data.iloc[1, 5] if is_edge else data.iloc[2, 5] # row 2/3, col 6
                 value2 = data.iloc[4, 0] if is_edge else data.iloc[4, 2] # row 5, col 1/3
-                all_results[s, j, :] = [value1, value2]
-            except Exception:
-                continue
+                all_results[s-1, j, :] = [value1, value2]
+            except FileNotFoundError:
+                print(f"Warning: File not found -> {file_path}")
+            except Exception as error:
+                print(f"Error reading {file_path}: {error}")
 
     results = np.nanmean(all_results, axis=0)
 
@@ -35,11 +37,11 @@ def plot_stacked_bars(is_edge):
     
     if is_edge:
         ax.legend(['processing time', 'WLAN delay'], loc='upper left')
-        ax.set_ylabel('Service Time\nProportion on Edge (sec)')
+        ax.set_ylabel('Service Time Components\non Edge (sec)')
         filename = 'edge_delay_reason'
     else:
         ax.legend(['processing time', 'WAN delay'], loc='upper left')
-        ax.set_ylabel('Service Time\nProportion on Cloud (sec)')
+        ax.set_ylabel('Service Time Components\non Cloud (sec)')
         filename = 'cloud_delay_reason'
 
     ax.set_xlabel(config['x_axis_label'])

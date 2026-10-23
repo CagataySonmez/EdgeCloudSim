@@ -23,8 +23,7 @@ def plot_location_heatmap():
     num_device_steps = len(device_counts)
     place_count = 11  # Number of location to use in heatmap!
 
-    # Array to accumulate results
-    results = np.zeros((num_device_steps, place_count))
+    all_results = np.full((num_simulations, num_device_steps, place_count), np.nan)
     
     # --- Data Reading and Processing ---
     for s in range(1, num_simulations + 1):
@@ -36,19 +35,20 @@ def plot_location_heatmap():
                 # Read data, skipping header (row 1) and time column (col 1)
                 data = pd.read_csv(file_path, sep=';', header=None, skiprows=1, usecols=range(1, place_count + 1))
                 
-                # Add the mean of each location (column) to the results
-                results[i, :] += data.mean(axis=0).values
+                all_results[s-1, i, :] = data.mean(axis=0).values
 
             except FileNotFoundError:
                 print(f"Warning: File not found -> {file_path}")
-                # Add NaNs for this iteration so it doesn't affect the mean
-                results[i, :] += np.full(place_count, np.nan) 
             except Exception as e:
                 print(f"Error reading {file_path}: {e}")
-                results[i, :] += np.full(place_count, np.nan)
 
-    # Calculate the average across all simulations
-    results /= num_simulations
+    valid_counts = np.sum(~np.isnan(all_results), axis=0)
+    results = np.divide(
+        np.nansum(all_results, axis=0),
+        valid_counts,
+        out=np.full((num_device_steps, place_count), np.nan),
+        where=valid_counts > 0,
+    )
 
     # --- Plotting ---
     fig, ax = plt.subplots(figsize=(10, 6)) # figsize in inches

@@ -29,9 +29,12 @@ if __name__ == '__main__':
                 
                 for i in range(len(place_types)):
                     mean_delay = data1.iloc[:, i + 1].mean() + data2.iloc[:, i + 1].mean()
-                    results[s, i, j] = mean_delay
-            except Exception:
-                continue
+                    results[s-1, i, j] = mean_delay
+            except FileNotFoundError as error:
+                print(f"Warning: File not found -> {error.filename}")
+            except Exception as error:
+                print(f"Error reading AP delay data for iteration {s}, "
+                      f"{num_devices} devices: {error}")
 
     avg_results = np.nanmean(results, axis=0)
 
@@ -41,7 +44,7 @@ if __name__ == '__main__':
     font_sizes = config['font_sizes']
     plt.rcParams.update({'font.family': 'Times New Roman'})
 
-    markers = [':k*', ':ko', ':ks']
+    markers = [':*', ':o', ':s']
     for i in range(len(place_types)):
         ax.plot(device_counts, avg_results[i, :], markers[i], 
                 label=place_types[i], 
@@ -50,7 +53,8 @@ if __name__ == '__main__':
                 linewidth=1.5)
 
     ax.set_xlabel(config['x_axis_label'], fontsize=font_sizes[0])
-    ax.set_ylabel('Average Network Delay (sec)', fontsize=font_sizes[0])
+    ax.set_ylabel('Average Network Delay for Traffic Heuristic (sec)',
+                  fontsize=font_sizes[0])
     ax.legend(fontsize=font_sizes[1], loc='upper left')
     ax.tick_params(axis='both', which='major', labelsize=font_sizes[2])
     ax.set_xlim(start_devices - 50, end_devices + 50)
