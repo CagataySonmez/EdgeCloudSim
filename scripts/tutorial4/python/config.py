@@ -1,7 +1,6 @@
 def get_configuration():
     """
-    Returns a dictionary containing all simulation and plotting parameters.
-    Equivalent to getConfiguration.m.
+    Return the simulation and plotting parameters for tutorial 4.
     """
     config = {
         'folder_path': '../../../sim_results/tutorial4',
@@ -15,7 +14,7 @@ def get_configuration():
         'min_devices': 1000,
         'step_devices': 100,
         'max_devices': 2000,
-        'use_scientific_notation_x_axis': False, # For future use
+        'use_scientific_notation_x_axis': False,
         'save_figure_as_pdf': True,
         'plot_confidence_interval': True,
         'use_color': True,
@@ -30,6 +29,6 @@ def get_configuration():
         # Line styles and markers for colorless plots
         'bw_markers': ['-k*', '-ko', '-ks', '-kv', '-kp'],
         # Line styles and markers for colorful plots
-        'color_markers': ['-k*', '-ko', '-ks', '-kv', '-kp']
+        'color_markers': ['-*', '-o', '-s', '-v', '-p']
     }
     return config

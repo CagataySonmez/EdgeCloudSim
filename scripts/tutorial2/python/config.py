@@ -1,21 +1,20 @@
 def get_configuration():
     """
-    Returns a dictionary containing all simulation and plotting parameters.
-    Equivalent to getConfiguration.m.
+    Return the simulation and plotting parameters for tutorial 2.
     """
     config = {
         'folder_path': '../../../sim_results/tutorial2',
         'num_iterations': 10,
         'x_tick_interval': 1,
         'scenario_types': ['RANDOM', 'MOBILE_UTIL_HEURISTIC', 'EDGE_UTIL_HEURISTIC'],
-        'legends': ['rand', 'mobil', 'edge'],
+        'legends': ['random', 'mobile', 'edge'],
         'figure_position': [6, 3, 15, 15],  # [left, bottom, width, height] in centimeters
         'font_sizes': [13, 12, 12],  # [xy_label, legend, xy_axis_ticks]
         'x_axis_label': 'Number of Clients',
         'min_devices': 200,
         'step_devices': 200,
         'max_devices': 2000,
-        'use_scientific_notation_x_axis': False, # For future use
+        'use_scientific_notation_x_axis': False,
         'save_figure_as_pdf': True,
         'plot_confidence_interval': True,
         'use_color': True,
