@@ -146,6 +146,48 @@ METADATA_RANGES = {
 }
 
 # ----------------------------------------------------------------------------
+# Continuous environment randomization (scenario.sample_randomized_env_profile).
+#
+# Section IV-A-1 describes each meta-training scenario as varying "task
+# arrival rates, network bandwidths, or edge server capabilities", but Table
+# II only randomizes the *task* side; the network/hardware side here was
+# previously limited to the ten fixed ENV_PROFILES presets. These ranges let
+# a scenario draw its physical environment continuously instead -- spanning
+# (and interpolating between) every preset: WLAN from the SDV rural radio to
+# mmWave, WAN from CONGESTED_WAN to MMWAVE_5G, edge MIPS from WEAK_EDGE to
+# GPU_EDGE, propagation from terrestrial to NTN, dwell from SDV_HIGHWAY to
+# pedestrian. Rate-like quantities are sampled log-uniformly (a 3->6 Mbps
+# step matters as much as 25->50), the cloud linearly.
+#
+# EDGE_HETEROGENEITY_RANGE makes the ten edge servers *individually*
+# different (each server's MIPS = the scenario's edge MIPS x its own
+# log-uniform factor): Section V-A-2's ten identical servers make the
+# per-server actions 1..N interchangeable, whereas real edge fleets are
+# mixed-generation. The factors are NOT in the state vector -- which server
+# is fast is a scenario-specific latent fact the policy has to *adapt* to,
+# exactly the structure meta-initialization is supposed to exploit.
+#
+# Training-side only: no single Java preset can mirror a continuous range,
+# so these scenarios are excluded from test_config_mirror by construction
+# (EnvProfile name "RANDOMIZED", never in ENV_PROFILES). Off unless a caller
+# passes env_randomization > 0 (train_meta.py --env-randomization).
+# ----------------------------------------------------------------------------
+ENV_RANDOMIZATION_RANGES = {
+    "wlan_bandwidth_mbps": (100.0, 1000.0),     # log-uniform
+    "man_bandwidth_mbps": (100.0, 400.0),       # log-uniform
+    "wan_bandwidth_mbps": (3.0, 50.0),          # log-uniform
+    "edge_vm_mips": (2500.0, 40000.0),          # log-uniform
+    "cloud_vm_mips": (50000.0, 150000.0),       # uniform
+    "wan_propagation_delay": (0.05, 0.6),       # log-uniform
+    "mobility_dwell_time": (8.0, 300.0),        # log-uniform, when mobile
+}
+# Probability a randomized environment has mobile devices at all (otherwise
+# dwell = inf, the paper's two-failure-mode model).
+ENV_RANDOMIZATION_MOBILITY_PROB = 0.5
+# Per-edge-server MIPS multiplier range (log-uniform); (1.0, 1.0) disables.
+EDGE_HETEROGENEITY_RANGE = (0.5, 2.0)
+
+# ----------------------------------------------------------------------------
 # State / action space (Section IV-A-2)
 # state = {L, U, D, mu_d, mu_e1..mu_eN, mu_c, b_wlan, b_man, b_wan}
 # action in {0, ..., N+1}: 0 = device, 1..N = edge servers, N+1 = cloud

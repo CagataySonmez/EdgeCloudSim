@@ -38,6 +38,7 @@ from baselines.ddpg import DDPGAgent
 from baselines.a2c import A2CAgent
 from baselines.a3c import train_a3c
 from mec_core.scenario import sample_scenario_pool
+from mec_core.scenario_io import load_scenarios
 from mec_core.seeding import seed_everything
 
 
@@ -158,6 +159,20 @@ def main():
     parser.add_argument("--env-profiles", type=str, default=None,
                          help="comma-separated ENV_PROFILES restriction -- same "
                               "match-what-theta*-used rule as --scenario-source")
+    parser.add_argument("--env-randomization", type=float, default=0.0,
+                         help="continuous-environment probability -- same "
+                              "match-what-theta*-used rule as --scenario-source")
+    parser.add_argument("--load-scenarios", type=str, default=None,
+                         help="train on the exact pool in this JSON file (e.g. the "
+                              "<theta*>_scenarios.json train_meta.py wrote) -- the most "
+                              "reliable way to guarantee the same pool as theta*; "
+                              "overrides --scenarios/--scenario-source/--env-profiles/"
+                              "--env-randomization")
+    parser.add_argument("--meta-batch", type=int, default=1,
+                         help="MULTITASK only: the --meta-batch theta* was trained with. "
+                              "Batched Reptile pays B inner loops per outer iteration, so "
+                              "MULTITASK runs --outer * B episodes to keep the "
+                              "env-interaction budget equal")
     parser.add_argument("--persist-buffers", action="store_true",
                          help="MULTITASK only: match the env-interaction budget of a "
                               "theta* trained with train_meta --persist-buffers (warm-up "
@@ -173,12 +188,21 @@ def main():
 
     os.makedirs(args.out_dir, exist_ok=True)
 
+    if args.meta_batch < 1:
+        parser.error("--meta-batch must be >= 1")
+
     seed_everything(args.seed)  # see mec_core/seeding.py
-    env_names = args.env_profiles.split(",") if args.env_profiles else None
-    scenarios = sample_scenario_pool(args.scenarios, seed=args.seed,
-                                     source=args.scenario_source, env_names=env_names)
+    if args.load_scenarios:
+        scenarios, _ = load_scenarios(args.load_scenarios)
+        pool_desc = f"loaded from {args.load_scenarios}"
+    else:
+        env_names = args.env_profiles.split(",") if args.env_profiles else None
+        scenarios = sample_scenario_pool(args.scenarios, seed=args.seed,
+                                         source=args.scenario_source, env_names=env_names,
+                                         env_randomization=args.env_randomization)
+        pool_desc = f"source={args.scenario_source}"
     print(f"Training baselines on {len(scenarios)} scenarios "
-          f"(source={args.scenario_source}), {args.steps} transitions each...")
+          f"({pool_desc}), {args.steps} transitions each...")
 
     print("\n[1/5] Training SAC (no meta-init)...")
     sac_agent = train_sac_no_meta(scenarios, args.steps, args.seed)
@@ -209,7 +233,8 @@ def main():
     parity = "persist-buffers" if args.persist_buffers else "fresh-buffer (default)"
     print(f"\n[5/5] Training MULTITASK (joint pretraining, {parity} budget parity)...")
     multitask_agent, env_steps = train_multitask(
-        scenarios, num_outer_iterations=args.outer, num_inner_updates=args.inner,
+        scenarios, num_outer_iterations=args.outer * args.meta_batch,
+        num_inner_updates=args.inner,
         seed=args.seed, persist_buffers_parity=args.persist_buffers)
     multitask_path = os.path.join(args.out_dir, "multitask.pt")
     torch.save(multitask_agent.get_params(), multitask_path)

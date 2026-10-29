@@ -1,7 +1,9 @@
 """Reptile-based meta-training: Outer Loop (Algorithm 1) + Inner Loop (Algorithm 2)."""
 
 import copy
+import multiprocessing
 import random
+from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 import torch
@@ -11,6 +13,7 @@ from mec_core.env import MECOffloadEnv
 from mec_core.normalize import normalize_state
 from mec_core.replay_buffer import ReplayBuffer
 from mec_core.scenario import sample_scenario
+from mec_core.seeding import seed_everything
 from .sac import SACAgent
 
 
@@ -24,6 +27,46 @@ def _interpolate_params(theta, theta_k, alpha):
                 theta_k[group][key] - theta[group][key]
             )
     return new_theta
+
+
+def _average_params(thetas):
+    """Element-wise mean of several parameter dicts (same nested layout as
+    SACAgent.get_params()). Used by the batched outer update, where
+    theta + alpha * mean_b(theta_b - theta) == interpolate(theta, mean_b(theta_b))."""
+    if len(thetas) == 1:
+        return thetas[0]
+    return {
+        group: {key: torch.stack([t[group][key] for t in thetas]).mean(dim=0)
+                for key in thetas[0][group]}
+        for group in thetas[0]
+    }
+
+
+def _config_snapshot():
+    """Every UPPERCASE constant of mec_core.config. Spawned worker processes
+    import config fresh from disk, so an in-process override
+    (config.override_config, used by run_ablations.py) would silently NOT
+    reach them -- the snapshot is re-applied in each worker instead."""
+    return {k: v for k, v in vars(config).items() if k.isupper()}
+
+
+def _worker_init(config_values):
+    # One intra-op thread per worker: B workers x torch's default 8 threads
+    # on these tiny MLPs is pure oversubscription.
+    torch.set_num_threads(1)
+    for k, v in config_values.items():
+        setattr(config, k, v)
+
+
+def _seeded_inner_loop(theta, scenario, num_inner_updates, agent_kwargs, seed,
+                       replay_buffer=None):
+    """inner_loop() preceded by a full reseed from its own inner seed, so
+    the result depends only on (theta, scenario, seed) -- never on which
+    process ran it or what ran before it. That is what makes the batched
+    outer loop produce bit-identical theta* for any num_workers."""
+    seed_everything(seed)
+    return inner_loop(theta, scenario, num_inner_updates, agent_kwargs=agent_kwargs,
+                      seed=seed, replay_buffer=replay_buffer)
 
 
 def _schedule_alpha(meta_lr: float, k: int, num_outer_iterations: int, schedule: str) -> float:
@@ -114,6 +157,8 @@ def outer_loop(
     persist_buffers: bool = False,
     eval_scenarios=None,
     meta_lr_schedule: str = "constant",
+    meta_batch_size: int = 1,
+    num_workers: int = 1,
 ):
     """Algorithm 1: repeatedly sample a scenario, refine a local copy via
     the Inner Loop, and shift the global meta-parameter theta towards it.
@@ -152,8 +197,34 @@ def outer_loop(
     annealing; see _schedule_alpha). "constant" reproduces the previous
     behavior exactly, float-op for float-op.
 
+    `meta_batch_size` (B): inner loops per outer iteration. The paper's
+    Algorithm 1 refines ONE scenario per iteration (B=1, the default --
+    the original code path, untouched). B > 1 is the batched Reptile of
+    Nichol et al. 2018 (their Algorithm 2): B scenarios are drawn, each
+    refined independently from the same theta, and theta moves toward
+    their average, theta <- theta + alpha_k * (1/B) sum_b (theta_b - theta).
+    Averaging cancels the scenario-specific part of each pull, so every
+    outer step is a lower-variance estimate of the direction shared across
+    scenarios -- the "common structure" Section V-B credits theta* with.
+
+    `num_workers`: run each iteration's B inner loops in that many spawned
+    processes (wall-clock speedup ~min(B, num_workers) for B > 1). In the
+    batched path every inner loop reseeds from its own seed, so theta* is
+    bit-identical for ANY num_workers -- parallelism never changes
+    results. num_workers > 1 cannot be combined with persist_buffers
+    (per-scenario buffers live in this process).
+
     Returns the final meta-learned parameter theta*.
     """
+    if meta_batch_size < 1:
+        raise ValueError(f"meta_batch_size must be >= 1, got {meta_batch_size}")
+    if num_workers < 1:
+        raise ValueError(f"num_workers must be >= 1, got {num_workers}")
+    if persist_buffers and num_workers > 1:
+        raise ValueError("persist_buffers keeps per-scenario replay buffers in this "
+                         "process; it cannot be combined with num_workers > 1")
+    batched = meta_batch_size > 1 or num_workers > 1
+
     agent_kwargs = agent_kwargs or {}
     rng = random.Random(seed)
 
@@ -177,64 +248,107 @@ def outer_loop(
     theta = global_agent.get_params()
     scenario_buffers = {} if persist_buffers else None
 
-    for k in range(1, num_outer_iterations + 1):
-        scenario_idx = rng.randrange(len(scenarios))
-        scenario = scenarios[scenario_idx]
-        replay_buffer = None
-        if persist_buffers:
-            # created empty on first visit, then mutated in place by every
-            # inner loop that revisits this scenario
-            replay_buffer = scenario_buffers.setdefault(
-                scenario_idx, ReplayBuffer(config.REPLAY_BUFFER_SIZE))
-        theta_k = inner_loop(
-            theta, scenario, num_inner_updates, agent_kwargs=agent_kwargs,
-            seed=rng.randint(0, 2**31), replay_buffer=replay_buffer,
-        )
-        theta = _interpolate_params(
-            theta, theta_k,
-            _schedule_alpha(meta_lr, k, num_outer_iterations, meta_lr_schedule))
+    executor = None
+    if num_workers > 1:
+        executor = ProcessPoolExecutor(
+            max_workers=num_workers,
+            mp_context=multiprocessing.get_context("spawn"),
+            initializer=_worker_init, initargs=(_config_snapshot(),))
+    try:
+        for k in range(1, num_outer_iterations + 1):
+            if not batched:
+                scenario_idx = rng.randrange(len(scenarios))
+                scenario = scenarios[scenario_idx]
+                replay_buffer = None
+                if persist_buffers:
+                    # created empty on first visit, then mutated in place by every
+                    # inner loop that revisits this scenario
+                    replay_buffer = scenario_buffers.setdefault(
+                        scenario_idx, ReplayBuffer(config.REPLAY_BUFFER_SIZE))
+                theta_k = inner_loop(
+                    theta, scenario, num_inner_updates, agent_kwargs=agent_kwargs,
+                    seed=rng.randint(0, 2**31), replay_buffer=replay_buffer,
+                )
+            else:
+                # all B (scenario, seed) picks drawn up front, in a fixed
+                # order, so the training stream is independent of scheduling
+                picks = [(rng.randrange(len(scenarios)), rng.randint(0, 2**31))
+                         for _ in range(meta_batch_size)]
+                scenario = scenarios[picks[0][0]]  # the periodic eval below uses the first
+                if executor is not None:
+                    futures = [executor.submit(_seeded_inner_loop, theta, scenarios[idx],
+                                               num_inner_updates, agent_kwargs, s)
+                               for idx, s in picks]
+                    batch = [f.result() for f in futures]
+                else:
+                    # single intra-op thread, same as the pool workers: torch's
+                    # multi-threaded reductions sum in a different order
+                    # (measured ~2e-9 drift), which alone would break the
+                    # any-num_workers bit-identity guarantee
+                    threads = torch.get_num_threads()
+                    torch.set_num_threads(1)
+                    try:
+                        batch = []
+                        for idx, s in picks:
+                            replay_buffer = None
+                            if persist_buffers:
+                                replay_buffer = scenario_buffers.setdefault(
+                                    idx, ReplayBuffer(config.REPLAY_BUFFER_SIZE))
+                            batch.append(_seeded_inner_loop(theta, scenarios[idx],
+                                                            num_inner_updates, agent_kwargs,
+                                                            s, replay_buffer))
+                    finally:
+                        torch.set_num_threads(threads)
+                theta_k = _average_params(batch)
+            theta = _interpolate_params(
+                theta, theta_k,
+                _schedule_alpha(meta_lr, k, num_outer_iterations, meta_lr_schedule))
 
-        want_log = (reward_log is not None or metrics_log is not None) and k % eval_every == 0
-        if want_log or (progress_every and k % progress_every == 0):
-            eval_agent = SACAgent(**agent_kwargs)
-            eval_agent.load_params(theta)
-            avg_reward, action_counts, policy_entropy = _evaluate(
-                eval_agent, scenario, seed=rng.randint(0, 2**31))
-            heldout_msg = ""
-            entry = None
-            if metrics_log is not None:
-                entry = {
-                    "iteration": k,
-                    "avg_reward": avg_reward,
-                    "policy_entropy": policy_entropy,
-                    "alpha": eval_agent.alpha,
-                    "action_counts": action_counts,
-                }
-            if heldout_eval_seeds is not None:
-                heldout = [
-                    _evaluate(eval_agent, s, seed=es)[0]
-                    for s, es in zip(eval_scenarios, heldout_eval_seeds)
-                ]
-                eval_mean = float(np.mean(heldout))
-                eval_std = float(np.std(heldout))
-                heldout_msg = f" heldout_eval={eval_mean:.3f}+-{eval_std:.3f}"
+            want_log = (reward_log is not None or metrics_log is not None) and k % eval_every == 0
+            if want_log or (progress_every and k % progress_every == 0):
+                eval_agent = SACAgent(**agent_kwargs)
+                eval_agent.load_params(theta)
+                avg_reward, action_counts, policy_entropy = _evaluate(
+                    eval_agent, scenario, seed=rng.randint(0, 2**31))
+                heldout_msg = ""
+                entry = None
+                if metrics_log is not None:
+                    entry = {
+                        "iteration": k,
+                        "avg_reward": avg_reward,
+                        "policy_entropy": policy_entropy,
+                        "alpha": eval_agent.alpha,
+                        "action_counts": action_counts,
+                    }
+                if heldout_eval_seeds is not None:
+                    heldout = [
+                        _evaluate(eval_agent, s, seed=es)[0]
+                        for s, es in zip(eval_scenarios, heldout_eval_seeds)
+                    ]
+                    eval_mean = float(np.mean(heldout))
+                    eval_std = float(np.std(heldout))
+                    heldout_msg = f" heldout_eval={eval_mean:.3f}+-{eval_std:.3f}"
+                    if entry is not None:
+                        entry["eval_reward_mean"] = eval_mean
+                        entry["eval_reward_std"] = eval_std
+                if reward_log is not None:
+                    reward_log.append(avg_reward)
                 if entry is not None:
-                    entry["eval_reward_mean"] = eval_mean
-                    entry["eval_reward_std"] = eval_std
-            if reward_log is not None:
-                reward_log.append(avg_reward)
-            if entry is not None:
-                metrics_log.append(entry)
-            if progress_every and k % progress_every == 0:
-                print(f"[Outer Loop] iter {k}/{num_outer_iterations} "
-                      f"avg_reward={avg_reward:.3f} entropy={policy_entropy:.3f} "
-                      f"alpha={eval_agent.alpha:.3f}{heldout_msg}")
+                    metrics_log.append(entry)
+                if progress_every and k % progress_every == 0:
+                    print(f"[Outer Loop] iter {k}/{num_outer_iterations} "
+                          f"avg_reward={avg_reward:.3f} entropy={policy_entropy:.3f} "
+                          f"alpha={eval_agent.alpha:.3f}{heldout_msg}")
+    finally:
+        if executor is not None:
+            executor.shutdown()
 
     return theta
 
 
 def sample_heldout_scenarios(num: int, training_scenarios, seed: int = None,
-                             source: str = "mixed", env_names=None):
+                             source: str = "mixed", env_names=None,
+                             env_randomization: float = 0.0):
     """Samples a FIXED held-out evaluation set for outer_loop(eval_scenarios=...):
     `num` scenarios from the same distribution as the training pool, rejected
     until disjoint from every training scenario (and internally duplicate-free),
@@ -255,7 +369,8 @@ def sample_heldout_scenarios(num: int, training_scenarios, seed: int = None,
                 f"could not sample {num} scenarios disjoint from the training pool "
                 f"after {attempts} attempts -- scenario space too constrained "
                 f"(source={source!r}, env_names={env_names!r})")
-        s = sample_scenario(rng, source=source, env_names=env_names)
+        s = sample_scenario(rng, source=source, env_names=env_names,
+                            env_randomization=env_randomization)
         if s in training_scenarios or s in heldout:
             continue
         heldout.append(s)

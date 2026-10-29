@@ -292,3 +292,29 @@ def test_decision_latency_constant_mirrored():
     source = _java_source("ReSACOStateBuilder.java")
     assert float(_java_constant(source, "RESACO_DECISION_LATENCY_SECONDS")) == \
         config.DECISION_LATENCY_SECONDS
+
+
+def test_heterogeneous_edge_eval_profile_mirrors_its_xml_per_datacenter():
+    """HETEROGENEOUS_EDGE_PROFILE (evaluation-only, not in ENV_PROFILES)
+    must match edge_devices_heterogeneous.xml server by server: datacenter
+    i's VMs run at profile.edge_mips(i), its host at 8x that, and the
+    paired preset's network values equal the profile's."""
+    from mec_core.scenario import HETEROGENEOUS_EDGE_PROFILE as profile
+
+    rows = {row[0]: row for row in _simulation_list()}
+    assert "heterogeneous_edge" in rows, "heterogeneous_edge row missing from simulation.list"
+    _, edge_xml, _ = rows["heterogeneous_edge"]
+    root = ET.parse(os.path.join(CONFIG_DIR, edge_xml)).getroot()
+    datacenters = root.findall("datacenter")
+    assert len(datacenters) == config.NUM_EDGE_SERVERS
+    for i, dc in enumerate(datacenters):
+        vm_mips = {int(vm.find("mips").text) for vm in dc.iter("VM")}
+        assert vm_mips == {round(profile.edge_mips(i))}, (
+            f"datacenter {i}: XML VM MIPS {vm_mips} != profile {profile.edge_mips(i)}")
+        host = dc.find("hosts/host")
+        assert int(host.find("mips").text) == config.VMS_PER_EDGE_SERVER * round(profile.edge_mips(i))
+
+    props = _read_properties("heterogeneous_edge.properties")
+    assert float(props["wlan_bandwidth"]) == pytest.approx(profile.wlan_bandwidth_mbps)
+    assert float(props["wan_bandwidth"]) == pytest.approx(profile.wan_bandwidth_mbps)
+    assert float(props["wan_propagation_delay"]) == pytest.approx(profile.wan_propagation_delay)

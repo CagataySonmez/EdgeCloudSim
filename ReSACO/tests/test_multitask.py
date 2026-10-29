@@ -83,3 +83,30 @@ def test_multitask_checkpoint_roundtrips_into_sacagent(tmp_path):
     path = tmp_path / "multitask.pt"
     torch.save(agent.get_params(), path)
     SACAgent().load_params(torch.load(path, map_location="cpu"))
+
+
+def test_multitask_matches_batched_reptile_budget(monkeypatch):
+    """Batched Reptile (train_meta --meta-batch B) pays B inner loops per
+    outer iteration; train_baselines --meta-batch B runs MULTITASK for
+    K*B episodes so the env-interaction budget stays exactly equal."""
+    calls = {"n": 0}
+    orig_step = MECOffloadEnv.step
+
+    def counting_step(self, action):
+        calls["n"] += 1
+        return orig_step(self, action)
+
+    monkeypatch.setattr(MECOffloadEnv, "step", counting_step)
+
+    scenarios = sample_scenario_pool(3, seed=33)
+    K, N, B = 2, 5, 3
+
+    calls["n"] = 0
+    outer_loop(scenarios, num_outer_iterations=K, num_inner_updates=N,
+               seed=33, progress_every=0, meta_batch_size=B, num_workers=1)
+    resaco_steps = calls["n"]
+
+    calls["n"] = 0
+    _, reported = train_multitask(scenarios, num_outer_iterations=K * B,
+                                  num_inner_updates=N, seed=33, progress_every=0)
+    assert reported == calls["n"] == resaco_steps == K * B * (config.BATCH_SIZE + N)

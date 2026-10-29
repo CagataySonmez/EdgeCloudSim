@@ -9,3 +9,4 @@ gpu_edge;edge_devices_gpu_edge.xml;applications_nextgen.xml
 sdv_highway;edge_devices.xml;applications_sdv.xml
 sdv_rural_road;edge_devices_sdv_rural.xml;applications_sdv.xml
 sdv_urban;edge_devices_sdv_urban.xml;applications_sdv.xml
+heterogeneous_edge;edge_devices_heterogeneous.xml;applications.xml

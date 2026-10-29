@@ -66,7 +66,9 @@ another algorithm can be added or compared without touching ReSACO/:
 ```
 ../mec_core/            shared, algorithm-agnostic MEC infrastructure
   config.py             tier/network/reward constants + the paper's Table II ranges
-  scenario.py           AppProfile x EnvProfile x device-count sampling (see "Scenarios" below)
+  scenario.py           AppProfile x EnvProfile x device-count sampling (see "Scenarios" below),
+                        incl. continuous environment randomization + per-server edge heterogeneity
+  scenario_io.py        the scenario data model: metadata set S <-> versioned JSON (save/load/describe)
   env.py                lightweight 3-tier offload environment (state/action/reward, Section III)
   networks.py           discrete Actor + twin Critic (Fig. 3)
   replay_buffer.py      replay buffer D (columnar numpy ring -- see "Performance" below)
@@ -80,19 +82,23 @@ another algorithm can be added or compared without touching ReSACO/:
 
 resaco/                 ReSACO itself -- nothing else
   sac.py                SACAgent: SAC-Update (Algorithm 3, Eq. 9-13) + learned entropy temperature
-  reptile.py            Outer Loop / Inner Loop meta-training (Algorithm 1-2, Eq. 8)
+  reptile.py            Outer Loop / Inner Loop meta-training (Algorithm 1-2, Eq. 8), plus
+                        batched Reptile (B scenarios per outer step) on optional worker processes
   deploy.py             DeploymentAgent: Deployment Phase (Algorithm 4)
 
 bridge/
   inference_server.py    TCP ACT/OUTCOME server wrapping a DeploymentAgent
 
 scripts/
-  train_meta.py          run Algorithm 1 -> checkpoints/theta_star.pt
+  train_meta.py          run Algorithm 1 -> checkpoints/theta_star.pt (+ theta_star_scenarios.json);
+                         --preset paper (default) | fast
   train_baselines.py     train SAC(no meta-init)/DDPG/A2C/A3C with ReSACO's K*N step budget, plus
                          MULTITASK (joint pretraining) at ReSACO's full env-interaction budget incl. warm-ups
   compare_algorithms.py  Section V-C style comparison across MD counts -> checkpoints/comparison.csv
   plot_convergence.py    Section V-B / Fig. 5 style meta-init vs. random-init convergence plot
   sweep_meta_lr.py       the H1 meta-lr sweep with paired random-init controls (see "Convergence" below)
+  compare_meta_configs.py paper vs Reptile-schedule vs batched vs env-randomized meta-training, same
+                         paired protocol; picks --preset fast by a pre-registered rule
   run_ablations.py       one-factor-at-a-time ablation grid -> checkpoints/ablations.md
   stats.py               IQM + percentile-bootstrap-CI helpers shared by the comparison/sweep scripts
   export_onnx.py         export the trained actor as an ONNX graph (see "ONNX export" below)
@@ -130,7 +136,7 @@ Also runs automatically on every push/PR via
 regression here shows up without anyone having to remember to run
 `pytest` locally.
 
-154 tests, ~15 seconds, no GPU/network/trained-checkpoint dependency
+187 tests, ~15 seconds, no GPU/network/trained-checkpoint dependency
 (agents are freshly constructed per test; `test_bridge.py` writes throwaway
 fake checkpoints to `tmp_path` rather than touching `checkpoints/`).
 Coverage is weighted toward regression protection for the bugs found and
@@ -335,6 +341,22 @@ scenarios/iterations).
   skips the 64-step warm-up every single outer iteration and gives every
   minibatch more diverse experience. A deliberate, documented deviation
   from the paper's procedure (off by default).
+- `--preset {paper,fast}` -- `paper` (default) is Table II exactly;
+  `fast` is the configuration `compare_meta_configs.py` selected (see
+  "Environment randomization & batched Reptile" below). Any flag given
+  explicitly overrides its preset value.
+- `--meta-batch B` / `--workers W` -- batched Reptile: B scenarios
+  refined per outer iteration, theta moves toward their average; W
+  processes run them in parallel. theta* is bit-identical for any W.
+- `--env-randomization P` -- fraction of scenarios whose physical
+  environment (bandwidths, MIPS, per-server heterogeneity, WAN
+  propagation, mobility) is drawn continuously instead of from a preset.
+- `--save-scenarios PATH` / `--load-scenarios PATH` -- the meta-training
+  pool is always written as JSON next to theta* (default
+  `<out>_scenarios.json`); loading it replays the identical pool.
+  `train_baselines.py --load-scenarios` trains the controls on that exact
+  pool, and `train_baselines.py --meta-batch B` scales MULTITASK's budget
+  to match a batched theta*.
 
 Warm-up transitions are collected with uniform-random actions -- the
 paper's own "collects initial transitions by allowing exploratory
@@ -741,6 +763,82 @@ producing an untrained network no matter how long you ran it -- see
   now gets its own (faster-critic) learning rates typical for that
   algorithm family (`DDPG_ACTOR_LR`/`DDPG_CRITIC_LR`), and A2C/A3C share
   their own on-policy learning rate (`A2C_LR`) instead.
+
+### Environment randomization & batched Reptile
+
+Three additions aimed at the paper's own description of the Meta-Learning
+Phase, all **off by default** (paper-exact runs are bit-identical to
+before -- verified against the previous commit for theta* and every
+scenario source):
+
+- **Continuous environment randomization** (`--env-randomization P`).
+  Section IV-A-1 says scenarios vary "task arrival rates, network
+  bandwidths, or edge server capabilities", but Table II only randomizes
+  the task side; the network/hardware side was limited to the fixed
+  presets. With probability P a scenario now draws its environment from
+  `config.ENV_RANDOMIZATION_RANGES` (WLAN 100-1000 / MAN 100-400 / WAN
+  3-50 Mbps, edge 2500-40000 MIPS, cloud 50k-150k MIPS, WAN propagation
+  0.05-0.6s, 50% chance of mobility with 8-300s dwell), spanning and
+  interpolating every preset.
+- **Per-server edge heterogeneity.** A randomized environment gives each
+  of the ten edge servers its own MIPS factor (0.5x-2x). With the paper's
+  ten identical servers the per-server actions 1..N are interchangeable;
+  with a mixed fleet, *which* server to pick matters -- and since the
+  factors are not in the state, it is a scenario-specific fact the policy
+  has to adapt to. `HETEROGENEOUS_EDGE` (an evaluation-only fixed fleet,
+  mirrored by `edge_devices_heterogeneous.xml` / the `heterogeneous_edge`
+  simulation.list row) tests generalization to an unseen fleet in both
+  simulators.
+- **Batched Reptile** (`--meta-batch B --workers W`, Nichol et al. 2018's
+  Algorithm 2): B scenarios refined per outer iteration, theta moved
+  toward their average. Runs on W worker processes; each inner loop
+  reseeds from its own seed and runs single-threaded, so theta* is
+  **bit-identical for any W** (multi-threaded torch reductions alone
+  drift ~2e-9, which is why the in-process path pins one thread too).
+- **Scenario data model** (`mec_core/scenario_io.py`): the metadata set S
+  is written as versioned JSON next to every theta*
+  (`<out>_scenarios.json`), with a coverage summary;
+  `--load-scenarios` replays it exactly, and `train_baselines.py
+  --load-scenarios` / `--meta-batch` give the MULTITASK control the same
+  pool and budget.
+
+**Measured** with `scripts/compare_meta_configs.py` (5 seeds, M=10, N=50,
+sweep_meta_lr's paired random-init protocol on a never-seen scenario,
+one common 20-scenario held-out set; IQM [95% bootstrap CI]):
+
+| config | meta_lr | B | K | env rand | env interactions | delta vs random init | early delta (5 ep.) | final held-out reward | wall-clock |
+|---|---|---|---|---|---|---|---|---|---|
+| paper | constant 0.001 | 1 | 300 | 0 | 34,200 | -0.018 [-0.115, +0.037] | +0.000 [-0.358, +0.017] | -2.736 [-3.113, -2.468] | 35s |
+| **h1** | linear 1.0 | 1 | 300 | 0 | 34,200 | **+0.492 [+0.070, +1.046]** | **+0.398 [+0.036, +0.721]** | -1.968 [-2.650, -1.820] | 35s |
+| batch-eqbudget | linear 1.0 | 4 | 75 | 0 | 34,200 | -0.057 [-0.280, +0.155] | -0.026 [-0.431, +0.102] | -2.753 [-3.684, -2.592] | 15s |
+| batch | linear 1.0 | 4 | 300 | 0 | 136,800 | +0.212 [-0.020, +0.634] | +0.319 [-0.589, +0.762] | -2.101 [-2.666, -1.903] | 52s |
+| batch-envrand | linear 1.0 | 4 | 300 | 0.3 | 136,800 | +0.403 [+0.051, +0.925] | +0.280 [-0.000, +0.954] | **-1.913 [-2.022, -1.868]** | 52s |
+
+(The paper and h1 rows reproduce the H1 sweep above to the digit -- same
+protocol, same seeds.) What this does and does not show:
+
+- **Reptile's own schedule is the improvement that matters.** h1 is the
+  only change that makes meta-initialization measurably adapt faster than
+  random init within the paper's budget -- including in the first five
+  episodes, the "fast adaptation" the paper claims. It is `--preset fast`
+  (selected by the rule written into compare_meta_configs.py before the
+  run: highest-IQM CI-clear config, ties broken by wall-clock; h1 and
+  batch-envrand were tied, h1 is cheaper).
+- **Batching is not a free speedup.** At the same env budget
+  (batch-eqbudget) it is 2.3x faster wall-clock but loses the meta-init
+  advantage entirely: 75 averaged outer steps are too few for the
+  annealed schedule. At 4x the budget (batch) it does not beat h1 either.
+- **Environment randomization helps robustness, not peak delta.**
+  batch-envrand has the best and by far the tightest held-out reward
+  (-1.913, CI width 0.15 vs 0.83 for h1) and a CI-clear adaptation
+  advantage -- but at 4x h1's env budget, and its delta is statistically
+  tied with h1's. n=5; treat it as a promising direction, not a verdict.
+
+`checkpoints/theta_star_fast.pt` (+ `_scenarios.json`, `_metrics.csv`) is
+a `--preset fast` theta*. The bridge still serves `theta_star.pt`; to
+serve the improved one, copy it over (`cp checkpoints/theta_star_fast.pt
+checkpoints/theta_star.pt`) and delete any `theta_star_adapted.pt` so
+online adaptation restarts from it.
 
 ## Compare (fast, toy environment)
 

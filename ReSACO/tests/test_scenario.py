@@ -189,3 +189,67 @@ def test_sample_scenario_pool_app_mix_roughly_matches_usage_percentage():
         assert abs(observed_pct - profile.usage_percentage) < 5, (
             f"{profile.name}: expected ~{profile.usage_percentage}%, got {observed_pct:.1f}%"
         )
+
+
+# ------------------------------------------------ continuous env randomization
+def test_randomized_env_profile_stays_within_configured_ranges():
+    from mec_core.scenario import RANDOMIZED_ENV_NAME, sample_randomized_env_profile
+
+    r = config.ENV_RANDOMIZATION_RANGES
+    lo_f, hi_f = config.EDGE_HETEROGENEITY_RANGE
+    rng = random.Random(5)
+    saw_mobile = saw_static = False
+    for _ in range(300):
+        e = sample_randomized_env_profile(rng)
+        assert e.name == RANDOMIZED_ENV_NAME
+        for field in ("wlan_bandwidth_mbps", "man_bandwidth_mbps", "wan_bandwidth_mbps",
+                      "edge_vm_mips", "cloud_vm_mips", "wan_propagation_delay"):
+            lo, hi = r[field]
+            assert lo <= getattr(e, field) <= hi, f"{field}={getattr(e, field)} outside {r[field]}"
+        if e.mobility_dwell_time == float("inf"):
+            saw_static = True
+        else:
+            saw_mobile = True
+            assert r["mobility_dwell_time"][0] <= e.mobility_dwell_time <= r["mobility_dwell_time"][1]
+        assert len(e.edge_mips_factors) == config.NUM_EDGE_SERVERS
+        assert all(lo_f <= f <= hi_f for f in e.edge_mips_factors)
+    # ENV_RANDOMIZATION_MOBILITY_PROB=0.5 -> both kinds appear in 300 draws
+    assert saw_mobile and saw_static
+
+
+def test_randomized_env_profile_is_never_a_mirrored_preset():
+    # test_config_mirror requires every ENV_PROFILES entry to have a Java
+    # preset; the continuous profile must never sneak into that list
+    from mec_core.scenario import RANDOMIZED_ENV_NAME
+    assert RANDOMIZED_ENV_NAME not in {e.name for e in ENV_PROFILES}
+
+
+def test_zero_env_randomization_reproduces_the_preset_only_pool_exactly():
+    # env_randomization=0 must not consume an extra RNG draw, or every
+    # previously-seeded scenario pool (and theta* trained on it) would shift
+    for source in ("mixed", "table2", "apps"):
+        assert (sample_scenario_pool(40, seed=9, source=source)
+                == sample_scenario_pool(40, seed=9, source=source, env_randomization=0.0))
+
+
+def test_full_env_randomization_randomizes_every_scenario():
+    from mec_core.scenario import RANDOMIZED_ENV_NAME
+    pool = sample_scenario_pool(30, seed=3, env_randomization=1.0)
+    assert {s.env_profile.name for s in pool} == {RANDOMIZED_ENV_NAME}
+    # and the environments genuinely differ from one another
+    assert len({s.env_profile.wan_bandwidth_mbps for s in pool}) == len(pool)
+
+
+def test_partial_env_randomization_mixes_presets_and_randomized():
+    from mec_core.scenario import RANDOMIZED_ENV_NAME
+    pool = sample_scenario_pool(400, seed=4, env_randomization=0.3)
+    frac = sum(s.env_profile.name == RANDOMIZED_ENV_NAME for s in pool) / len(pool)
+    assert 0.2 < frac < 0.4
+    assert any(s.env_profile.name in {e.name for e in ENV_PROFILES} for s in pool)
+
+
+def test_env_randomization_out_of_range_rejected():
+    import pytest
+    for bad in (-0.1, 1.5):
+        with pytest.raises(ValueError):
+            sample_scenario(random.Random(0), env_randomization=bad)

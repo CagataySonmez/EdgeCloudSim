@@ -141,6 +141,36 @@ def test_infinite_dwell_means_no_mobility_failures():
         assert not info.get("mobility_fail", False)
 
 
+def test_heterogeneous_edge_servers_process_at_their_own_speed():
+    # server 0 at the base speed, server 1 twice as fast; the remaining
+    # factors don't matter for this test
+    factors = (1.0, 2.0) + (1.0,) * (config.NUM_EDGE_SERVERS - 2)
+    hetero = replace(DEFAULT_ENV_PROFILE, mobility_dwell_time=float("inf"),
+                     edge_mips_factors=factors)
+    assert hetero.edge_mips(0) == config.EDGE_VM_MIPS
+    assert hetero.edge_mips(1) == 2.0 * config.EDGE_VM_MIPS
+
+    base_env = MECOffloadEnv(_make_scenario(env_profile=hetero, vm_utilization_on_edge=1.0), seed=31)
+    fast_env = MECOffloadEnv(_make_scenario(env_profile=hetero, vm_utilization_on_edge=1.0), seed=31)
+    base_env.reset()
+    fast_env.reset()
+    _, _, _, base_info = base_env.step(1)  # edge server 0
+    _, _, _, fast_info = fast_env.step(2)  # edge server 1
+    assert not base_info["failed"] and not fast_info["failed"]
+    # same seed -> same task; processing time excludes the (possibly
+    # different, serving-cell-dependent) network delay
+    base_process = base_info["service_time"] - base_info["delay"]
+    fast_process = fast_info["service_time"] - fast_info["delay"]
+    assert abs(base_process / fast_process - 2.0) < 1e-9
+
+
+def test_homogeneous_profile_edge_mips_is_the_preset_value():
+    assert DEFAULT_ENV_PROFILE.edge_mips_factors == ()
+    for i in range(config.NUM_EDGE_SERVERS):
+        assert DEFAULT_ENV_PROFILE.edge_mips(i) == DEFAULT_ENV_PROFILE.edge_vm_mips
+    assert DEFAULT_ENV_PROFILE.mean_edge_mips() == DEFAULT_ENV_PROFILE.edge_vm_mips
+
+
 def test_env_profile_drives_bandwidth_and_edge_mips():
     congested = replace(DEFAULT_ENV_PROFILE, wan_bandwidth_mbps=3.0,
                         mobility_dwell_time=float("inf"))

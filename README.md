@@ -326,14 +326,15 @@ presets -- x every device count in the config, run in parallel, matching
 tail -f output/<date>/ite_1.log
 ```
 
-`simulation.list` runs eleven *scenarios* per sweep, each its own config
+`simulation.list` runs twelve *scenarios* per sweep, each its own config
 preset under `config/` (delete lines from `simulation.list` to run
 fewer). The first four run the classic `applications.xml` workload, the
 next four run `applications_nextgen.xml` (GenAI inference, XR streaming,
 V2X perception, smart-city analytics), and the last three run
 `applications_sdv.xml` (software-defined-vehicle fleet: ADAS perception,
 HD-map updates, driver monitoring, OTA) across the three canonical
-driving environments:
+driving environments, and the twelfth (`heterogeneous_edge`) evaluates the
+classic workload on a fleet of ten *unequal* edge servers:
 
 | Scenario line   | Preset                                            | Environment                                  |
 |-----------------|---------------------------------------------------|----------------------------------------------|
@@ -348,12 +349,17 @@ driving environments:
 | `sdv_highway`   | WLAN 300 / WAN 30 Mbps, dwell 10/8/5s             | vehicles at highway speed past sparse RSU corridors |
 | `sdv_rural_road`| WLAN 100 / WAN 8 Mbps, `edge_devices_sdv_rural.xml`: edge MIPS / 2, dwell 60/45/30s | thin rural roadside infrastructure |
 | `sdv_urban`     | WLAN 400 Mbps, `edge_devices_sdv_urban.xml`: edge MIPS x 2, dwell 35/25/15s | stop-and-go traffic under dense city MEC |
+| `heterogeneous_edge` | `edge_devices_heterogeneous.xml`: each edge datacenter at its own VM MIPS, ~0.54x..1.87x | mixed-generation edge fleet (evaluation only) |
 
 These mirror the Python training side's `mec_core/scenario.py`
 `ENV_PROFILES`/`NEXTGEN_APP_PROFILES` (same names, same knobs), which
 meta-training now samples across -- so the served policies have actually
 trained on these conditions. If you change a preset on one side, change
-the other.
+the other. The exception is `heterogeneous_edge`: it mirrors
+`HETEROGENEOUS_EDGE_PROFILE`, an *evaluation-only* profile that training
+never samples (it only ever sees continuously randomized heterogeneous
+fleets via `train_meta.py --env-randomization`), so it measures
+generalization to an unseen fleet.
 
 Note: the RL-backed policies (RESACO/SAC/DDPG/A2C/A3C/MULTITASK) are
 noticeably slower wall-clock than static heuristics like EDGE_PRIORITY,

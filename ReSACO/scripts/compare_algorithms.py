@@ -43,7 +43,8 @@ from mec_core.env import MECOffloadEnv
 from resaco.sac import SACAgent
 from baselines.ddpg import DDPGAgent
 from baselines.a2c import A2CAgent
-from mec_core.scenario import (APP_PROFILES, ENV_PROFILES, NEXTGEN_APP_PROFILES,
+from mec_core.scenario import (APP_PROFILES, ENV_PROFILES, EVAL_ONLY_ENV_PROFILES,
+                              NEXTGEN_APP_PROFILES,
                               SDV_APP_PROFILES, Scenario, sample_table2_profile)
 from mec_core.seeding import seed_everything
 from stats import bootstrap_ci, iqm
@@ -250,7 +251,7 @@ def main():
     parser.add_argument("--out-csv", type=str, default=os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "checkpoints", "comparison.csv"))
     parser.add_argument("--env-profile", type=str, default="DEFAULT",
-                         choices=[e.name for e in ENV_PROFILES],
+                         choices=[e.name for e in ENV_PROFILES + EVAL_ONLY_ENV_PROFILES],
                          help="environment preset to sweep under (network quality, tier "
                               "hardware, device mobility -- see mec_core/scenario.py's "
                               "ENV_PROFILES). Defaults to DEFAULT so runs stay comparable "
@@ -281,7 +282,8 @@ def main():
         print("No trained checkpoints found. Nothing to compare.")
         return
 
-    env_profile = next(e for e in ENV_PROFILES if e.name == args.env_profile)
+    env_profile = next(e for e in ENV_PROFILES + EVAL_ONLY_ENV_PROFILES
+                       if e.name == args.env_profile)
     print(f"Environment profile: {env_profile.name} "
           f"(wan={env_profile.wan_bandwidth_mbps}Mbps, edge={env_profile.edge_vm_mips}MIPS, "
           f"mobility dwell={env_profile.mobility_dwell_time}s)")

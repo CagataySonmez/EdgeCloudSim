@@ -234,7 +234,9 @@ class MECOffloadEnv:
             # room for one more per-VM slot -- see the class docstring
             mu_delta = p.vm_utilization_on_edge / config.VMS_PER_EDGE_SERVER
             mu_current = self.mu_edge[index]
-            mips = ep.edge_vm_mips
+            # this server's own MIPS (heterogeneous fleets under a
+            # randomized environment; == edge_vm_mips for every preset)
+            mips = ep.edge_mips(index)
             # WLAN reaches the serving edge directly; any other edge server
             # is a neighbor relay that additionally crosses the MAN
             # (EdgeCloudSim's REQUEST_RECEIVED_BY_EDGE_DEVICE_TO_RELAY path).
@@ -421,7 +423,11 @@ class MECOffloadEnv:
         # (and destabilizing the critic) as device count climbs into the
         # thousands.
         if edge_frac > 0 and self.n_edge > 0:
-            process_time = p.task_length / ep.edge_vm_mips
+            # the in-flight window uses the fleet-average speed; each server
+            # then holds its share for its OWN process time, so a slow
+            # server in a heterogeneous fleet stays loaded longer (both
+            # reduce to edge_vm_mips for a homogeneous fleet)
+            process_time = p.task_length / ep.mean_edge_mips()
             window = min(elapsed, process_time)
             edge_share = self._poisson_sample(rate * edge_frac * window)
             if edge_share > 0:
@@ -434,7 +440,8 @@ class MECOffloadEnv:
                     room = max(0.0, _SATURATION_CEILING - self.mu_edge[index])
                     delta = min(desired, room)
                     if delta > 0:  # zero-delta occupies only bloat the release list
-                        self._occupy("edge", index, delta, process_time)
+                        self._occupy("edge", index, delta,
+                                     p.task_length / ep.edge_mips(index))
 
         if cloud_frac > 0:
             process_time = p.task_length / ep.cloud_vm_mips

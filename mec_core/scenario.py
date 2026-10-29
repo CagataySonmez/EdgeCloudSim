@@ -11,6 +11,7 @@ sample from Table II's abstract ranges. See APP_PROFILES below.
 """
 
 from dataclasses import dataclass
+import math
 import random
 
 from . import config
@@ -112,6 +113,23 @@ class EnvProfile:
     # bandwidth. Mirrored by the wan_propagation_delay property in the
     # matching scripts/ReSACO/config preset.
     wan_propagation_delay: float = config.WAN_PROPAGATION_DELAY
+    # Per-edge-server MIPS multipliers (one per server, see
+    # config.EDGE_HETEROGENEITY_RANGE). Empty = every server runs exactly
+    # edge_vm_mips, which is what every fixed preset (and the paper's
+    # Section V-A-2 fleet of identical servers) uses.
+    edge_mips_factors: tuple = ()
+
+    def edge_mips(self, index: int) -> float:
+        """MIPS of edge server `index` (0-based)."""
+        if not self.edge_mips_factors:
+            return self.edge_vm_mips
+        return self.edge_vm_mips * self.edge_mips_factors[index]
+
+    def mean_edge_mips(self) -> float:
+        """Fleet-average edge MIPS (== edge_vm_mips for homogeneous fleets)."""
+        if not self.edge_mips_factors:
+            return self.edge_vm_mips
+        return self.edge_vm_mips * sum(self.edge_mips_factors) / len(self.edge_mips_factors)
 
 
 # Mirrors scripts/ReSACO/config/: DEFAULT <-> default_config.properties +
@@ -223,6 +241,63 @@ ENV_PROFILES = [
 ]
 
 DEFAULT_ENV_PROFILE = ENV_PROFILES[0]
+
+RANDOMIZED_ENV_NAME = "RANDOMIZED"
+
+# A FIXED heterogeneous edge fleet for evaluation only: the ten servers'
+# per-VM MIPS spread geometrically from ~0.54x to ~1.87x the paper's 10000
+# (geometric mean 1x), mirroring scripts/ReSACO/config/
+# edge_devices_heterogeneous.xml datacenter by datacenter (the
+# heterogeneous_edge simulation.list row; test_config_mirror enforces it).
+# Deliberately NOT in ENV_PROFILES: training never sees this exact fleet
+# (only continuously randomized ones via env_randomization), so it is a
+# genuinely unseen environment for compare_algorithms --env-profile
+# HETEROGENEOUS_EDGE and the CloudSim run -- and keeping it out of the
+# weighted list leaves every default scenario pool bit-identical.
+HETEROGENEOUS_EDGE_VM_MIPS = (5359, 6156, 7071, 8123, 9330, 10718, 12311, 14142, 16245, 18661)
+HETEROGENEOUS_EDGE_PROFILE = EnvProfile(
+    name="HETEROGENEOUS_EDGE", weight=0.0,
+    wlan_bandwidth_mbps=config.WLAN_BANDWIDTH_MBPS,
+    man_bandwidth_mbps=config.MAN_BANDWIDTH_MBPS,
+    wan_bandwidth_mbps=config.WAN_BANDWIDTH_MBPS,
+    edge_vm_mips=config.EDGE_VM_MIPS, cloud_vm_mips=config.CLOUD_VM_MIPS,
+    mobility_dwell_time=float("inf"),
+    edge_mips_factors=tuple(m / config.EDGE_VM_MIPS for m in HETEROGENEOUS_EDGE_VM_MIPS),
+)
+EVAL_ONLY_ENV_PROFILES = [HETEROGENEOUS_EDGE_PROFILE]
+
+
+def _log_uniform(rng: random.Random, lo: float, hi: float) -> float:
+    return math.exp(rng.uniform(math.log(lo), math.log(hi)))
+
+
+def sample_randomized_env_profile(rng: random.Random = random,
+                                  num_edge_servers: int = config.NUM_EDGE_SERVERS) -> EnvProfile:
+    """Draws one physical environment continuously from
+    config.ENV_RANDOMIZATION_RANGES instead of picking a fixed preset --
+    Section IV-A-1's "network bandwidths, or edge server capabilities"
+    axis of scenario diversity, which Table II alone leaves unrandomized.
+    Each edge server additionally gets its own MIPS factor
+    (config.EDGE_HETEROGENEITY_RANGE), so per-server actions stop being
+    interchangeable. See the config.py block for the ranges' rationale.
+    """
+    r = config.ENV_RANDOMIZATION_RANGES
+    mobile = rng.random() < config.ENV_RANDOMIZATION_MOBILITY_PROB
+    dwell = _log_uniform(rng, *r["mobility_dwell_time"]) if mobile else float("inf")
+    lo, hi = config.EDGE_HETEROGENEITY_RANGE
+    factors = tuple(_log_uniform(rng, lo, hi) if hi > lo else lo
+                    for _ in range(num_edge_servers))
+    return EnvProfile(
+        name=RANDOMIZED_ENV_NAME, weight=0.0,
+        wlan_bandwidth_mbps=_log_uniform(rng, *r["wlan_bandwidth_mbps"]),
+        man_bandwidth_mbps=_log_uniform(rng, *r["man_bandwidth_mbps"]),
+        wan_bandwidth_mbps=_log_uniform(rng, *r["wan_bandwidth_mbps"]),
+        edge_vm_mips=_log_uniform(rng, *r["edge_vm_mips"]),
+        cloud_vm_mips=rng.uniform(*r["cloud_vm_mips"]),
+        mobility_dwell_time=dwell,
+        wan_propagation_delay=_log_uniform(rng, *r["wan_propagation_delay"]),
+        edge_mips_factors=factors,
+    )
 
 
 # Next-generation edge workloads (2025-era trends), mirroring
@@ -389,7 +464,7 @@ class Scenario:
 
 
 def sample_scenario(rng: random.Random = random, source: str = "mixed",
-                    env_names=None) -> Scenario:
+                    env_names=None, env_randomization: float = 0.0) -> Scenario:
     """Samples one meta-training scenario: a task profile (see `source`),
     an EnvProfile weighted by its own weight, and a random device count
     (Table II's range).
@@ -403,7 +478,15 @@ def sample_scenario(rng: random.Random = random, source: str = "mixed",
     env_names: optionally restrict the environment pool to these profile
     names (e.g. ["DEFAULT"] for a paper-exact run where scenarios vary
     only Table II's parameters, never the physical environment).
+
+    env_randomization: probability in [0, 1] that this scenario's
+    environment is drawn continuously (sample_randomized_env_profile)
+    instead of from the preset pool. At 0 (default) no extra random draw
+    is made at all, so every pre-existing seeded scenario pool is
+    reproduced bit-for-bit.
     """
+    if not 0.0 <= env_randomization <= 1.0:
+        raise ValueError(f"env_randomization must be in [0, 1], got {env_randomization}")
     r = config.METADATA_RANGES
     if source == "mixed":
         names = list(SCENARIO_SOURCE_WEIGHTS)
@@ -421,12 +504,15 @@ def sample_scenario(rng: random.Random = random, source: str = "mixed",
         app_profile = rng.choices(SDV_APP_PROFILES, weights=weights, k=1)[0]
     else:
         raise ValueError(f"unknown scenario source {source!r} (use table2/apps/nextgen/sdv/mixed)")
-    env_pool = ENV_PROFILES
-    if env_names is not None:
-        env_pool = [e for e in ENV_PROFILES if e.name in set(env_names)]
-        if not env_pool:
-            raise ValueError(f"no ENV_PROFILES match {env_names!r}")
-    env_profile = rng.choices(env_pool, weights=[e.weight for e in env_pool], k=1)[0]
+    if env_randomization > 0.0 and rng.random() < env_randomization:
+        env_profile = sample_randomized_env_profile(rng)
+    else:
+        env_pool = ENV_PROFILES
+        if env_names is not None:
+            env_pool = [e for e in ENV_PROFILES if e.name in set(env_names)]
+            if not env_pool:
+                raise ValueError(f"no ENV_PROFILES match {env_names!r}")
+        env_profile = rng.choices(env_pool, weights=[e.weight for e in env_pool], k=1)[0]
     return Scenario(
         app_profile=app_profile,
         number_of_mobile_devices=int(rng.uniform(*r["number_of_mobile_devices"])),
@@ -435,7 +521,8 @@ def sample_scenario(rng: random.Random = random, source: str = "mixed",
 
 
 def sample_scenario_pool(num_scenarios: int, seed: int = None, source: str = "mixed",
-                         env_names=None):
+                         env_names=None, env_randomization: float = 0.0):
     rng = random.Random(seed)
-    return [sample_scenario(rng, source=source, env_names=env_names)
+    return [sample_scenario(rng, source=source, env_names=env_names,
+                            env_randomization=env_randomization)
             for _ in range(num_scenarios)]

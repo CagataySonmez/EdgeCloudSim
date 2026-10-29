@@ -17,6 +17,7 @@ from resaco.reptile import (_schedule_alpha, outer_loop, residual_init_fraction,
                             sample_heldout_scenarios)
 from resaco.sac import SACAgent
 from mec_core.scenario import sample_scenario_pool
+from mec_core.seeding import seed_everything
 
 
 def test_outer_loop_moves_theta_away_from_random_init():
@@ -190,3 +191,92 @@ def test_unknown_schedule_rejected():
         _schedule_alpha(0.1, 1, 10, "cosine")
     with pytest.raises(ValueError):
         residual_init_fraction(0.1, 10, "cosine")
+
+
+# ------------------------------------------------------------ batched Reptile
+def _theta_equal(a, b):
+    return all(torch.equal(a[g][k], b[g][k]) for g in a for k in a[g])
+
+
+def _batched_theta(scenarios, workers, batch=2, iters=3):
+    torch.manual_seed(77)
+    return outer_loop(scenarios, num_outer_iterations=iters, num_inner_updates=5,
+                      seed=77, progress_every=0, meta_batch_size=batch,
+                      num_workers=workers)
+
+
+def test_batched_theta_is_identical_for_any_worker_count():
+    # each inner loop reseeds from its own seed, so where it runs must not
+    # matter -- parallelism is a pure wall-clock knob
+    scenarios = sample_scenario_pool(3, seed=21)
+    serial = _batched_theta(scenarios, workers=1)
+    parallel = _batched_theta(scenarios, workers=2)
+    assert _theta_equal(serial, parallel)
+
+
+def test_batched_outer_loop_trains():
+    scenarios = sample_scenario_pool(3, seed=22)
+    torch.manual_seed(77)
+    theta_init = SACAgent().get_params()
+    theta = _batched_theta(scenarios, workers=1)
+    assert not _theta_equal(theta_init, theta)
+
+
+def test_batch_of_one_on_one_worker_is_the_paper_path():
+    # meta_batch_size=1, num_workers=1 must run Algorithm 1's original code
+    # path -- not the reseeding batched one -- so default runs are unchanged
+    # (seed_everything, not just torch: the paper path's replay buffer
+    # samples from the global `random` module)
+    scenarios = sample_scenario_pool(2, seed=23)
+    seed_everything(5)
+    default = outer_loop(scenarios, num_outer_iterations=3, num_inner_updates=5,
+                         seed=5, progress_every=0)
+    seed_everything(5)
+    explicit = outer_loop(scenarios, num_outer_iterations=3, num_inner_updates=5,
+                          seed=5, progress_every=0, meta_batch_size=1, num_workers=1)
+    assert _theta_equal(default, explicit)
+
+
+def test_average_params_identity_and_mean():
+    from resaco.reptile import _average_params
+    a = SACAgent().get_params()
+    assert _theta_equal(_average_params([a]), a)
+    avg = _average_params([a, a])
+    assert all(torch.allclose(avg[g][k], a[g][k]) for g in a for k in a[g])
+    b = SACAgent().get_params()
+    mid = _average_params([a, b])
+    key = next(iter(a["actor"]))
+    assert torch.allclose(mid["actor"][key], (a["actor"][key] + b["actor"][key]) / 2)
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"meta_batch_size": 0},
+    {"num_workers": 0},
+    {"persist_buffers": True, "num_workers": 2},
+])
+def test_invalid_batched_settings_rejected(kwargs):
+    with pytest.raises(ValueError):
+        outer_loop(sample_scenario_pool(2, seed=24), num_outer_iterations=1,
+                   num_inner_updates=5, seed=1, progress_every=0, **kwargs)
+
+
+def test_config_overrides_reach_spawned_workers():
+    # override_config (run_ablations.py) mutates the parent's module; spawned
+    # workers re-import config from disk, so outer_loop must ship the
+    # snapshot. With rewards scaled 1000x the trained critic differs.
+    from mec_core import config
+    scenarios = sample_scenario_pool(2, seed=25)
+    base = _batched_theta(scenarios, workers=2, iters=1)
+    with config.override_config(TMAX_SECONDS=1000.0, DELAY_SENSITIVITY_BASE=500.0):
+        serial = _batched_theta(scenarios, workers=1, iters=1)
+        parallel = _batched_theta(scenarios, workers=2, iters=1)
+    assert _theta_equal(serial, parallel)
+    assert not _theta_equal(base, parallel)
+
+
+def test_heldout_sampler_accepts_env_randomization():
+    from mec_core.scenario import RANDOMIZED_ENV_NAME
+    pool = sample_scenario_pool(5, seed=26, env_randomization=1.0)
+    heldout = sample_heldout_scenarios(5, pool, seed=26, env_randomization=1.0)
+    assert {s.env_profile.name for s in heldout} == {RANDOMIZED_ENV_NAME}
+    assert not any(s in pool for s in heldout)
